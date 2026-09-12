@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Plus } from "lucide-react";
+import { useSchoolStore } from "@/store/schoolStore";
 import { useSession } from "@/hooks/useSession";
 import { useClassroomStore } from "@/store/classroomStore";
 import { getClassroomsForUser } from "@/services/dashboard";
@@ -10,10 +11,11 @@ import { ClassroomCard } from "@/components/screens/Dashboard/ClassroomCard";
 import { DashboardPanel } from "@/components/ui/DashboardPanel";
 
 export function Classrooms() {
+  const availableSchools = useSchoolStore((state) => state.schools);
   const user = useSession("coordenador");
   const allRooms = useClassroomStore((state) => state.rooms);
   if (!user) return <p role="status" className="p-8 text-sm">Carregando suas turmas…</p>;
-  const rooms = getClassroomsForUser(user, allRooms);
+  const rooms = getClassroomsForUser(user, allRooms, availableSchools);
 
   return (
     <DashboardShell

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
+import { useSchoolStore } from "@/store/schoolStore";
 import { useRouter } from "next/navigation";
 import type { SessionUser } from "@/interfaces/auth";
 import { ClassroomSchema, type ClassroomForm } from "@/validation/Classroom.validation";
@@ -9,7 +10,8 @@ import { getSchoolsForUser } from "@/services/dashboard";
 
 export function useCreateClassroom(user: SessionUser) {
   const router = useRouter();
-  const schools = getSchoolsForUser(user);
+  const availableSchools = useSchoolStore((state) => state.schools);
+  const schools = getSchoolsForUser(user, undefined, availableSchools);
   const [values, setValues] = useState<ClassroomForm>({ year: "", identifier: "", schoolId: schools[0]?.id ?? "", teacherIds: [], period: "Manhã" });
   const [errors, setErrors] = useState<Partial<Record<keyof ClassroomForm, string>>>({});
   const [error, setError] = useState("");
