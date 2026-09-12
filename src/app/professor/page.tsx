@@ -19,7 +19,7 @@ export default function TeacherHome() {
   const subjects = getSubjectsForUser(user, allRooms, availableSchools);
 
   return (
-    <DashboardShell user={user} title="Ensinar transforma o amanhã." description="Suas turmas, seus conteúdos e novas oportunidades de aprendizagem, em um só lugar." navigation={[{ label: "Minhas turmas", href: "#classrooms", icon: "users" }, { label: "Disciplinas", href: "#subjects", icon: "book" }, { label: "Temas e quizzes", href: "#content", icon: "chart" }]}>
+    <DashboardShell user={user} title="Ensinar transforma o amanhã." description="Suas turmas, seus conteúdos e novas oportunidades de aprendizagem, em um só lugar." navigation={[{ label: "Minhas turmas", href: "/professor/turmas", icon: "users" }, { label: "Temas e quizzes", href: "#content", icon: "chart" }]}>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Minhas turmas" value={rooms.length} detail="Designadas pela coordenação" icon="users" />
         <StatCard label="Minhas disciplinas" value={subjects.length} detail="Vinculadas às suas turmas" icon="book" />

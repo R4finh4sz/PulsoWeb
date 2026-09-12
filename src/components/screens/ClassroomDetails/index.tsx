@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, UserRound } from "lucide-react";
+import { ArrowLeft, Plus, UserRound } from "lucide-react";
 import type { UserRole } from "@/interfaces/auth";
 import { useSchoolStore } from "@/store/schoolStore";
 import { useSession } from "@/hooks/useSession";
@@ -23,7 +23,7 @@ export function ClassroomDetails({ id, role }: { id: string; role: Extract<UserR
   if (!user) return <p role="status" className="p-8 text-sm">Carregando turma…</p>;
 
   const room = getClassroomsForUser(user, allRooms, availableSchools).find((item) => item.id === id);
-  const back = role === "coordenador" ? "/coordenador/turmas" : "/professor#classrooms";
+  const back = role === "coordenador" ? "/coordenador/turmas" : "/professor/turmas";
   const navigation = [{ label: role === "coordenador" ? "Turmas" : "Minhas turmas", href: back, icon: "book" as const }];
   if (!room) return (
     <DashboardShell user={user} title="Turma não encontrada" description="Esta turma não existe ou não está disponível para o seu perfil." navigation={navigation}>
@@ -65,6 +65,11 @@ export function ClassroomDetails({ id, role }: { id: string; role: Extract<UserR
         </DashboardPanel>
       </div>
       <DashboardPanel id="subjects" title={role === "professor" ? "Minhas disciplinas nesta turma" : "Disciplinas da turma"}>
+        {user.role === "professor" && <div className="mb-5 flex justify-end">
+          <button type="button" disabled className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg bg-[var(--blue)] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60">
+            <Plus aria-hidden="true" className="h-4 w-4" />Criar disciplina
+          </button>
+        </div>}
         {subjects.length ? <div className="grid gap-4 sm:grid-cols-2">{subjects.map((subject) => (
           <article key={subject.id} className="rounded-xl border border-[var(--line)] p-5">
             <h3 className="font-semibold">{subject.name}</h3>
