@@ -19,6 +19,7 @@ export function ClassroomDetails({ id, role }: { id: string; role: Extract<UserR
   const availableSchools = useSchoolStore((state) => state.schools);
   const user = useSession(role);
   const allRooms = useClassroomStore((state) => state.rooms);
+  const allStudents = useClassroomStore((state) => state.students);
   if (!user) return <p role="status" className="p-8 text-sm">Carregando turma…</p>;
 
   const room = getClassroomsForUser(user, allRooms, availableSchools).find((item) => item.id === id);
@@ -33,6 +34,7 @@ export function ClassroomDetails({ id, role }: { id: string; role: Extract<UserR
   const school = getSchoolsForUser(user, allRooms, availableSchools).find((item) => item.id === room.schoolId);
   const teachers = allTeachers.filter((person) => person.role === "professor" && room.teacherIds.includes(person.id));
   const subjects = getSubjectsForUser(user, allRooms, availableSchools).filter((subject) => subject.classroomId === room.id);
+  const students = allStudents.filter((student) => student.classroomId === room.id).sort((first, second) => first.name.localeCompare(second.name, "pt-BR"));
 
   return (
     <DashboardShell user={user} title={room.name} description={`${school?.name ?? "Escola"} · Ensino médio · ${room.period}`} navigation={navigation}>
@@ -73,7 +75,20 @@ export function ClassroomDetails({ id, role }: { id: string; role: Extract<UserR
         ))}</div> : <p className="text-sm text-[var(--muted)]">Nenhuma disciplina disponível para este perfil nesta turma.</p>}
       </DashboardPanel>
       <DashboardPanel id="students" title="Alunos" description="O vínculo com a turma dá acesso aos conteúdos e atividades.">
-        <p className="text-sm">{room.students ? `${room.students} alunos vinculados. A relação nominal ainda não está disponível nesta demonstração.` : "Esta turma ainda não possui alunos vinculados."}</p>
+        {user.role === "coordenador" ? (
+          <>
+            {students.length ? <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{students.map((student) => (
+              <li key={student.id} className="flex items-start gap-3 rounded-xl border border-[var(--line)] p-4">
+                <span className="shrink-0 rounded-lg bg-[#e8f5f8] p-2 text-[var(--blue)]"><UserRound aria-hidden="true" className="h-5 w-5" /></span>
+                <div className="min-w-0">
+                  <h3 className="break-words text-sm font-semibold">{student.name}</h3>
+                  <p className="mt-1 break-all text-xs text-[var(--muted)]">{student.email}</p>
+                  <p className="mt-2 break-words text-xs text-[var(--muted)]">Matrícula: {student.enrollment}</p>
+                </div>
+              </li>
+            ))}</ul> : <p className="text-sm text-[var(--muted)]">Nenhum cadastro de aluno disponível nesta turma.</p>}
+          </>
+        ) : <p className="text-sm">{room.students ? `${room.students} alunos vinculados.` : "Esta turma ainda não possui alunos vinculados."}</p>}
       </DashboardPanel>
     </DashboardShell>
   );
