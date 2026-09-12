@@ -26,7 +26,7 @@ export default function CoordinatorHome() {
   return (
     <DashboardShell user={user} title="Conexões que fazem aprender." description={`${schools.map((school) => school.name).join(" · ")} — acompanhe suas turmas e organize quem faz parte de cada uma.`} navigation={[{ label: "Turmas", href: "/coordenador/turmas", icon: "book" }, { label: "Alunos", href: "#students", icon: "users" }, { label: "Professores", href: "#teachers", icon: "school" }]}>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Turmas da escola" value={rooms.length} detail="Ensino fundamental" icon="book" />
+        <StatCard label="Turmas da escola" value={rooms.length} detail="Ensino médio" icon="book" />
         <StatCard label="Alunos vinculados" value={rooms.reduce((total, room) => total + room.students, 0)} detail="Distribuídos nas turmas" icon="users" />
         <StatCard label="Professores designados" value={teachers.length} detail="Com acesso às suas turmas" icon="school" />
         <StatCard label="Turmas sem professor" value={pending.length} detail="Aguardando designação" icon="check" />

@@ -10,6 +10,8 @@ import { mockUsers } from "@/mocks/platform";
 import { DashboardShell } from "@/components/screens/Dashboard/DashboardShell";
 import { DashboardPanel } from "@/components/ui/DashboardPanel";
 import { StatCard } from "@/components/ui/StatCard";
+import { AddTeachers } from "./AddTeachers";
+import { RemoveTeacher } from "./RemoveTeacher";
 
 export function ClassroomDetails({ id, role }: { id: string; role: Extract<UserRole, "coordenador" | "professor"> }) {
   const user = useSession(role);
@@ -30,7 +32,7 @@ export function ClassroomDetails({ id, role }: { id: string; role: Extract<UserR
   const subjects = getSubjectsForUser(user, allRooms).filter((subject) => subject.classroomId === room.id);
 
   return (
-    <DashboardShell user={user} title={room.name} description={`${school?.name ?? "Escola"} · Ensino fundamental · ${room.period}`} navigation={navigation}>
+    <DashboardShell user={user} title={room.name} description={`${school?.name ?? "Escola"} · Ensino médio · ${room.period}`} navigation={navigation}>
       <Link href={back} className="inline-flex items-center gap-2 text-sm text-[var(--blue)]"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Voltar para turmas</Link>
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Alunos vinculados" value={room.students} detail="Participantes da turma" icon="users" />
@@ -43,14 +45,16 @@ export function ClassroomDetails({ id, role }: { id: string; role: Extract<UserR
             <div><dt className="text-xs text-[var(--muted)]">Turma</dt><dd className="mt-1 font-medium">{room.name}</dd></div>
             <div><dt className="text-xs text-[var(--muted)]">Escola</dt><dd className="mt-1 font-medium">{school?.name}</dd></div>
             <div><dt className="text-xs text-[var(--muted)]">Turno</dt><dd className="mt-1 font-medium">{room.period}</dd></div>
-            <div><dt className="text-xs text-[var(--muted)]">Etapa de ensino</dt><dd className="mt-1 font-medium">Ensino fundamental</dd></div>
+            <div><dt className="text-xs text-[var(--muted)]">Etapa de ensino</dt><dd className="mt-1 font-medium">Ensino médio</dd></div>
           </dl>
         </DashboardPanel>
         <DashboardPanel id="teachers" title="Professores vinculados" description="Educadores com acesso a esta turma.">
+          {user.role === "coordenador" && <AddTeachers key={room.id} user={user} room={room} />}
           {teachers.length ? <ul className="grid gap-3 sm:grid-cols-2">{teachers.map((teacher) => (
             <li key={teacher.id} className="flex items-start gap-3 rounded-xl border border-[var(--line)] p-4">
               <span className="rounded-lg bg-[#e8f5f8] p-2 text-[var(--blue)]"><UserRound aria-hidden="true" className="h-5 w-5" /></span>
               <div className="min-w-0"><h3 className="text-sm font-semibold">{teacher.name}</h3><p className="mt-1 break-all text-xs text-[var(--muted)]">{teacher.email}</p></div>
+              {user.role === "coordenador" && <RemoveTeacher user={user} roomId={room.id} teacher={teacher} />}
             </li>
           ))}</ul> : <p className="rounded-xl bg-[#fff9e5] p-4 text-sm text-[#796413]">Nenhum professor vinculado a esta turma.</p>}
         </DashboardPanel>
@@ -59,7 +63,7 @@ export function ClassroomDetails({ id, role }: { id: string; role: Extract<UserR
         {subjects.length ? <div className="grid gap-4 sm:grid-cols-2">{subjects.map((subject) => (
           <article key={subject.id} className="rounded-xl border border-[var(--line)] p-5">
             <h3 className="font-semibold">{subject.name}</h3>
-            <p className="mt-2 text-xs text-[var(--muted)]">Professor: {teachers.find((teacher) => teacher.id === subject.teacherId)?.name}</p>
+            <p className="mt-2 text-xs text-[var(--muted)]">Professor: {mockUsers.find((teacher) => teacher.id === subject.teacherId)?.name}{!room.teacherIds.includes(subject.teacherId) && " (sem vínculo atual com a turma)"}</p>
             <p className="mt-3 text-sm">{subject.topic}</p>
             <p className="mt-4 text-xs text-[var(--muted)]">{subject.topics} temas · {subject.questions} questões · {subject.quizzes} quizzes</p>
           </article>
@@ -71,4 +75,3 @@ export function ClassroomDetails({ id, role }: { id: string; role: Extract<UserR
     </DashboardShell>
   );
 }
-

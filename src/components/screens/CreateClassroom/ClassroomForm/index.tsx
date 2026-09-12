@@ -58,7 +58,7 @@ export function ClassroomForm({ user }: { user: SessionUser }) {
         <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Prévia da turma</p>
         <span className="mt-5 inline-flex rounded-xl bg-[#fff6d5] p-3 text-[#866b00]"><BookOpen aria-hidden="true" className="h-6 w-6" /></span>
         <h2 className="mt-4 text-2xl font-semibold">{values.year || "—"}º ano {values.identifier || "—"}</h2>
-        <p className="mt-2 text-sm text-[var(--muted)]">{values.period} · Ensino fundamental</p>
+        <p className="mt-2 text-sm text-[var(--muted)]">{values.period} · Ensino médio</p>
         <div className="mt-5 space-y-3 border-t border-[var(--line)] pt-5 text-sm">
           <p>{schools.find((school) => school.id === values.schoolId)?.name || "Selecione uma escola"}</p>
           <p className="text-[var(--muted)]">{selectedTeachers.map((person) => person.name).join(", ") || "Professores a definir"}</p>
