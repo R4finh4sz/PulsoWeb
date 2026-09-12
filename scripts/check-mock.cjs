@@ -110,3 +110,33 @@ test("professor não vê turma sem designação nem conteúdos de outro professo
   assert.equal(getClassroomsForUser({ ...user, id: "teacher-without-class" }).length, 0);
   assert.equal(getSubjectsForUser({ ...user, id: "teacher-without-class" }).length, 0);
 });
+
+test("adicionar professores preserva vínculos e permite acesso ao novo professor", () => {
+  const { addClassroomTeachers } = require("../src/services/classrooms.ts");
+  const updated = addClassroomTeachers(mockUsers[1], "class-1", ["teacher-2"], classrooms);
+  assert.deepEqual(updated.find((room) => room.id === "class-1").teacherIds, ["teacher-1", "teacher-2"]);
+  assert.deepEqual(classrooms.find((room) => room.id === "class-1").teacherIds, ["teacher-1"]);
+  const teacher = mockUsers.find((user) => user.id === "teacher-2");
+  assert.ok(getClassroomsForUser(teacher, updated).some((room) => room.id === "class-1"));
+  const repeated = addClassroomTeachers(mockUsers[1], "class-1", ["teacher-2"], updated);
+  assert.equal(repeated.find((room) => room.id === "class-1").teacherIds.length, 2);
+  assert.throws(() => addClassroomTeachers(mockUsers[2], "class-1", ["teacher-2"], classrooms));
+  assert.throws(() => addClassroomTeachers({ ...mockUsers[1], id: "other" }, "class-1", ["teacher-2"], classrooms));
+  assert.throws(() => addClassroomTeachers(mockUsers[1], "missing", ["teacher-2"], classrooms));
+  assert.throws(() => addClassroomTeachers(mockUsers[1], "class-1", ["admin-1"], classrooms));
+  assert.throws(() => addClassroomTeachers(mockUsers[1], "class-1", [], classrooms));
+});
+
+test("remoção preserva os demais vínculos e revoga acesso somente à turma removida", () => {
+  const { removeClassroomTeacher } = require("../src/services/classrooms.ts");
+  const updated = removeClassroomTeacher(mockUsers[1], "class-1", "teacher-1", classrooms);
+  assert.deepEqual(updated.find((room) => room.id === "class-1").teacherIds, []);
+  assert.deepEqual(classrooms.find((room) => room.id === "class-1").teacherIds, ["teacher-1"]);
+  assert.deepEqual(getClassroomsForUser(mockUsers[2], updated).map((room) => room.id), ["class-2"]);
+  assert.ok(getSubjectsForUser(mockUsers[2], updated).every((subject) => subject.classroomId !== "class-1"));
+  assert.throws(() => removeClassroomTeacher(mockUsers[2], "class-1", "teacher-1", classrooms));
+  assert.throws(() => removeClassroomTeacher({ ...mockUsers[1], id: "other" }, "class-1", "teacher-1", classrooms));
+  assert.throws(() => removeClassroomTeacher(mockUsers[1], "missing", "teacher-1", classrooms));
+  const multiple = classrooms.map((room) => room.id === "class-1" ? { ...room, teacherIds: ["teacher-1", "teacher-2"] } : room);
+  assert.deepEqual(removeClassroomTeacher(mockUsers[1], "class-1", "teacher-2", multiple)[0].teacherIds, ["teacher-1"]);
+});
