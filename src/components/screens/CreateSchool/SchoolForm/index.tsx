@@ -5,7 +5,7 @@ import { School } from "lucide-react";
 import type { SessionUser } from "@/interfaces/auth";
 import { useCreateSchool } from "@/hooks/useCreateSchool";
 import { states } from "@/validation/School.validation";
-import { mockUsers } from "@/mocks/platform";
+import { useCoordinatorStore } from "@/store/coordinatorStore";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Button from "@/components/ui/Button";
@@ -13,7 +13,7 @@ import { DashboardPanel } from "@/components/ui/DashboardPanel";
 
 export function SchoolForm({ user }: { user: SessionUser }) {
   const { values, errors, error, saving, setField, handleSubmit } = useCreateSchool(user);
-  const coordinators = mockUsers.filter((person) => person.role === "coordenador");
+  const coordinators = useCoordinatorStore((state) => state.coordinators);
   const coordinator = coordinators.find((person) => person.id === values.coordinatorId);
   return (
     <form onSubmit={handleSubmit} noValidate className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -41,7 +41,7 @@ export function SchoolForm({ user }: { user: SessionUser }) {
             <option value="">Selecione um coordenador</option>
             {coordinators.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}
           </Select>
-          {coordinator && <div className="mt-4 rounded-xl bg-[#e8f5f8] p-4"><p className="text-sm font-semibold">{coordinator.name}</p><p className="mt-1 text-xs text-[var(--muted)]">{coordinator.email}</p></div>}
+          {coordinator && <div className="mt-4 rounded-xl bg-[#e8f5f8] p-4"><p className="text-sm font-semibold">{coordinator.name}</p><p className="mt-1 text-xs text-[var(--muted)]">{coordinator.registration ? "Matrícula: " + coordinator.registration : coordinator.email}</p></div>}
         </DashboardPanel>
         {error && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</p>}
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

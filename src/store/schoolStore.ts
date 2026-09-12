@@ -6,6 +6,7 @@ import type { School } from "@/interfaces/school";
 import type { SessionUser } from "@/interfaces/auth";
 import type { SchoolForm } from "@/validation/School.validation";
 import { schools } from "@/mocks/platform";
+import { useCoordinatorStore } from "@/store/coordinatorStore";
 import { createSchool } from "@/services/schools";
 
 type SchoolState = {
@@ -17,7 +18,7 @@ export const useSchoolStore = create<SchoolState>()(
   persist(
     (set) => ({
       schools,
-      addSchool: (user, form) => set((state) => ({ schools: [...state.schools, createSchool(user, form, state.schools)] })),
+      addSchool: (user, form) => set((state) => ({ schools: [...state.schools, createSchool(user, form, state.schools, useCoordinatorStore.getState().coordinators)] })),
     }),
     {
       name: "pulso-demo-schools",

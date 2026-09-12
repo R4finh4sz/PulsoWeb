@@ -171,3 +171,22 @@ test("escola exige um coordenador válido e libera a criação de turmas para el
   assert.deepEqual(getClassroomsForUser(mockUsers[1], [room], [school]), [room]);
   assert.throws(() => createClassroom({ ...mockUsers[1], id: "other" }, { ...newRoom, schoolId: school.id }, [], [school]));
 });
+
+test("cadastro de coordenador valida dados e disponibiliza vínculo com escola", () => {
+  const { createCoordinator } = require("../src/services/coordinators.ts");
+  const { CoordinatorSchema, isValidBirthDate } = require("../src/validation/Coordinator.validation.ts");
+  const { createSchool } = require("../src/services/schools.ts");
+  const form = { name: "Ana Souza", birthDate: "1990-05-20", registration: "0001-ab" };
+  assert.equal(isValidBirthDate("2000-02-29"), true);
+  for (const date of ["", "2001-02-29", "2020-02-30", "2999-01-01"]) assert.equal(isValidBirthDate(date), false);
+  for (const field of Object.keys(form)) assert.equal(CoordinatorSchema.safeParse({ ...form, [field]: "" }).success, false);
+  assert.equal(CoordinatorSchema.safeParse({ ...form, name: "Ana" }).success, false);
+  const person = createCoordinator(mockUsers[0], form, []);
+  assert.equal(person.registration, "0001-AB");
+  assert.equal(person.birthDate, form.birthDate);
+  assert.equal(person.role, "coordenador");
+  assert.throws(() => createCoordinator(mockUsers[0], form, [person]), /matrícula/);
+  assert.throws(() => createCoordinator(mockUsers[1], form, []), /administrador/);
+  const school = createSchool(mockUsers[0], { name: "Escola Nova", cnpj: "11222333000181", street: "Rua Teste", state: "SP", city: "Campinas", coordinatorId: person.id }, [], [person]);
+  assert.equal(school.coordinatorId, person.id);
+});
