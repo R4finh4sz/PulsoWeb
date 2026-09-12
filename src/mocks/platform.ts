@@ -16,8 +16,8 @@ export const schools = [
 
 export const classrooms = [
   { id: "class-1", schoolId: "school-1", name: "3º ano B", period: "Manhã", students: 28, teacherIds: ["teacher-1"], color: "blue" },
-  { id: "class-2", schoolId: "school-1", name: "4º ano A", period: "Tarde", students: 25, teacherIds: ["teacher-1"], color: "yellow" },
-  { id: "class-3", schoolId: "school-1", name: "5º ano A", period: "Manhã", students: 30, teacherIds: [], color: "blue" },
+  { id: "class-2", schoolId: "school-1", name: "1º ano A", period: "Tarde", students: 25, teacherIds: ["teacher-1"], color: "yellow" },
+  { id: "class-3", schoolId: "school-1", name: "2º ano A", period: "Manhã", students: 30, teacherIds: [], color: "blue" },
 ];
 
 export const subjects = [

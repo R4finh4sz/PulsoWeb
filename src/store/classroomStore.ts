@@ -31,6 +31,16 @@ export const useClassroomStore = create<ClassroomState>()(
     }),
     {
       name: "pulso-demo-classrooms",
+      version: 1,
+      migrate: (persisted) => {
+        const previous = persisted as Pick<ClassroomState, "rooms">;
+        return {
+          rooms: previous.rooms.map((room) => ({
+            ...room,
+            name: room.name.replace(/^4º ano /, "1º ano ").replace(/^5º ano /, "2º ano "),
+          })),
+        };
+      },
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({ rooms: state.rooms }),
     },
