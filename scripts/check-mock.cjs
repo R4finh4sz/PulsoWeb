@@ -20,6 +20,34 @@ const { homeRoutes } = require("../src/interfaces/auth.ts");
 const { createClassroom } = require("../src/services/classrooms.ts");
 const { ClassroomSchema } = require("../src/validation/Classroom.validation.ts");
 const { classrooms } = require("../src/mocks/platform.ts");
+const { createStudent } = require("../src/services/students.ts");
+const { StudentSchema } = require("../src/validation/Student.validation.ts");
+const { schools } = require("../src/mocks/platform.ts");
+
+test("cadastro de aluno valida campos e mantém a matrícula como texto", () => {
+  const room = getClassroomsForUser(mockUsers[1])[0];
+  const input = { name: " Ana Silva ", email: " ANA@EXEMPLO.COM ", enrollment: "00123", classroomId: room.id };
+  const student = createStudent(mockUsers[1], input, [], classrooms, schools);
+  assert.equal(student.name, "Ana Silva");
+  assert.equal(student.email, "ana@exemplo.com");
+  assert.equal(student.enrollment, "00123");
+  assert.equal(student.classroomId, room.id);
+  for (const field of ["name", "email", "enrollment", "classroomId"]) {
+    assert.equal(StudentSchema.safeParse({ ...input, [field]: "" }).success, false);
+  }
+  assert.equal(StudentSchema.safeParse({ ...input, email: "invalido" }).success, false);
+  assert.throws(() => createStudent(mockUsers[1], input, [student], classrooms, schools), /matrícula/);
+  assert.throws(() => createStudent(mockUsers[1], { ...input, enrollment: "456" }, [student], classrooms, schools), /email/);
+});
+
+test("cadastro de aluno rejeita perfis e turmas fora da coordenação", () => {
+  const room = getClassroomsForUser(mockUsers[1])[0];
+  const input = { name: "Ana Silva", email: "ana@exemplo.com", enrollment: "00123", classroomId: room.id };
+  for (const user of [mockUsers[0], mockUsers[2], { ...mockUsers[1], id: "other-coordinator" }]) {
+    assert.throws(() => createStudent(user, input, [], classrooms, schools), /coordenação/);
+  }
+  assert.throws(() => createStudent(mockUsers[1], { ...input, classroomId: "missing" }, [], classrooms, schools), /coordenação/);
+});
 
 const newRoom = { year: "2", identifier: "c", schoolId: "school-1", teacherIds: ["teacher-1"], period: "Manhã" };
 
