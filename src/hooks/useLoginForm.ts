@@ -1,24 +1,28 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { useLoginStore } from "@/store/loginStore";
+import { authService } from "@/services/auth";
+import { homeRoutes } from "@/interfaces/auth";
 import { LoginSchema, type LoginErrors, type LoginForm } from "@/validation/Login.validation";
 
 export function useLoginForm() {
+  const router = useRouter();
   const [values, setValues] = useState<LoginForm>({ email: "", password: "" });
   const [errors, setErrors] = useState<LoginErrors>({});
-  const submittedEmail = useLoginStore((state) => state.submittedEmail);
-  const setSubmittedEmail = useLoginStore((state) => state.setSubmittedEmail);
+  const [error, setError] = useState("");
+  const setUser = useLoginStore((state) => state.setUser);
 
   function setField(field: keyof LoginForm, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
-    setSubmittedEmail(null);
+    setError("");
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSubmittedEmail(null);
+    setError("");
     const result = LoginSchema.safeParse(values);
 
     if (!result.success) {
@@ -36,8 +40,14 @@ export function useLoginForm() {
     }
 
     setErrors({});
-    setSubmittedEmail(result.data.email);
+    try {
+      const user = authService.login(result.data);
+      setUser(user);
+      router.replace(homeRoutes[user.role]);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Não foi possível entrar.");
+    }
   }
 
-  return { values, errors, submittedEmail, setField, handleSubmit };
+  return { values, errors, error, setField, handleSubmit };
 }
