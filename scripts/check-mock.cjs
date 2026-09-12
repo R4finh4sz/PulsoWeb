@@ -23,6 +23,39 @@ const { classrooms } = require("../src/mocks/platform.ts");
 
 const newRoom = { year: "2", identifier: "c", schoolId: "school-1", teacherIds: ["teacher-1"], period: "Manhã" };
 
+test("professor valida dados, normaliza email e preserva zeros da matrícula", () => {
+  const { TeacherSchema } = require("../src/validation/Teacher.validation.ts");
+  const { createTeacher } = require("../src/services/teachers.ts");
+  const input = { name: " Sofia Santos ", email: " SOFIA@EXEMPLO.COM ", registration: "00123" };
+  const teacher = createTeacher(mockUsers[1], input, []);
+  assert.equal(teacher.name, "Sofia Santos");
+  assert.equal(teacher.email, "sofia@exemplo.com");
+  assert.equal(teacher.registration, "00123");
+  assert.equal(teacher.role, "professor");
+  for (const field of ["name", "email", "registration"]) {
+    assert.equal(TeacherSchema.safeParse({ ...input, [field]: " " }).success, false);
+  }
+  assert.equal(TeacherSchema.safeParse({ ...input, email: "invalido" }).success, false);
+  assert.throws(() => createTeacher(mockUsers[1], input, [teacher]), /matrícula/);
+  assert.throws(() => createTeacher(mockUsers[1], { ...input, registration: "456" }, [teacher]), /email/);
+  for (const user of [mockUsers[0], mockUsers[2]]) {
+    assert.throws(() => createTeacher(user, input, []), /Somente o coordenador/);
+  }
+});
+
+test("professor cadastrado pode ser vinculado a turmas novas e existentes", () => {
+  const { createTeacher } = require("../src/services/teachers.ts");
+  const { addClassroomTeachers } = require("../src/services/classrooms.ts");
+  const teacher = createTeacher(mockUsers[1], { name: "Sofia Santos", email: "sofia@exemplo.com", registration: "00123" }, []);
+  const available = [...mockUsers, teacher];
+  const room = createClassroom(mockUsers[1], { ...newRoom, teacherIds: [teacher.id] }, classrooms, undefined, available);
+  assert.deepEqual(room.teacherIds, [teacher.id]);
+  const updated = addClassroomTeachers(mockUsers[1], "class-1", [teacher.id], classrooms, undefined, available);
+  assert.ok(updated.find((item) => item.id === "class-1").teacherIds.includes(teacher.id));
+  assert.equal(getClassroomsForUser(teacher, updated).length, 1);
+  assert.throws(() => addClassroomTeachers(mockUsers[1], "class-1", ["missing"], classrooms, undefined, available), /professores válidos/);
+});
+
 test("turma valida ano e identificador, normalizando a letra", () => {
   assert.equal(ClassroomSchema.parse(newRoom).identifier, "C");
   for (const year of ["", "0", "10", "a", "1.5"]) {

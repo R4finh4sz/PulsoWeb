@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { Plus } from "lucide-react";
 import type { SessionUser } from "@/interfaces/auth";
 import type { Classroom } from "@/interfaces/classroom";
-import { mockUsers } from "@/mocks/platform";
+import { useTeacherStore } from "@/store/teacherStore";
 import { useClassroomStore } from "@/store/classroomStore";
 import MultiSelect from "@/components/ui/MultiSelect";
 import Button from "@/components/ui/Button";
@@ -15,7 +15,8 @@ export function AddTeachers({ user, room }: { user: SessionUser; room: Classroom
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const addTeachers = useClassroomStore((state) => state.addTeachers);
-  const available = mockUsers.filter((person) => person.role === "professor" && !room.teacherIds.includes(person.id));
+  const allTeachers = useTeacherStore((state) => state.teachers);
+  const available = allTeachers.filter((person) => person.role === "professor" && !room.teacherIds.includes(person.id));
 
   function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
