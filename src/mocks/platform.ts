@@ -6,6 +6,7 @@ export const mockUsers: SessionUser[] = [
   { id: "admin-1", name: "Rafael Souza", email: "admin@pulso.com", role: "admin" },
   { id: "coordinator-1", name: "Mariana Costa", email: "coordenador@pulso.com", role: "coordenador" },
   { id: "teacher-1", name: "Lucas Oliveira", email: "professor@pulso.com", role: "professor" },
+  { id: "teacher-2", name: "Ana Martins", email: "ana@pulso.com", role: "professor" },
 ];
 
 export const schools = [

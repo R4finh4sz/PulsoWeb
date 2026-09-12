@@ -1,10 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useSyncExternalStore, type ReactNode } from "react";
 import logo from "@/assets/images/LogoImageWhite.png";
-import { roleLabels, type SessionUser } from "@/interfaces/auth";
+import { homeRoutes, roleLabels, type SessionUser } from "@/interfaces/auth";
 import { useLoginStore } from "@/store/loginStore";
 import { DashboardIcon, type IconName } from "@/components/ui/DashboardIcon";
 
@@ -24,8 +25,15 @@ const subscribeToHash = (callback: () => void) => {
 export function DashboardShell({ user, title, description, navigation, children }: Props) {
   const logout = useLoginStore((state) => state.logout);
   const router = useRouter();
+  const pathname = usePathname();
   const activeSection = useSyncExternalStore(subscribeToHash, () => window.location.hash || "#overview", () => "#overview");
-  const links = [{ label: "Início", href: "#overview", icon: "home" as const }, ...navigation];
+  const home = homeRoutes[user.role];
+  const links = [{ label: "Início", href: pathname === home ? "#overview" : home, icon: "home" as const }, ...navigation];
+  const isActive = (href: string) => {
+    if (href.startsWith("#")) return activeSection === href;
+    if (href.includes("#")) return pathname + activeSection === href;
+    return pathname === href || (href !== home && pathname.startsWith(href + "/"));
+  };
 
   return (
     <div className="min-h-screen bg-[#f5f8fa] lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
@@ -35,10 +43,10 @@ export function DashboardShell({ user, title, description, navigation, children 
         </div>
         <nav aria-label="Navegação principal" className="flex flex-wrap gap-2 px-6 py-6 lg:flex-col lg:items-start">
           {links.map((item) => (
-            <a key={item.href} href={item.href} aria-current={activeSection === item.href ? "location" : undefined}
-              className={`flex items-center gap-2.5 rounded-full px-3 py-2 text-sm transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${activeSection === item.href ? "bg-white/25 font-medium" : ""}`}>
+            <Link key={item.href} href={item.href} aria-current={isActive(item.href) ? "location" : undefined}
+              className={`flex items-center gap-2.5 rounded-full px-3 py-2 text-sm transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${isActive(item.href) ? "bg-white/25 font-medium" : ""}`}>
               <DashboardIcon name={item.icon} className="h-[18px] w-[18px]" />{item.label}
-            </a>
+            </Link>
           ))}
         </nav>
         <div className="mx-6 mb-6 mt-auto hidden rounded-xl bg-white/25 p-4 lg:block">

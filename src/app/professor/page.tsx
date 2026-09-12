@@ -1,5 +1,6 @@
 "use client";
 
+import { useClassroomStore } from "@/store/classroomStore";
 import { useSession } from "@/hooks/useSession";
 import { getClassroomsForUser, getSubjectsForUser } from "@/services/dashboard";
 
@@ -9,10 +10,11 @@ import { DashboardShell } from "@/components/screens/Dashboard/DashboardShell";
 import { ClassroomCard } from "@/components/screens/Dashboard/ClassroomCard";
 
 export default function TeacherHome() {
+  const allRooms = useClassroomStore((state) => state.rooms);
   const user = useSession("professor");
   if (!user) return <p role="status" className="p-8 text-sm">Carregando seu espaço…</p>;
-  const rooms = getClassroomsForUser(user);
-  const subjects = getSubjectsForUser(user);
+  const rooms = getClassroomsForUser(user, allRooms);
+  const subjects = getSubjectsForUser(user, allRooms);
 
   return (
     <DashboardShell user={user} title="Ensinar transforma o amanhã." description="Suas turmas, seus conteúdos e novas oportunidades de aprendizagem, em um só lugar." navigation={[{ label: "Minhas turmas", href: "#classrooms", icon: "users" }, { label: "Disciplinas", href: "#subjects", icon: "book" }, { label: "Temas e quizzes", href: "#content", icon: "chart" }]}>
