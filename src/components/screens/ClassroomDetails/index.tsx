@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft, UserRound } from "lucide-react";
 import type { UserRole } from "@/interfaces/auth";
+import { useSchoolStore } from "@/store/schoolStore";
 import { useSession } from "@/hooks/useSession";
 import { useClassroomStore } from "@/store/classroomStore";
 import { getClassroomsForUser, getSchoolsForUser, getSubjectsForUser } from "@/services/dashboard";
@@ -14,11 +15,12 @@ import { AddTeachers } from "./AddTeachers";
 import { RemoveTeacher } from "./RemoveTeacher";
 
 export function ClassroomDetails({ id, role }: { id: string; role: Extract<UserRole, "coordenador" | "professor"> }) {
+  const availableSchools = useSchoolStore((state) => state.schools);
   const user = useSession(role);
   const allRooms = useClassroomStore((state) => state.rooms);
   if (!user) return <p role="status" className="p-8 text-sm">Carregando turma…</p>;
 
-  const room = getClassroomsForUser(user, allRooms).find((item) => item.id === id);
+  const room = getClassroomsForUser(user, allRooms, availableSchools).find((item) => item.id === id);
   const back = role === "coordenador" ? "/coordenador/turmas" : "/professor#classrooms";
   const navigation = [{ label: role === "coordenador" ? "Turmas" : "Minhas turmas", href: back, icon: "book" as const }];
   if (!room) return (
@@ -27,9 +29,9 @@ export function ClassroomDetails({ id, role }: { id: string; role: Extract<UserR
     </DashboardShell>
   );
 
-  const school = getSchoolsForUser(user, allRooms).find((item) => item.id === room.schoolId);
+  const school = getSchoolsForUser(user, allRooms, availableSchools).find((item) => item.id === room.schoolId);
   const teachers = mockUsers.filter((person) => person.role === "professor" && room.teacherIds.includes(person.id));
-  const subjects = getSubjectsForUser(user, allRooms).filter((subject) => subject.classroomId === room.id);
+  const subjects = getSubjectsForUser(user, allRooms, availableSchools).filter((subject) => subject.classroomId === room.id);
 
   return (
     <DashboardShell user={user} title={room.name} description={`${school?.name ?? "Escola"} · Ensino médio · ${room.period}`} navigation={navigation}>
