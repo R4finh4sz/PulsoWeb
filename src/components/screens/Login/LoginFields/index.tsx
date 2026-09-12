@@ -6,7 +6,7 @@ import { useLoginForm } from "@/hooks/useLoginForm";
 import { LoginAction } from "../LoginAction";
 
 export function LoginFields() {
-  const { values, errors, submittedEmail, setField, handleSubmit } = useLoginForm();
+  const { values, errors, error, setField, handleSubmit } = useLoginForm();
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-6">
@@ -15,7 +15,7 @@ export function LoginFields() {
         <Input id="password" name="password" label="Senha" type="password" autoComplete="current-password" required value={values.password} onChange={(event) => setField("password", event.target.value)} error={errors.password} placeholder="Digite sua senha..." />
         <LoginAction />
       </div>
-      {submittedEmail && <p role="status" className="text-sm text-[var(--blue)]">Acesso preparado para {submittedEmail}.</p>}
+      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
       <Button type="submit" className="mt-4">Continuar</Button>
     </form>
   );
