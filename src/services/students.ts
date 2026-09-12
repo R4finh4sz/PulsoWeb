@@ -11,8 +11,12 @@ export function createStudent(user: SessionUser, input: StudentForm, existing: S
     throw new Error("Selecione uma turma sob sua coordenação.");
   }
   const schoolRoomIds = new Set(rooms.filter((item) => item.schoolId === room.schoolId).map((item) => item.id));
-  const students = existing.filter((student) => schoolRoomIds.has(student.classroomId));
-  if (students.some((student) => student.enrollment.toLowerCase() === data.enrollment.toLowerCase())) throw new Error("Já existe um aluno com essa matrícula nesta escola.");
-  if (students.some((student) => student.email.toLowerCase() === data.email)) throw new Error("Já existe um aluno com esse email nesta escola.");
+  const schoolStudents = existing.filter((student) => schoolRoomIds.has(student.classroomId));
+  if (schoolStudents.some((student) => student.enrollment.toLowerCase() === data.enrollment.toLowerCase())) {
+    throw new Error("Já existe um aluno com essa matrícula nesta escola.");
+  }
+  if (schoolStudents.some((student) => student.email.toLowerCase() === data.email)) {
+    throw new Error("Já existe um aluno com esse email nesta escola.");
+  }
   return { id: crypto.randomUUID(), ...data };
 }

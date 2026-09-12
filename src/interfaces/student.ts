@@ -1,1 +1,7 @@
-export type Student = { id: string; name: string; email: string; enrollment: string; classroomId: string };
+export type Student = {
+  id: string;
+  name: string;
+  email: string;
+  enrollment: string;
+  classroomId: string;
+};
