@@ -1,5 +1,6 @@
 "use client";
 
+import { useClassroomStore } from "@/store/classroomStore";
 import { useSession } from "@/hooks/useSession";
 import { mockUsers } from "@/mocks/platform";
 import { getSchoolsForUser, getClassroomsForUser } from "@/services/dashboard";
@@ -9,9 +10,10 @@ import { DashboardPanel } from "@/components/ui/DashboardPanel";
 import { DashboardShell } from "@/components/screens/Dashboard/DashboardShell";
 
 export default function AdminHome() {
+  const allRooms = useClassroomStore((state) => state.rooms);
   const user = useSession("admin");
   if (!user) return <p role="status" className="p-8 text-sm">Carregando seu espaço…</p>;
-  const schools = getSchoolsForUser(user);
+  const schools = getSchoolsForUser(user, allRooms);
   const coordinators = mockUsers.filter((account) => account.role === "coordenador");
   const pending = schools.filter((school) => !school.coordinatorId);
 
@@ -20,7 +22,7 @@ export default function AdminHome() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Escolas cadastradas" value={schools.length} detail="Sua rede de ensino" icon="school" />
         <StatCard label="Coordenadores" value={coordinators.length} detail="Lideranças cadastradas" icon="users" />
-        <StatCard label="Turmas na rede" value={getClassroomsForUser(user).length} detail="Organizadas pelos coordenadores" icon="book" />
+        <StatCard label="Turmas na rede" value={getClassroomsForUser(user, allRooms).length} detail="Organizadas pelos coordenadores" icon="book" />
         <StatCard label="Vínculos pendentes" value={pending.length} detail="Escola aguardando coordenador" icon="check" />
       </div>
       <div className="grid items-start gap-6 xl:grid-cols-[1.6fr_1fr]">

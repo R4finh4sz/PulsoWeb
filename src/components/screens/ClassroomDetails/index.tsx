@@ -1,0 +1,74 @@
+"use client";
+
+import Link from "next/link";
+import { ArrowLeft, UserRound } from "lucide-react";
+import type { UserRole } from "@/interfaces/auth";
+import { useSession } from "@/hooks/useSession";
+import { useClassroomStore } from "@/store/classroomStore";
+import { getClassroomsForUser, getSchoolsForUser, getSubjectsForUser } from "@/services/dashboard";
+import { mockUsers } from "@/mocks/platform";
+import { DashboardShell } from "@/components/screens/Dashboard/DashboardShell";
+import { DashboardPanel } from "@/components/ui/DashboardPanel";
+import { StatCard } from "@/components/ui/StatCard";
+
+export function ClassroomDetails({ id, role }: { id: string; role: Extract<UserRole, "coordenador" | "professor"> }) {
+  const user = useSession(role);
+  const allRooms = useClassroomStore((state) => state.rooms);
+  if (!user) return <p role="status" className="p-8 text-sm">Carregando turma…</p>;
+
+  const room = getClassroomsForUser(user, allRooms).find((item) => item.id === id);
+  const back = role === "coordenador" ? "/coordenador/turmas" : "/professor#classrooms";
+  const navigation = [{ label: role === "coordenador" ? "Turmas" : "Minhas turmas", href: back, icon: "book" as const }];
+  if (!room) return (
+    <DashboardShell user={user} title="Turma não encontrada" description="Esta turma não existe ou não está disponível para o seu perfil." navigation={navigation}>
+      <Link href={back} className="text-sm text-[var(--blue)]">Voltar para turmas</Link>
+    </DashboardShell>
+  );
+
+  const school = getSchoolsForUser(user, allRooms).find((item) => item.id === room.schoolId);
+  const teachers = mockUsers.filter((person) => person.role === "professor" && room.teacherIds.includes(person.id));
+  const subjects = getSubjectsForUser(user, allRooms).filter((subject) => subject.classroomId === room.id);
+
+  return (
+    <DashboardShell user={user} title={room.name} description={`${school?.name ?? "Escola"} · Ensino fundamental · ${room.period}`} navigation={navigation}>
+      <Link href={back} className="inline-flex items-center gap-2 text-sm text-[var(--blue)]"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Voltar para turmas</Link>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard label="Alunos vinculados" value={room.students} detail="Participantes da turma" icon="users" />
+        <StatCard label="Professores" value={teachers.length} detail="Educadores designados" icon="school" />
+        <StatCard label={role === "professor" ? "Minhas disciplinas" : "Disciplinas"} value={subjects.length} detail="Conteúdos vinculados à turma" icon="book" />
+      </div>
+      <div className="grid items-start gap-6 lg:grid-cols-[1fr_1.5fr]">
+        <DashboardPanel id="information" title="Informações da turma">
+          <dl className="space-y-4 text-sm">
+            <div><dt className="text-xs text-[var(--muted)]">Turma</dt><dd className="mt-1 font-medium">{room.name}</dd></div>
+            <div><dt className="text-xs text-[var(--muted)]">Escola</dt><dd className="mt-1 font-medium">{school?.name}</dd></div>
+            <div><dt className="text-xs text-[var(--muted)]">Turno</dt><dd className="mt-1 font-medium">{room.period}</dd></div>
+            <div><dt className="text-xs text-[var(--muted)]">Etapa de ensino</dt><dd className="mt-1 font-medium">Ensino fundamental</dd></div>
+          </dl>
+        </DashboardPanel>
+        <DashboardPanel id="teachers" title="Professores vinculados" description="Educadores com acesso a esta turma.">
+          {teachers.length ? <ul className="grid gap-3 sm:grid-cols-2">{teachers.map((teacher) => (
+            <li key={teacher.id} className="flex items-start gap-3 rounded-xl border border-[var(--line)] p-4">
+              <span className="rounded-lg bg-[#e8f5f8] p-2 text-[var(--blue)]"><UserRound aria-hidden="true" className="h-5 w-5" /></span>
+              <div className="min-w-0"><h3 className="text-sm font-semibold">{teacher.name}</h3><p className="mt-1 break-all text-xs text-[var(--muted)]">{teacher.email}</p></div>
+            </li>
+          ))}</ul> : <p className="rounded-xl bg-[#fff9e5] p-4 text-sm text-[#796413]">Nenhum professor vinculado a esta turma.</p>}
+        </DashboardPanel>
+      </div>
+      <DashboardPanel id="subjects" title={role === "professor" ? "Minhas disciplinas nesta turma" : "Disciplinas da turma"}>
+        {subjects.length ? <div className="grid gap-4 sm:grid-cols-2">{subjects.map((subject) => (
+          <article key={subject.id} className="rounded-xl border border-[var(--line)] p-5">
+            <h3 className="font-semibold">{subject.name}</h3>
+            <p className="mt-2 text-xs text-[var(--muted)]">Professor: {teachers.find((teacher) => teacher.id === subject.teacherId)?.name}</p>
+            <p className="mt-3 text-sm">{subject.topic}</p>
+            <p className="mt-4 text-xs text-[var(--muted)]">{subject.topics} temas · {subject.questions} questões · {subject.quizzes} quizzes</p>
+          </article>
+        ))}</div> : <p className="text-sm text-[var(--muted)]">Nenhuma disciplina disponível para este perfil nesta turma.</p>}
+      </DashboardPanel>
+      <DashboardPanel id="students" title="Alunos" description="O vínculo com a turma dá acesso aos conteúdos e atividades.">
+        <p className="text-sm">{room.students ? `${room.students} alunos vinculados. A relação nominal ainda não está disponível nesta demonstração.` : "Esta turma ainda não possui alunos vinculados."}</p>
+      </DashboardPanel>
+    </DashboardShell>
+  );
+}
+

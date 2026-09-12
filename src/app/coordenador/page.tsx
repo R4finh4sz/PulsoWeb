@@ -1,5 +1,9 @@
 "use client";
 
+
+
+
+import { useClassroomStore } from "@/store/classroomStore";
 import { useSession } from "@/hooks/useSession";
 import { getSchoolsForUser, getClassroomsForUser } from "@/services/dashboard";
 import { mockUsers } from "@/mocks/platform";
@@ -10,16 +14,17 @@ import { DashboardShell } from "@/components/screens/Dashboard/DashboardShell";
 import { ClassroomCard } from "@/components/screens/Dashboard/ClassroomCard";
 
 export default function CoordinatorHome() {
+  const allRooms = useClassroomStore((state) => state.rooms);
   const user = useSession("coordenador");
   if (!user) return <p role="status" className="p-8 text-sm">Carregando seu espaço…</p>;
-  const rooms = getClassroomsForUser(user);
-  const schools = getSchoolsForUser(user);
+  const rooms = getClassroomsForUser(user, allRooms);
+  const schools = getSchoolsForUser(user, allRooms);
   const teacherIds = new Set(rooms.flatMap((room) => room.teacherIds));
   const teachers = mockUsers.filter((person) => teacherIds.has(person.id));
   const pending = rooms.filter((room) => !room.teacherIds.length);
 
   return (
-    <DashboardShell user={user} title="Conexões que fazem aprender." description={`${schools.map((school) => school.name).join(" · ")} — acompanhe suas turmas e organize quem faz parte de cada uma.`} navigation={[{ label: "Turmas", href: "#classrooms", icon: "book" }, { label: "Alunos", href: "#students", icon: "users" }, { label: "Professores", href: "#teachers", icon: "school" }]}>
+    <DashboardShell user={user} title="Conexões que fazem aprender." description={`${schools.map((school) => school.name).join(" · ")} — acompanhe suas turmas e organize quem faz parte de cada uma.`} navigation={[{ label: "Turmas", href: "/coordenador/turmas", icon: "book" }, { label: "Alunos", href: "#students", icon: "users" }, { label: "Professores", href: "#teachers", icon: "school" }]}>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Turmas da escola" value={rooms.length} detail="Ensino fundamental" icon="book" />
         <StatCard label="Alunos vinculados" value={rooms.reduce((total, room) => total + room.students, 0)} detail="Distribuídos nas turmas" icon="users" />
