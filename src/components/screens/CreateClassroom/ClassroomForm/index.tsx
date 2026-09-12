@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
 import type { SessionUser } from "@/interfaces/auth";
-import { mockUsers } from "@/mocks/platform";
+import { useTeacherStore } from "@/store/teacherStore";
 import { useCreateClassroom } from "@/hooks/useCreateClassroom";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
@@ -13,7 +13,8 @@ import { DashboardPanel } from "@/components/ui/DashboardPanel";
 
 export function ClassroomForm({ user }: { user: SessionUser }) {
   const { values, errors, error, saving, schools, setField, handleSubmit } = useCreateClassroom(user);
-  const teachers = mockUsers.filter((person) => person.role === "professor");
+  const allTeachers = useTeacherStore((state) => state.teachers);
+  const teachers = allTeachers.filter((person) => person.role === "professor");
   const selectedTeachers = teachers.filter((person) => values.teacherIds.includes(person.id));
 
   return (

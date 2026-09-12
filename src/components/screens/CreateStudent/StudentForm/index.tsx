@@ -19,7 +19,7 @@ export function StudentForm({ user }: { user: SessionUser }) {
       <div className="space-y-6">
         <DashboardPanel id="student-data" title="Dados do aluno" description="Preencha as informações para cadastrar o aluno.">
           <div className="space-y-5">
-            <Input id="name" name="name" label="Nome" placeholder="Nome completo do aluno" autoComplete="name" maxLength={150} required value={values.name} onChange={(event) => setField("name", event.target.value)} error={errors.name} />
+            <Input id="name" name="name" label="Nome" placeholder="Nome completo do aluno" autoComplete="name" maxLength={100} required value={values.name} onChange={(event) => setField("name", event.target.value)} error={errors.name} />
             <Input id="email" name="email" type="email" label="Email" placeholder="aluno@exemplo.com" autoComplete="email" required value={values.email} onChange={(event) => setField("email", event.target.value)} error={errors.email} />
             <Input id="enrollment" name="enrollment" label="Matrícula" placeholder="Ex.: 20260001" maxLength={50} required value={values.enrollment} onChange={(event) => setField("enrollment", event.target.value)} error={errors.enrollment} />
           </div>

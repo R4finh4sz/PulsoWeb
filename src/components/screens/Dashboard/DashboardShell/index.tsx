@@ -28,11 +28,14 @@ export function DashboardShell({ user, title, description, navigation, children 
   const pathname = usePathname();
   const activeSection = useSyncExternalStore(subscribeToHash, () => window.location.hash || "#overview", () => "#overview");
   const home = homeRoutes[user.role];
-  const links = [
-    { label: "Início", href: pathname === home ? "#overview" : home, icon: "home" as const },
-    ...navigation,
-    ...(user.role === "coordenador" ? [{ label: "Criar aluno", href: "/coordenador/alunos/novo", icon: "users" as const }] : []),
-  ];
+  const sidebarNavigation = user.role === "coordenador"
+    ? [
+      ...navigation.filter((item) => item.label !== "Professores" && item.href !== "/coordenador/alunos/novo"),
+      { label: "Criar aluno", href: "/coordenador/alunos/novo", icon: "users" as const },
+      { label: "Professores", href: "/coordenador/professores", icon: "school" as const },
+    ]
+    : navigation;
+  const links = [{ label: "Início", href: pathname === home ? "#overview" : home, icon: "home" as const }, ...sidebarNavigation];
   const isActive = (href: string) => {
     if (href.startsWith("#")) return activeSection === href;
     if (href.includes("#")) return pathname + activeSection === href;
@@ -62,7 +65,7 @@ export function DashboardShell({ user, title, description, navigation, children 
 
       <div className="min-w-0">
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--line)] bg-white px-6 py-4 lg:px-10">
-          <div className="flex items-center gap-2 text-xs text-[var(--muted)]"><span className="h-2 w-2 " /></div>
+          <div className="flex items-center gap-2 text-xs text-[var(--muted)]"><span className="h-2 w-2" /></div>
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e8f5f8] text-xs font-semibold text-[var(--blue)]">{user.name.split(" ").map((part) => part[0]).slice(0, 2).join("")}</div>
             <div><p className="text-xs font-semibold">{user.name}</p><p className="text-[10px] text-[var(--muted)]">{roleLabels[user.role]}</p></div>

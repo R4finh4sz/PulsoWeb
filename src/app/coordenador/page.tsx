@@ -7,7 +7,7 @@ import { useClassroomStore } from "@/store/classroomStore";
 import { useSchoolStore } from "@/store/schoolStore";
 import { useSession } from "@/hooks/useSession";
 import { getSchoolsForUser, getClassroomsForUser } from "@/services/dashboard";
-import { mockUsers } from "@/mocks/platform";
+import { useTeacherStore } from "@/store/teacherStore";
 
 import { StatCard } from "@/components/ui/StatCard";
 import { DashboardPanel } from "@/components/ui/DashboardPanel";
@@ -16,13 +16,14 @@ import { ClassroomCard } from "@/components/screens/Dashboard/ClassroomCard";
 
 export default function CoordinatorHome() {
   const allRooms = useClassroomStore((state) => state.rooms);
+  const allTeachers = useTeacherStore((state) => state.teachers);
   const availableSchools = useSchoolStore((state) => state.schools);
   const user = useSession("coordenador");
   if (!user) return <p role="status" className="p-8 text-sm">Carregando seu espaço…</p>;
   const rooms = getClassroomsForUser(user, allRooms, availableSchools);
   const schools = getSchoolsForUser(user, allRooms, availableSchools);
   const teacherIds = new Set(rooms.flatMap((room) => room.teacherIds));
-  const teachers = mockUsers.filter((person) => teacherIds.has(person.id));
+  const teachers = allTeachers.filter((person) => teacherIds.has(person.id));
   const pending = rooms.filter((room) => !room.teacherIds.length);
 
   return (

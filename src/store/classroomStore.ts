@@ -9,6 +9,7 @@ import { createStudent } from "@/services/students";
 import type { SessionUser } from "@/interfaces/auth";
 import type { ClassroomForm } from "@/validation/Classroom.validation";
 import { useSchoolStore } from "@/store/schoolStore";
+import { useTeacherStore } from "@/store/teacherStore";
 import { classrooms } from "@/mocks/platform";
 import { addClassroomTeachers, createClassroom, removeClassroomTeacher } from "@/services/classrooms";
 
@@ -37,10 +38,10 @@ export const useClassroomStore = create<ClassroomState>()(
         rooms: removeClassroomTeacher(user, roomId, teacherId, state.rooms, useSchoolStore.getState().schools),
       })),
       addTeachers: (user, roomId, teacherIds) => set((state) => ({
-        rooms: addClassroomTeachers(user, roomId, teacherIds, state.rooms, useSchoolStore.getState().schools),
+        rooms: addClassroomTeachers(user, roomId, teacherIds, state.rooms, useSchoolStore.getState().schools, useTeacherStore.getState().teachers),
       })),
       addClassroom: (user, form) => set((state) => ({
-        rooms: [...state.rooms, createClassroom(user, form, state.rooms, useSchoolStore.getState().schools)],
+        rooms: [...state.rooms, createClassroom(user, form, state.rooms, useSchoolStore.getState().schools, useTeacherStore.getState().teachers)],
       })),
     }),
     {

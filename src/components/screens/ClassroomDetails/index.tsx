@@ -7,7 +7,7 @@ import { useSchoolStore } from "@/store/schoolStore";
 import { useSession } from "@/hooks/useSession";
 import { useClassroomStore } from "@/store/classroomStore";
 import { getClassroomsForUser, getSchoolsForUser, getSubjectsForUser } from "@/services/dashboard";
-import { mockUsers } from "@/mocks/platform";
+import { useTeacherStore } from "@/store/teacherStore";
 import { DashboardShell } from "@/components/screens/Dashboard/DashboardShell";
 import { DashboardPanel } from "@/components/ui/DashboardPanel";
 import { StatCard } from "@/components/ui/StatCard";
@@ -15,6 +15,7 @@ import { AddTeachers } from "./AddTeachers";
 import { RemoveTeacher } from "./RemoveTeacher";
 
 export function ClassroomDetails({ id, role }: { id: string; role: Extract<UserRole, "coordenador" | "professor"> }) {
+  const allTeachers = useTeacherStore((state) => state.teachers);
   const availableSchools = useSchoolStore((state) => state.schools);
   const user = useSession(role);
   const allRooms = useClassroomStore((state) => state.rooms);
@@ -30,7 +31,7 @@ export function ClassroomDetails({ id, role }: { id: string; role: Extract<UserR
   );
 
   const school = getSchoolsForUser(user, allRooms, availableSchools).find((item) => item.id === room.schoolId);
-  const teachers = mockUsers.filter((person) => person.role === "professor" && room.teacherIds.includes(person.id));
+  const teachers = allTeachers.filter((person) => person.role === "professor" && room.teacherIds.includes(person.id));
   const subjects = getSubjectsForUser(user, allRooms, availableSchools).filter((subject) => subject.classroomId === room.id);
 
   return (
@@ -65,7 +66,7 @@ export function ClassroomDetails({ id, role }: { id: string; role: Extract<UserR
         {subjects.length ? <div className="grid gap-4 sm:grid-cols-2">{subjects.map((subject) => (
           <article key={subject.id} className="rounded-xl border border-[var(--line)] p-5">
             <h3 className="font-semibold">{subject.name}</h3>
-            <p className="mt-2 text-xs text-[var(--muted)]">Professor: {mockUsers.find((teacher) => teacher.id === subject.teacherId)?.name}{!room.teacherIds.includes(subject.teacherId) && " (sem vínculo atual com a turma)"}</p>
+            <p className="mt-2 text-xs text-[var(--muted)]">Professor: {allTeachers.find((teacher) => teacher.id === subject.teacherId)?.name}{!room.teacherIds.includes(subject.teacherId) && " (sem vínculo atual com a turma)"}</p>
             <p className="mt-3 text-sm">{subject.topic}</p>
             <p className="mt-4 text-xs text-[var(--muted)]">{subject.topics} temas · {subject.questions} questões · {subject.quizzes} quizzes</p>
           </article>

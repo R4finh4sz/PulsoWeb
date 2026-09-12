@@ -12,24 +12,24 @@ export function removeClassroomTeacher(user: SessionUser, roomId: string, teache
   return rooms.map((item) => item.id === roomId ? { ...item, teacherIds: item.teacherIds.filter((id) => id !== teacherId) } : item);
 }
 
-export function addClassroomTeachers(user: SessionUser, roomId: string, teacherIds: string[], rooms: Classroom[], availableSchools: School[] = schools): Classroom[] {
+export function addClassroomTeachers(user: SessionUser, roomId: string, teacherIds: string[], rooms: Classroom[], availableSchools: School[] = schools, availableTeachers: SessionUser[] = mockUsers): Classroom[] {
   const room = rooms.find((item) => item.id === roomId);
   if (!room || user.role !== "coordenador" || !availableSchools.some((school) => school.id === room.schoolId && school.coordinatorId === user.id)) {
     throw new Error("Você só pode vincular professores às turmas sob sua coordenação.");
   }
   const ids = ClassroomSchema.shape.teacherIds.parse(teacherIds);
-  if (!ids.every((id) => mockUsers.some((person) => person.id === id && person.role === "professor"))) {
+  if (!ids.every((id) => availableTeachers.some((person) => person.id === id && person.role === "professor"))) {
     throw new Error("Selecione professores válidos.");
   }
   return rooms.map((item) => item.id === roomId ? { ...item, teacherIds: [...new Set([...item.teacherIds, ...ids])] } : item);
 }
 
-export function createClassroom(user: SessionUser, input: ClassroomForm, existing: Classroom[], availableSchools: School[] = schools): Classroom {
+export function createClassroom(user: SessionUser, input: ClassroomForm, existing: Classroom[], availableSchools: School[] = schools, availableTeachers: SessionUser[] = mockUsers): Classroom {
   const data = ClassroomSchema.parse(input);
   if (user.role !== "coordenador" || !availableSchools.some((school) => school.id === data.schoolId && school.coordinatorId === user.id)) {
     throw new Error("Você só pode criar turmas na escola sob sua coordenação.");
   }
-  if (!data.teacherIds.every((id) => mockUsers.some((person) => person.id === id && person.role === "professor"))) {
+  if (!data.teacherIds.every((id) => availableTeachers.some((person) => person.id === id && person.role === "professor"))) {
     throw new Error("Selecione um professor válido.");
   }
   const name = `${data.year}º ano ${data.identifier}`;
