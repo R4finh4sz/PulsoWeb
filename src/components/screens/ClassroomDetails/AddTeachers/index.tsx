@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type SyntheticEvent } from "react";
 import { Plus } from "lucide-react";
 import type { SessionUser } from "@/interfaces/auth";
 import type { Classroom } from "@/interfaces/classroom";
@@ -18,7 +18,7 @@ export function AddTeachers({ user, room }: { user: SessionUser; room: Classroom
   const allTeachers = useTeacherStore((state) => state.teachers);
   const available = allTeachers.filter((person) => person.role === "professor" && !room.teacherIds.includes(person.id));
 
-  function save(event: FormEvent<HTMLFormElement>) {
+  function save(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selected.length) {
       setError("Selecione pelo menos um professor.");

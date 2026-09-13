@@ -1,27 +1,23 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
-import type { SessionUser } from "@/interfaces/auth";
+import { useRef, useState, type SyntheticEvent } from "react";
 import { SchoolSchema, type SchoolForm } from "@/validation/School.validation";
-import { useSchoolStore } from "@/store/schoolStore";
+import { schoolsApi } from "@/integrations/schools/api";
+import { useFeedbackStore } from "@/store/feedbackStore";
 
-export function useCreateSchool(user: SessionUser) {
-  const router = useRouter();
-  const [values, setValues] = useState<SchoolForm>({ name: "", cnpj: "", street: "", state: "", city: "", coordinatorId: "" });
+export function useCreateSchool() {
+  const [values, setValues] = useState<SchoolForm>({ name: "", cnpj: "", street: "", neighborhood: "", state: "", city: "" });
   const [errors, setErrors] = useState<Partial<Record<keyof SchoolForm, string>>>({});
-  const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const submitted = useRef(false);
-  const addSchool = useSchoolStore((state) => state.addSchool);
+  const showFeedback = useFeedbackStore((state) => state.showFeedback);
 
   function setField(field: keyof SchoolForm, value: string) {
     setValues((previous) => ({ ...previous, [field]: value }));
     setErrors((previous) => ({ ...previous, [field]: undefined }));
-    setError("");
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitted.current) return;
     const parsed = SchoolSchema.safeParse(values);
@@ -36,14 +32,21 @@ export function useCreateSchool(user: SessionUser) {
     submitted.current = true;
     setSaving(true);
     try {
-      addSchool(user, parsed.data);
-      router.push("/admin#schools");
+      await schoolsApi.create({
+        nome: parsed.data.name,
+        cnpj: parsed.data.cnpj,
+        logradouro: parsed.data.street,
+        bairro: parsed.data.neighborhood,
+        cidade: parsed.data.city,
+      });
+      showFeedback({ type: "success", message: "Escola cadastrada com sucesso." });
+      setSaving(false);
     } catch (cause) {
       submitted.current = false;
       setSaving(false);
-      setError(cause instanceof Error ? cause.message : "Não foi possível criar a escola.");
+      showFeedback({ type: "error", message: cause instanceof Error ? cause.message : "Não foi possível criar a escola." });
     }
   }
-  return { values, errors, error, saving, setField, handleSubmit };
+  return { values, errors, saving, setField, handleSubmit };
 }
 

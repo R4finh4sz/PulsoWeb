@@ -11,14 +11,14 @@ import { createSchool } from "@/services/schools";
 
 type SchoolState = {
   schools: School[];
-  addSchool: (user: SessionUser, form: SchoolForm) => void;
+  addSchool: (user: SessionUser, form: SchoolForm, coordinators?: { id: string; role: string }[]) => void;
 };
 
 export const useSchoolStore = create<SchoolState>()(
   persist(
     (set) => ({
       schools,
-      addSchool: (user, form) => set((state) => ({ schools: [...state.schools, createSchool(user, form, state.schools, useCoordinatorStore.getState().coordinators)] })),
+      addSchool: (user, form, coordinators) => set((state) => ({ schools: [...state.schools, createSchool(user, form, state.schools, coordinators ?? useCoordinatorStore.getState().coordinators)] })),
     }),
     {
       name: "pulso-demo-schools",

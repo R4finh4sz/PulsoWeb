@@ -6,7 +6,7 @@ import { useLoginForm } from "@/hooks/useLoginForm";
 import { LoginAction } from "../LoginAction";
 
 export function LoginFields() {
-  const { values, errors, error, setField, handleSubmit } = useLoginForm();
+  const { values, errors, error, saving, setField, handleSubmit } = useLoginForm();
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-6">
@@ -16,7 +16,7 @@ export function LoginFields() {
         <LoginAction />
       </div>
       {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-      <Button type="submit" className="mt-4">Continuar</Button>
+      <Button type="submit" disabled={saving} className="mt-4">{saving ? "Entrando…" : "Continuar"}</Button>
     </form>
   );
 }

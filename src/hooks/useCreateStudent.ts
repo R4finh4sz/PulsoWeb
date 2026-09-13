@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type SyntheticEvent } from "react";
 import { useSchoolStore } from "@/store/schoolStore";
 import { useRouter } from "next/navigation";
 import type { SessionUser } from "@/interfaces/auth";
@@ -26,7 +26,7 @@ export function useCreateStudent(user: SessionUser) {
     setError("");
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitted.current) return;
     const parsed = StudentSchema.safeParse(values);

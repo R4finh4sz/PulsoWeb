@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type SyntheticEvent } from "react";
 import { useSchoolStore } from "@/store/schoolStore";
 import { useRouter } from "next/navigation";
 import type { SessionUser } from "@/interfaces/auth";
 import { ClassroomSchema, type ClassroomForm } from "@/validation/Classroom.validation";
-import { useClassroomStore } from "@/store/classroomStore";
 import { getSchoolsForUser } from "@/services/dashboard";
+import { classroomsApi } from "@/integrations/classrooms/api";
+import { useApiMutation } from "@/integrations/useApiMutation";
 
 export function useCreateClassroom(user: SessionUser) {
   const router = useRouter();
@@ -14,10 +15,13 @@ export function useCreateClassroom(user: SessionUser) {
   const schools = getSchoolsForUser(user, undefined, availableSchools);
   const [values, setValues] = useState<ClassroomForm>({ year: "", identifier: "", schoolId: schools[0]?.id ?? "", teacherIds: [], period: "Manhã" });
   const [errors, setErrors] = useState<Partial<Record<keyof ClassroomForm, string>>>({});
-  const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const submitted = useRef(false);
-  const addClassroom = useClassroomStore((state) => state.addClassroom);
+  const mutation = useApiMutation(async (input: ClassroomForm) => {
+    const room = await classroomsApi.create({ name: `${input.year}º ano · ${input.period}`, identifier: input.identifier });
+    for (const teacherId of input.teacherIds) await classroomsApi.assign(room.id, Number(teacherId));
+    return room;
+  });
 
   function setField<K extends keyof ClassroomForm>(field: K, value: ClassroomForm[K]) {
     setValues((current) => ({ ...current, [field]: value }));
@@ -25,7 +29,7 @@ export function useCreateClassroom(user: SessionUser) {
     setError("");
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitted.current) return;
     const parsed = ClassroomSchema.safeParse(values);
@@ -40,18 +44,16 @@ export function useCreateClassroom(user: SessionUser) {
       return;
     }
     setErrors({});
-    setError("");
     submitted.current = true;
     setSaving(true);
     try {
-      addClassroom(user, parsed.data);
+      await mutation.mutateAsync(parsed.data);
       router.push("/coordenador/turmas");
-    } catch (cause) {
+    } catch {
       submitted.current = false;
       setSaving(false);
-      setError(cause instanceof Error ? cause.message : "Não foi possível criar a turma.");
     }
   }
 
-  return { values, errors, error, saving, schools, setField, handleSubmit };
+  return { values, errors, saving, schools, setField, handleSubmit };
 }

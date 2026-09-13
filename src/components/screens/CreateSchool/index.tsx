@@ -10,9 +10,9 @@ export function CreateSchool() {
   const user = useSession("admin");
   if (!user) return <p role="status" className="p-8 text-sm">Carregando seu espaço…</p>;
   return (
-    <DashboardShell user={user} title="Uma nova escola na sua rede." description="Cadastre os dados da instituição para começar." navigation={[{ label: "Escolas", href: "/admin/escolas/nova", icon: "school" }, { label: "Coordenadores", href: "/admin/coordenadores/novo", icon: "users" }, { label: "Vínculos pendentes", href: "/admin#pending", icon: "check" }]}>
+    <DashboardShell user={user} title="Uma nova escola na sua rede." description="Cadastre os dados da instituição para começar." navigation={[{ label: "Escolas", href: "/admin/escolas/nova", icon: "school" }, { label: "Coordenadores", href: "/admin/coordenadores", icon: "users" }, { label: "Vínculos pendentes", href: "/admin#pending", icon: "check" }]}>
       <Link href="/admin#schools" className="inline-flex items-center gap-2 text-sm text-[var(--blue)]"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Voltar para escolas</Link>
-      <SchoolForm user={user} />
+      <SchoolForm />
     </DashboardShell>
   );
 }

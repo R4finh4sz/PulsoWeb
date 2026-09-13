@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type SyntheticEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { SessionUser } from "@/interfaces/auth";
 import { TeacherSchema, type TeacherForm } from "@/validation/Teacher.validation";
@@ -21,7 +21,7 @@ export function useCreateTeacher(user: SessionUser) {
     setError("");
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitted.current) return;
     const parsed = TeacherSchema.safeParse(values);
