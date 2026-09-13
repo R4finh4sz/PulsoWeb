@@ -29,7 +29,7 @@ export function StudentForm({ user }: { user: SessionUser }) {
             <option value="">Selecione a turma</option>
             {rooms.map((room) => <option key={room.id} value={room.id}>{room.name} · {room.period} · {schools.find((school) => school.id === room.schoolId)?.name}</option>)}
           </Select>
-          {!rooms.length && <p role="status" className="mt-4 text-sm text-[var(--muted)]">Nenhuma turma disponível. <Link href="/coordenador/turmas/nova" className="text-[var(--blue)] underline">Crie uma turma</Link> para cadastrar alunos.</p>}
+          {!rooms.length && <p role="status" className="mt-3 text-sm text-[var(--muted)]">Nenhuma turma disponível. <Link href="/coordenador/turmas/nova" className="text-[var(--blue)] underline">Crie uma turma</Link> para cadastrar alunos.</p>}
         </DashboardPanel>
         {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</p>}
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

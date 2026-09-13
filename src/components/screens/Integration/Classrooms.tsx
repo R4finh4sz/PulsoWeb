@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useState, type SyntheticEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useClassrooms, useClassroom } from "@/integrations/classrooms/hooks";
 import { classroomsApi } from "@/integrations/classrooms/api";
@@ -11,23 +11,34 @@ import type { Classroom, CreateClassroom, User } from "@/integrations/types";
 import type { SessionUser, UserRole } from "@/interfaces/auth";
 import { Protected, Workspace, ErrorMessage, actionClass, fieldClass } from "./shared";
 import { UsersHome } from "./Users";
+import { StatCard } from "@/components/ui/StatCard";
 const base = (role: UserRole) => "/" + role;
 export function ClassroomList({ user }: { user: SessionUser }) {
   const query = useClassrooms();
   return <section className="space-y-4 rounded-xl bg-white p-6">
     <h2 className="text-lg font-semibold">Turmas</h2>
-    {(user.role === "coordenador" || user.role === "admin") && <Link className={actionClass} href={base(user.role) + "/turmas/nova"}>Criar turma</Link>}
+    {(user.role === "coordenador" || user.role === "admin") && <div className="pt-1"><Link className={actionClass} href={base(user.role) + "/turmas/nova"}>Criar turma</Link></div>}
     {query.isPending && <p role="status">Carregando turmas…</p>}<ErrorMessage error={query.error} />
-    {query.data && !query.data.length && <p>Nenhuma turma disponível.</p>}
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{query.data?.map(room => <Link key={room.id}
+    {query.data && !query.data.length && <p className="mt-2">Nenhuma turma disponível.</p>}
+    <div className="grid gap-4 pt-2 md:grid-cols-2 xl:grid-cols-3">{query.data?.map(room => <Link key={room.id}
       href={base(user.role) + "/turmas/" + room.id} className="rounded-xl border border-[var(--line)] p-5 hover:border-[var(--blue)]">
       <h3 className="font-semibold">{room.name} · {room.identifier}</h3><p className="mt-2 text-sm">{room.teacherIds.length} professores vinculados</p>
     </Link>)}</div>
   </section>;
 }
+function CoordinatorDashboard() {
+  const teachers = useUsers("teachers", { page: 0, size: 1 });
+  const students = useUsers("students", { page: 0, size: 1 });
+  return <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <StatCard label="Professores criados" value={teachers.data?.totalElements ?? "--"} detail="Cadastros disponíveis" icon="users" />
+    <StatCard label="Quizzes criados" value="--" detail="Integração pendente" icon="help" />
+    <StatCard label="Quizzes respondidos" value="--" detail="Integração pendente" icon="chart" />
+    <StatCard label="Alunos cadastrados" value={students.data?.totalElements ?? "--"} detail="Cadastros disponíveis" icon="users" />
+  </div>;
+}
 export function HomePage({ role }: { role: UserRole }) {
   return <Protected role={role}>{user => <Workspace user={user} title="Visão geral">
-    <ClassroomList user={user} /><UsersHome user={user} />
+    {user.role === "coordenador" && <CoordinatorDashboard />}<ClassroomList user={user} /><UsersHome user={user} />
   </Workspace>}</Protected>;
 }
 export function ClassroomsPage({ role }: { role: UserRole }) {
@@ -36,7 +47,7 @@ export function ClassroomsPage({ role }: { role: UserRole }) {
 function ClassroomForm({ existing, onCreated }: { existing?: Classroom; onCreated?: (room: Classroom) => void }) {
   const [success, setSuccess] = useState(false);
   const mutation = useApiMutation((body: CreateClassroom) => existing ? classroomsApi.update(existing.id, body) : classroomsApi.create(body));
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault(); if (mutation.isPending) return;
     const form = event.currentTarget; const data = new FormData(form); setSuccess(false);
     try {

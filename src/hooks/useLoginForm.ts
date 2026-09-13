@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, type FormEvent } from "react";
+import { useState, useRef, type SyntheticEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useLogin } from "@/integrations/auth/hooks";
 import { toSessionUser } from "@/integrations/auth/session";
@@ -16,7 +16,7 @@ export function useLoginForm() {
     setValues(current => ({ ...current, [field]: value }));
     setErrors(current => ({ ...current, [field]: undefined })); setError("");
   }
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitted.current) return;
     setError("");

@@ -1,2 +1,7 @@
-import { HomePage } from "@/components/screens/Integration/Classrooms";
-export default function Page() { return <HomePage role="admin" />; }
+"use client";
+
+import { AdminDashboard } from "@/components/screens/AdminDashboard";
+
+export default function AdminHome() {
+  return <AdminDashboard />;
+}

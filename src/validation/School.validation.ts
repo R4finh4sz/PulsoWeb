@@ -26,10 +26,10 @@ export function isValidCnpj(value: string) {
 }
 
 export const SchoolSchema = z.object({
-  coordinatorId: z.string().min(1, "Selecione um coordenador."),
   name: z.string().trim().min(2, "Informe o nome da escola.").max(150, "Use até 150 caracteres."),
   cnpj: z.string().transform(normalizeCnpj).refine(isValidCnpj, "Informe um CNPJ válido."),
   street: z.string().trim().min(3, "Informe o logradouro.").max(200, "Use até 200 caracteres."),
+  neighborhood: z.string().trim().min(2, "Informe o bairro.").max(100, "Use até 100 caracteres."),
   state: z.string().refine((value) => states.some((state) => state === value), "Selecione um estado."),
   city: z.string().trim().min(2, "Informe a cidade.").max(100, "Use até 100 caracteres."),
 });

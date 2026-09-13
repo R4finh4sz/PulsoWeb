@@ -1,6 +1,6 @@
 export type Role = "ADMIN" | "PEDAGOGICAL_COORDINATOR" | "TEACHER" | "STUDENT";
-export type User = { id: number; fullName: string; ra: string; email: string; role: Role; classroomId: number | null };
-export type CreateUser = Pick<User, "fullName" | "ra" | "email">;
+export type User = { id: number; fullName: string; ra: string; email: string; role: Role; classroomId: number | null; schoolId?: number | null };
+export type CreateUser = Pick<User, "fullName" | "ra" | "email"> & { schoolId?: number };
 export type UserPage = { content: User[]; page: number; size: number; totalElements: number; totalPages: number };
 export type UserFilters = { q?: string; page?: number; size?: number; classroomId?: number; unassigned?: boolean };
 export type UserResource = "students" | "teachers" | "coordinators";

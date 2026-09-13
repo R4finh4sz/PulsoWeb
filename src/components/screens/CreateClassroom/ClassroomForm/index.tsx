@@ -12,7 +12,7 @@ import Button from "@/components/ui/Button";
 import { DashboardPanel } from "@/components/ui/DashboardPanel";
 
 export function ClassroomForm({ user }: { user: SessionUser }) {
-  const { values, errors, error, saving, schools, setField, handleSubmit } = useCreateClassroom(user);
+  const { values, errors, saving, schools, setField, handleSubmit } = useCreateClassroom(user);
   const allTeachers = useTeacherStore((state) => state.teachers);
   const teachers = allTeachers.filter((person) => person.role === "professor");
   const selectedTeachers = teachers.filter((person) => values.teacherIds.includes(person.id));
@@ -48,7 +48,6 @@ export function ClassroomForm({ user }: { user: SessionUser }) {
             error={errors.teacherIds}
           />
         </DashboardPanel>
-        {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</p>}
         {!schools.length && <p role="alert" className="text-sm text-red-700">Você precisa estar vinculado a uma escola para criar turmas.</p>}
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Link href="/coordenador/turmas" className="rounded-md border border-[var(--line)] px-6 py-3 text-center text-sm">Cancelar</Link>

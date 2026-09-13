@@ -2,19 +2,15 @@
 
 import Link from "next/link";
 import { School } from "lucide-react";
-import type { SessionUser } from "@/interfaces/auth";
 import { useCreateSchool } from "@/hooks/useCreateSchool";
 import { states } from "@/validation/School.validation";
-import { useCoordinatorStore } from "@/store/coordinatorStore";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Button from "@/components/ui/Button";
 import { DashboardPanel } from "@/components/ui/DashboardPanel";
 
-export function SchoolForm({ user }: { user: SessionUser }) {
-  const { values, errors, error, saving, setField, handleSubmit } = useCreateSchool(user);
-  const coordinators = useCoordinatorStore((state) => state.coordinators);
-  const coordinator = coordinators.find((person) => person.id === values.coordinatorId);
+export function SchoolForm() {
+  const { values, errors, saving, setField, handleSubmit } = useCreateSchool();
   return (
     <form onSubmit={handleSubmit} noValidate className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
       <div className="space-y-6">
@@ -27,6 +23,7 @@ export function SchoolForm({ user }: { user: SessionUser }) {
         <DashboardPanel id="address" title="Endereço" description="Informe onde a escola está localizada.">
           <div className="space-y-5">
             <Input id="street" name="street" label="Logradouro" placeholder="Rua, avenida ou outro logradouro" autoComplete="street-address" required maxLength={200} value={values.street} onChange={(event) => setField("street", event.target.value)} error={errors.street} />
+            <Input id="neighborhood" name="neighborhood" label="Bairro" placeholder="Nome do bairro" autoComplete="address-level2" required maxLength={100} value={values.neighborhood} onChange={(event) => setField("neighborhood", event.target.value)} error={errors.neighborhood} />
             <div className="grid gap-5 sm:grid-cols-[150px_1fr]">
               <Select id="state" name="state" label="Estado" autoComplete="address-level1" required value={values.state} onChange={(event) => setField("state", event.target.value)} error={errors.state}>
                 <option value="">Selecione</option>
@@ -36,14 +33,7 @@ export function SchoolForm({ user }: { user: SessionUser }) {
             </div>
           </div>
         </DashboardPanel>
-        <DashboardPanel id="coordination" title="Coordenador da escola" description="Selecione um único coordenador responsável pela instituição.">
-          <Select id="coordinatorId" name="coordinatorId" label="Coordenador" required value={values.coordinatorId} onChange={(event) => setField("coordinatorId", event.target.value)} error={errors.coordinatorId}>
-            <option value="">Selecione um coordenador</option>
-            {coordinators.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}
-          </Select>
-          {coordinator && <div className="mt-4 rounded-xl bg-[#e8f5f8] p-4"><p className="text-sm font-semibold">{coordinator.name}</p><p className="mt-1 text-xs text-[var(--muted)]">{coordinator.registration ? "Matrícula: " + coordinator.registration : coordinator.email}</p></div>}
-        </DashboardPanel>
-        {error && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</p>}
+      
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Link href="/admin#schools" className="rounded-lg border border-[var(--line)] px-6 py-3 text-center text-sm">Cancelar</Link>
           <Button type="submit" disabled={saving} className="sm:w-auto sm:px-8">{saving ? "Salvando…" : "Criar escola"}</Button>
@@ -58,7 +48,7 @@ export function SchoolForm({ user }: { user: SessionUser }) {
           <p className="break-words">{values.street || "Logradouro a informar"}</p>
           <p>{[values.city, values.state].filter(Boolean).join(" · ") || "Cidade e estado"}</p>
         </div>
-        <p className="mt-5 rounded-xl bg-[#e8f5f8] p-3 text-xs leading-5">Coordenação: {coordinator?.name ?? "Selecione o responsável"}</p>
+        <p className="mt-5 rounded-xl bg-[#e8f5f8] p-3 text-xs leading-5">Coordenação: --</p>
       </aside>
     </form>
   );

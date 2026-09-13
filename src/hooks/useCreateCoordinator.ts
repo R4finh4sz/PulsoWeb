@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type SyntheticEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { SessionUser } from "@/interfaces/auth";
 import { CoordinatorSchema, type CoordinatorForm } from "@/validation/Coordinator.validation";
@@ -21,7 +21,7 @@ export function useCreateCoordinator(user: SessionUser) {
     setError("");
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitted.current) return;
     const parsed = CoordinatorSchema.safeParse(values);
