@@ -1,25 +1,17 @@
 "use client";
-
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useLoginStore } from "@/store/loginStore";
 import { homeRoutes, type UserRole } from "@/interfaces/auth";
-import { mockUsers } from "@/mocks/platform";
-
-const subscribe = () => () => {};
-
+import { useMe } from "@/integrations/auth/hooks";
+import { toSessionUser } from "@/integrations/auth/session";
 export function useSession(role: UserRole) {
   const router = useRouter();
-  const hydrated = useSyncExternalStore(subscribe, () => true, () => false);
-  const storedUser = useLoginStore((state) => state.user);
-  const user = hydrated ? mockUsers.find((account) => account.id === storedUser?.id) ?? null : null;
-
+  const session = useMe();
+  const user = session.data ? toSessionUser(session.data) : null;
   useEffect(() => {
-    if (!hydrated) return;
+    if (session.isPending || session.isError) return;
     if (!user) router.replace("/");
     else if (user.role !== role) router.replace(homeRoutes[user.role]);
-  }, [hydrated, user, role, router]);
-
+  }, [session.isPending, session.isError, user, role, router]);
   return user?.role === role ? user : null;
 }
-

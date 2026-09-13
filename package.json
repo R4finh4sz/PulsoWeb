@@ -7,10 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:api": "node --test scripts/check-api.mjs",
     "test:mock": "node --test scripts/check-mock.cjs"
   },
   "dependencies": {
     "@fontsource/poppins": "^5.3.0",
+    "@tanstack/react-query": "5",
     "lucide-react": "^1.45.0",
     "next": "16.3.5",
     "react": "19.2.8",

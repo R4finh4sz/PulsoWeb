@@ -1,53 +1,40 @@
 "use client";
-
-import { useState, type FormEvent } from "react";
+import { useState, useRef, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { useLoginStore } from "@/store/loginStore";
-import { authService } from "@/services/auth";
+import { useLogin } from "@/integrations/auth/hooks";
+import { toSessionUser } from "@/integrations/auth/session";
 import { homeRoutes } from "@/interfaces/auth";
 import { LoginSchema, type LoginErrors, type LoginForm } from "@/validation/Login.validation";
-
 export function useLoginForm() {
   const router = useRouter();
+  const login = useLogin();
+  const submitted = useRef(false);
   const [values, setValues] = useState<LoginForm>({ email: "", password: "" });
   const [errors, setErrors] = useState<LoginErrors>({});
   const [error, setError] = useState("");
-  const setUser = useLoginStore((state) => state.setUser);
-
   function setField(field: keyof LoginForm, value: string) {
-    setValues((current) => ({ ...current, [field]: value }));
-    setErrors((current) => ({ ...current, [field]: undefined }));
-    setError("");
+    setValues(current => ({ ...current, [field]: value }));
+    setErrors(current => ({ ...current, [field]: undefined })); setError("");
   }
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitted.current) return;
     setError("");
-    const result = LoginSchema.safeParse(values);
-
-    if (!result.success) {
-      const nextErrors: LoginErrors = {};
-      for (const issue of result.error.issues) {
-        const field = issue.path[0];
-        if ((field === "email" || field === "password") && !nextErrors[field]) {
-          nextErrors[field] = issue.message;
-        }
+    const parsed = LoginSchema.safeParse(values);
+    if (!parsed.success) {
+      const next: LoginErrors = {};
+      for (const issue of parsed.error.issues) {
+        const key = issue.path[0]; if (key === "email" || key === "password") next[key] ??= issue.message;
       }
-      setErrors(nextErrors);
-      const firstField = nextErrors.email ? "email" : "password";
-      event.currentTarget.querySelector<HTMLInputElement>(`[name="${firstField}"]`)?.focus();
-      return;
+      setErrors(next); return;
     }
-
-    setErrors({});
+    setErrors({}); submitted.current = true;
     try {
-      const user = authService.login(result.data);
-      setUser(user);
-      router.replace(homeRoutes[user.role]);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Não foi possível entrar.");
-    }
+      const user = await login.mutateAsync(parsed.data);
+      setValues(current => ({ ...current, password: "" }));
+      router.replace(homeRoutes[toSessionUser(user).role]);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Não foi possível entrar."); }
+    finally { submitted.current = false; }
   }
-
-  return { values, errors, error, setField, handleSubmit };
+  return { values, errors, error, saving: login.isPending, setField, handleSubmit };
 }

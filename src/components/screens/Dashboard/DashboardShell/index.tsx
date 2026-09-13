@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useSyncExternalStore, type ReactNode } from "react";
 import logo from "@/assets/images/LogoImageWhite.png";
 import { homeRoutes, roleLabels, type SessionUser } from "@/interfaces/auth";
-import { useLoginStore } from "@/store/loginStore";
+import { useLogout } from "@/integrations/auth/hooks";
 import { DashboardIcon, type IconName } from "@/components/ui/DashboardIcon";
 
 type Props = {
@@ -23,7 +23,7 @@ const subscribeToHash = (callback: () => void) => {
 };
 
 export function DashboardShell({ user, title, description, navigation, children }: Props) {
-  const logout = useLoginStore((state) => state.logout);
+  const logout = useLogout();
   const router = useRouter();
   const pathname = usePathname();
   const activeSection = useSyncExternalStore(subscribeToHash, () => window.location.hash || "#overview", () => "#overview");
@@ -69,12 +69,12 @@ export function DashboardShell({ user, title, description, navigation, children 
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e8f5f8] text-xs font-semibold text-[var(--blue)]">{user.name.split(" ").map((part) => part[0]).slice(0, 2).join("")}</div>
             <div><p className="text-xs font-semibold">{user.name}</p><p className="text-[10px] text-[var(--muted)]">{roleLabels[user.role]}</p></div>
-            <button type="button" onClick={() => { logout(); router.replace("/"); }} className="ml-2 flex items-center gap-2 rounded-lg border border-[var(--line)] px-3 py-2 text-xs hover:bg-slate-50"><DashboardIcon name="logout" className="h-4 w-4" />Sair</button>
+            <button type="button" disabled={logout.isPending} onClick={() => { logout.mutate(undefined, { onSuccess: () => router.replace("/") }); }} className="ml-2 flex items-center gap-2 rounded-lg border border-[var(--line)] px-3 py-2 text-xs hover:bg-slate-50"><DashboardIcon name="logout" className="h-4 w-4" />Sair</button>
           </div>
         </header>
         <main id="overview" className="mx-auto max-w-[1440px] space-y-7 px-5 py-8 sm:px-8 lg:px-10">
           <div><p className="text-xs font-medium text-[var(--blue)]">INÍCIO / VISÃO GERAL</p><h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">{description}</p></div>
-          {children}
+          {logout.error && <p role="alert" className="text-sm text-red-700">{logout.error.message}</p>}{children}
         </main>
       </div>
     </div>
