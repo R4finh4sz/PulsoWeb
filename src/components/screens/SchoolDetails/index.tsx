@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowLeft, UserRound } from "lucide-react";
-import { useSession } from "@/hooks/useSession";
-import { useSchools } from "@/integrations/schools/hooks";
 import { DashboardShell } from "@/components/screens/Dashboard/DashboardShell";
 import { DashboardPanel } from "@/components/ui/DashboardPanel";
+import { useSession } from "@/hooks/useSession";
+import { useSchools } from "@/integrations/schools/hooks";
+import { ArrowLeft, UserRound } from "lucide-react";
+import Link from "next/link";
 
 export function SchoolDetails({ id }: { id: string }) {
   const user = useSession("admin");

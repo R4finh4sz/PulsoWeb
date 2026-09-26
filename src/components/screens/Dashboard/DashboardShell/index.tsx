@@ -34,7 +34,8 @@ export function DashboardShell({ user, title, description, navigation, children 
       { label: "Criar aluno", href: "/coordenador/alunos/novo", icon: "users" as const },
       { label: "Professores", href: "/coordenador/professores", icon: "school" as const },
     ]
-    : navigation;
+    : [...navigation];
+  sidebarNavigation.push({ label: "Termos de uso", href: `${home}/termos`, icon: "book" });
   const links = [{ label: "Início", href: pathname === home ? "#overview" : home, icon: "home" as const }, ...sidebarNavigation];
   const isActive = (href: string) => {
     if (href.startsWith("#")) return activeSection === href;

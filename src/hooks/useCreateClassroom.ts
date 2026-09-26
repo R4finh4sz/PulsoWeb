@@ -26,7 +26,7 @@ export function useCreateClassroom(user: SessionUser) {
   function setField<K extends keyof ClassroomForm>(field: K, value: ClassroomForm[K]) {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
-    setError("");
+    mutation.reset();
   }
 
   async function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {

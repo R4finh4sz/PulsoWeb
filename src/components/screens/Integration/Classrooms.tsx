@@ -1,17 +1,17 @@
 "use client";
+import { StatCard } from "@/components/ui/StatCard";
+import { classroomsApi } from "@/integrations/classrooms/api";
+import { useClassroom, useClassrooms } from "@/integrations/classrooms/hooks";
+import { subjectsApi } from "@/integrations/subjects/api";
+import type { Classroom, CreateClassroom, User } from "@/integrations/types";
+import { useApiMutation } from "@/integrations/useApiMutation";
+import { useUsers } from "@/integrations/users/hooks";
+import type { SessionUser, UserRole } from "@/interfaces/auth";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState, type SyntheticEvent } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useClassrooms, useClassroom } from "@/integrations/classrooms/hooks";
-import { classroomsApi } from "@/integrations/classrooms/api";
-import { subjectsApi } from "@/integrations/subjects/api";
-import { useUsers } from "@/integrations/users/hooks";
-import { useApiMutation } from "@/integrations/useApiMutation";
-import type { Classroom, CreateClassroom, User } from "@/integrations/types";
-import type { SessionUser, UserRole } from "@/interfaces/auth";
-import { Protected, Workspace, ErrorMessage, actionClass, fieldClass } from "./shared";
+import { ErrorMessage, Protected, Workspace, actionClass, fieldClass } from "./shared";
 import { UsersHome } from "./Users";
-import { StatCard } from "@/components/ui/StatCard";
 const base = (role: UserRole) => "/" + role;
 export function ClassroomList({ user }: { user: SessionUser }) {
   const query = useClassrooms();
@@ -95,8 +95,10 @@ function Assignment({ room, resource }: { room: Classroom; resource: "students" 
   </form>;
 }
 function Roster({ room, resource, manager }: { room: Classroom; resource: "students" | "teachers"; manager: boolean }) {
-  const query = useQuery({ queryKey: ["classrooms", room.id, resource],
-    queryFn: ({ signal }) => resource === "students" ? classroomsApi.students(room.id, signal) : classroomsApi.teachers(room.id, signal) });
+  const query = useQuery({
+    queryKey: ["classrooms", room.id, resource],
+    queryFn: ({ signal }) => resource === "students" ? classroomsApi.students(room.id, signal) : classroomsApi.teachers(room.id, signal)
+  });
   const mutation = useApiMutation((person: User) => resource === "students" ? classroomsApi.unenroll(room.id, person.id) : classroomsApi.unassign(room.id, person.id));
   return <section className="space-y-4 rounded-xl bg-white p-6">
     <h2 className="text-lg font-semibold">{resource === "students" ? "Alunos" : "Professores"} vinculados</h2>

@@ -1,10 +1,11 @@
 import { API_BASE_URL } from "./config";
+import { useAuthState } from "@/integrations/auth/state";
 export class ApiError extends Error {
   constructor(public status: number, message: string, public errors: string[] = []) { super(message); this.name = "ApiError"; }
 }
 type Options = Omit<RequestInit, "body"> & { body?: unknown };
 async function send<T>(path: string, options: RequestInit): Promise<T> {
-  const response = await fetch(API_BASE_URL + path, { ...options, credentials: "include", cache: "no-store" });
+  const response = await fetch(API_BASE_URL + path, { ...options, credentials: "omit", cache: "no-store" });
   if (!response.ok) {
     const problem = await response.json().catch(() => null);
     throw new ApiError(response.status, problem?.detail || (response.status === 401
@@ -19,12 +20,18 @@ export async function apiRequest<T>(path: string, { body, ...options }: Options 
   const headers = new Headers(options.headers);
   headers.set("Accept", "application/json");
   if (body !== undefined) headers.set("Content-Type", "application/json");
-  if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
-    // A fresh token also handles rotation after login/logout and in other tabs.
-    const csrf = await send<{ headerName: string; token: string }>("/csrf", { signal: options.signal });
-    headers.set(csrf.headerName, csrf.token);
+  const session = useAuthState.getState().session;
+  if (session && path !== "/auth/login") headers.set("Authorization", `Bearer ${session.accessToken}`);
+  try {
+    const result = await send<T>(path, { ...options, method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+    if (session !== useAuthState.getState().session && session?.accessToken !== useAuthState.getState().session?.accessToken) {
+      throw new DOMException("Sessão alterada durante a solicitação.", "AbortError");
+    }
+    return result;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401 && session?.accessToken === useAuthState.getState().session?.accessToken) useAuthState.getState().setSession(null);
+    throw error;
   }
-  return send<T>(path, { ...options, method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
 }
 export function queryString(params: object = {}) {
   const search = new URLSearchParams();
