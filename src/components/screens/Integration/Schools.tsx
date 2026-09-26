@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { useSchools } from "@/integrations/schools/hooks";
-import { Protected, Workspace, ErrorMessage, EmptyState, actionClass } from "./shared";
 import { StatCard } from "@/components/ui/StatCard";
+import { useSchools } from "@/integrations/schools/hooks";
+import Link from "next/link";
+import { EmptyState, ErrorMessage, Protected, Workspace, actionClass } from "./shared";
 
 export function SchoolsPage() {
   const query = useSchools();

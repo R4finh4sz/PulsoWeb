@@ -2,8 +2,6 @@
 import { useState, useRef, type SyntheticEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useLogin } from "@/integrations/auth/hooks";
-import { toSessionUser } from "@/integrations/auth/session";
-import { homeRoutes } from "@/interfaces/auth";
 import { LoginSchema, type LoginErrors, type LoginForm } from "@/validation/Login.validation";
 export function useLoginForm() {
   const router = useRouter();
@@ -30,9 +28,9 @@ export function useLoginForm() {
     }
     setErrors({}); submitted.current = true;
     try {
-      const user = await login.mutateAsync(parsed.data);
+      await login.mutateAsync(parsed.data);
       setValues(current => ({ ...current, password: "" }));
-      router.replace(homeRoutes[toSessionUser(user).role]);
+      router.replace("/");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Não foi possível entrar."); }
     finally { submitted.current = false; }
   }

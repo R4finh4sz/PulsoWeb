@@ -6,37 +6,60 @@ Frontend Next.js integrado ao PulsoBackend com TanStack Query.
 
 1. Instale com `yarn install`.
 2. Copie `.env.example` para `.env.local` e ajuste `API_BACKEND_URL`.
-3. Inicie o backend com as rotas de login por sessão disponíveis.
+3. Inicie o backend com autenticação JWT e envio de e-mail configurado.
 4. Execute `yarn dev` e abra http://localhost:3000.
 
 O navegador usa `NEXT_PUBLIC_API_BASE_URL=/api`. O Next encaminha as chamadas
-para `API_BACKEND_URL` (padrão http://localhost:8080), preservando os cookies.
+para `API_BACKEND_URL` (padrão http://localhost:8080).
 Reinicie o Next após mudar as variáveis. Em produção, use HTTPS.
+
+## Autenticação e termos
+
+Contrato conferido no projeto local PulsoBackend:
+
+- `POST /auth/login`: retorna accessToken, expiresAt, user e dados do desafio 2FA.
+- `POST /auth/2fa/verify`: recebe `{ code }` (seis dígitos), retorna 204.
+- `POST /auth/2fa/resend`: retorna codeExpiresAt e resendAvailableAt.
+- `GET /terms`: retorna title, version e content.
+- `GET /terms/accepted`: retorna as versões aceitas pelo usuário autenticado.
+- `POST /terms/accept`: recebe `{ version, termsAccepted: true }`, retorna 204.
+- Não há etapa de troca de senha no fluxo de entrada.
+- `GET /me`: retorna o perfil completo após 2FA e aceite dos termos.
+- `POST /auth/logout`: revoga a sessão.
+
+As chamadas usam Authorization Bearer, sem cookies antigos nem CSRF.
+A sessão fica no sessionStorage da aba; senhas não são persistidas.
+Login cancela consultas e limpa o cache anterior. Respostas de outra sessão
+são descartadas; um 401 antigo não encerra uma sessão nova.
+
+AuthGate protege todas as páginas antes de montar seu conteúdo. O código deve
+ser confirmado antes de consultar os termos. Uma modal sem fechamento exige
+leitura e aceite da versão atual; falhas de consulta ou aceite mantêm o bloqueio.
+Após o aceite, o frontend consulta o perfil e encaminha para a home, sem etapa de troca de senha. A versão aceita é conferida
+no servidor, inclusive ao recarregar a página, sem depender apenas do login.
+
+O bloqueio por termos implementado aqui é de interface. O SecurityConfig do
+backend consultado ainda exige troca de senha para contas com firstLogin=true, retornando 403 em /me mesmo após o aceite. O frontend não consegue remover essa restrição da API. O backend também não restringe todas as rotas
+de negócio por termsAccepted; essa restrição também precisa existir no backend
+para impedir chamadas diretas à API sem aceite.
 
 ## Organização
 
-- `src/api`: URL base, cliente HTTP e QueryProvider.
-- `src/integrations/auth`: login, logout e usuário autenticado.
-- `src/integrations/users`: alunos, professores e coordenadores.
-- `src/integrations/classrooms`: salas e vínculos.
-- `src/integrations/subjects`: listagem e criação de disciplinas.
-- `src/components/screens/Integration`: telas conectadas às rotas reais.
+- `src/api`: cliente HTTP e QueryProvider.
+- `src/integrations/auth`: contratos e sessão JWT.
+- `src/components/screens/Login/AuthGate.tsx`: proteção global e etapas de acesso.
+- `src/integrations/users`, `classrooms`, `subjects`: integrações de domínio.
 
-O cliente obtém CSRF antes das escritas. Login e logout usam sessão por cookie;
-não há senha ou token de autenticação persistido no armazenamento do navegador.
-Listagens de usuários são paginadas. As mutações atualizam o cache e não têm
-retentativa automática, evitando repetir cadastros e envios de e-mail.
-
-As páginas ativas usam o backend, não os stores da demonstração. Os módulos
-antigos de mocks foram mantidos para referência e para os testes antigos.
-Escolas, turnos, datas de nascimento, temas e quizzes ainda não são suportados
-pelos contratos disponíveis. A gestão de escolas aparece como indisponível.
-O cadastro de aluno é independente; faça o vínculo na página da turma.
-Um aluno já matriculado é transferido quando vinculado a outra turma.
+Módulos antigos de demonstração permanecem para referência; não são a fonte
+da sessão ativa.
 
 ## Validação
 
-- `yarn test:api`: contratos do cliente HTTP (cookies, CSRF, erros e 204).
+- `yarn test:api`: Bearer, isolamento de sessão, respostas atrasadas, erros e 204.
 - `yarn lint`: ESLint.
 - `yarn tsc --noEmit`: TypeScript.
 - `yarn build`: build de produção.
+
+Validação manual com backend e e-mail: entrar com cada perfil, confirmar código
+inválido/válido/expirado, reenviar após cooldown, abrir URL interna antes do aceite,
+recarregar, aceitar a versão atual e alternar entre administrador e professor.
