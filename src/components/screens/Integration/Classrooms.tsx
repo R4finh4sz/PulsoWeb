@@ -21,7 +21,7 @@ export function ClassroomList({ user }: { user: SessionUser }) {
     {query.isPending && <p role="status">Carregando turmas…</p>}<ErrorMessage error={query.error} />
     {query.data && !query.data.length && <p className="mt-2">Nenhuma turma disponível.</p>}
     <div className="grid gap-4 pt-2 md:grid-cols-2 xl:grid-cols-3">{query.data?.map(room => <Link key={room.id}
-      href={base(user.role) + "/turmas/" + room.id} className="rounded-xl border border-[var(--line)] p-5 hover:border-[var(--blue)]">
+      href={base(user.role) + "/turmas/" + room.id} className="rounded-xl border border-(--line) p-5 hover:border-[var(--blue)]">
       <h3 className="font-semibold">{room.name} · {room.identifier}</h3><p className="mt-2 text-sm">{room.teacherIds.length} professores vinculados</p>
     </Link>)}</div>
   </section>;
@@ -105,7 +105,7 @@ function Roster({ room, resource, manager }: { room: Classroom; resource: "stude
     {manager && <Assignment room={room} resource={resource} />}
     {query.isPending && <p role="status">Carregando…</p>}<ErrorMessage error={query.error || mutation.error} />
     {query.data && !query.data.length && <p>Nenhum vínculo cadastrado.</p>}
-    <ul className="space-y-3">{query.data?.map(person => <li key={person.id} className="flex flex-wrap justify-between gap-3 rounded-lg border border-[var(--line)] p-4">
+    <ul className="space-y-3">{query.data?.map(person => <li key={person.id} className="flex flex-wrap justify-between gap-3 rounded-lg border border-(--line) p-4">
       <div><p>{person.fullName}</p><p className="break-all text-sm">{person.email} · {person.ra}</p></div>
       {manager && <button disabled={mutation.isPending} onClick={() => {
         if (window.confirm("Desvincular " + person.fullName + " desta turma?")) mutation.mutate(person);
@@ -126,7 +126,7 @@ function Subjects({ room, user }: { room: Classroom; user: SessionUser }) {
       <button className={actionClass} disabled={mutation.isPending}>Criar disciplina</button></form>}
     {query.isPending && <p role="status">Carregando…</p>}<ErrorMessage error={query.error || mutation.error} />
     {query.data && !query.data.length && <p>Nenhuma disciplina cadastrada.</p>}
-    <ul className="grid gap-4 sm:grid-cols-2">{query.data?.map(subject => <li key={subject.id} className="rounded-lg border border-[var(--line)] p-4">{subject.name}</li>)}</ul>
+    <ul className="grid gap-4 sm:grid-cols-2">{query.data?.map(subject => <li key={subject.id} className="rounded-lg border border-(--line) p-4">{subject.name}</li>)}</ul>
   </section>;
 }
 function Details({ id, user }: { id: number; user: SessionUser }) {

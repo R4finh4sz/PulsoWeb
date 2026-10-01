@@ -8,7 +8,7 @@ import { homeRoutes, type SessionUser, type UserRole } from "@/interfaces/auth";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
-export const fieldClass = "mt-2 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-3 text-sm";
+export const fieldClass = "mt-2 w-full rounded-lg border border-(--line) bg-white px-3 py-3 text-sm";
 export const actionClass = "rounded-lg bg-[var(--blue)] px-4 py-2 text-sm text-white disabled:opacity-50 ";
 export function EmptyState() {
   return <div className="flex flex-col items-center gap-3 py-8 text-center">
