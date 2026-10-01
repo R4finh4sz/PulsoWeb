@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@/integrations/auth/api";
-import { useAuthState } from "@/integrations/auth/state";
 import { toSessionUser } from "@/integrations/auth/session";
+import { useAuthState } from "@/integrations/auth/state";
 import { homeRoutes } from "@/interfaces/auth";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import Button from "@/components/ui/Button";
 import { TwoFactorScreen } from "./TwoFactorScreen";
@@ -67,15 +67,17 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const mounted = useSyncExternalStore(subscribe, () => true, () => false);
   const pathname = usePathname();
   const router = useRouter();
+  const publicRegistration = pathname === "/registro" || pathname.startsWith("/convite/") || pathname === "/esqueci-senha" || pathname === "/forgot-password";
   useEffect(() => {
     if (!mounted) return;
-    if (!session) { if (pathname !== "/") router.replace("/"); return; }
+    if (!session) { if (pathname !== "/" && !publicRegistration) router.replace("/"); return; }
     const remaining = Date.parse(session.expiresAt) - Date.now();
     if (!(remaining > 0)) { useAuthState.getState().setSession(null); return; }
     const timer = setTimeout(() => useAuthState.getState().setSession(null), Math.min(remaining, 2147483647));
     return () => clearTimeout(timer);
-  }, [session, mounted, pathname, router]);
+  }, [session, mounted, pathname, router, publicRegistration]);
   if (!mounted) return <p role="status" className="p-8">Carregando…</p>;
+  if (publicRegistration) return children;
   if (!session) return pathname === "/" ? children : <p role="status" className="p-8">Entre para continuar…</p>;
   if (session.twoFactorRequired) return <TwoFactorScreen session={session} />;
   return <AuthorizedGate>{children}</AuthorizedGate>;

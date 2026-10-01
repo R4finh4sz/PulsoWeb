@@ -9,7 +9,7 @@ function loadClient(fetch, initial = { accessToken: "teacher-token" }) {
   const source = fs.readFileSync("src/api/client.ts", "utf8");
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
   const exports = {};
-  vm.runInNewContext(compiled, { exports, require: path => path.includes("state") ? { useAuthState: state } : { API_BASE_URL: "/api" }, fetch, Headers, URLSearchParams, DOMException });
+  vm.runInNewContext(compiled, { exports, require: path => path.includes("state") ? { useAuthState: state } : { API_BASE_URL: "/api" }, fetch, Headers, FormData, URLSearchParams, DOMException });
   return { ...exports, state };
 }
 test("GET sends current Bearer token, omits old cookies and disables caching", async () => {
@@ -68,4 +68,27 @@ test("server errors are preserved and writes are not retried", async () => {
 });
 test("filters preserve zero and false and escape search", () => {
   assert.equal(loadClient().queryString({ q: "Ana & B", page: 0, unassigned: false, classroomId: undefined }), "?q=Ana+%26+B&page=0&unassigned=false");
+});
+
+test("registration photo uses multipart without overriding its boundary", async () => {
+  const body = new FormData(); body.set("data", JSON.stringify({ name: "Aluno Teste" }));
+  body.set("photo", new Blob(["photo"], { type: "image/png" }), "photo.png");
+  const api = loadClient(async (url, options) => {
+    assert.equal(url, "/api/auth/register");
+    assert.equal(options.body, body);
+    assert.equal(options.headers.get("Content-Type"), null);
+    return Response.json({ id: 1, status: "PENDING" });
+  }, null);
+  assert.equal((await api.apiRequest("/auth/register", { method: "POST", body })).status, "PENDING");
+});
+
+test("registration photo download keeps Bearer authorization and returns a blob", async () => {
+  const api = loadClient(async (url, options) => {
+    assert.equal(url, "/api/registration-requests/1/photo");
+    assert.equal(options.headers.get("Authorization"), "Bearer teacher-token");
+    assert.equal(options.headers.get("Accept"), "image/png");
+    return new Response("photo", { headers: { "Content-Type": "image/png" } });
+  });
+  const photo = await api.apiRequest("/registration-requests/1/photo", { responseType: "blob", headers: { Accept: "image/png" } });
+  assert.equal(await photo.text(), "photo");
 });

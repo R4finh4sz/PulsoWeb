@@ -1,13 +1,13 @@
 "use client";
 
+import logo from "@/assets/images/LogoImageWhite.png";
+import { DashboardIcon, type IconName } from "@/components/ui/DashboardIcon";
+import { useLogout } from "@/integrations/auth/hooks";
+import { homeRoutes, roleLabels, type SessionUser } from "@/interfaces/auth";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSyncExternalStore, type ReactNode } from "react";
-import logo from "@/assets/images/LogoImageWhite.png";
-import { homeRoutes, roleLabels, type SessionUser } from "@/interfaces/auth";
-import { useLogout } from "@/integrations/auth/hooks";
-import { DashboardIcon, type IconName } from "@/components/ui/DashboardIcon";
 
 type Props = {
   user: SessionUser;
@@ -31,10 +31,10 @@ export function DashboardShell({ user, title, description, navigation, children 
   const sidebarNavigation = user.role === "coordenador"
     ? [
       ...navigation.filter((item) => item.label !== "Professores" && item.href !== "/coordenador/alunos/novo"),
-      { label: "Criar aluno", href: "/coordenador/alunos/novo", icon: "users" as const },
       { label: "Professores", href: "/coordenador/professores", icon: "school" as const },
     ]
     : [...navigation];
+  if (user.role === "admin" || user.role === "coordenador") sidebarNavigation.push({ label: "Solicitações de cadastro", href: `${home}/registros`, icon: "users" });
   sidebarNavigation.push({ label: "Termos de uso", href: `${home}/termos`, icon: "book" });
   const links = [{ label: "Início", href: pathname === home ? "#overview" : home, icon: "home" as const }, ...sidebarNavigation];
   const isActive = (href: string) => {
@@ -65,16 +65,16 @@ export function DashboardShell({ user, title, description, navigation, children 
       </aside>
 
       <div className="min-w-0">
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--line)] bg-white px-6 py-4 lg:px-10">
-          <div className="flex items-center gap-2 text-xs text-[var(--muted)]"><span className="h-2 w-2" /></div>
+        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-(--line) bg-white px-6 py-4 lg:px-10">
+          <div className="flex items-center gap-2 text-xs text-(--muted)"><span className="h-2 w-2" /></div>
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e8f5f8] text-xs font-semibold text-[var(--blue)]">{user.name.split(" ").map((part) => part[0]).slice(0, 2).join("")}</div>
-            <div><p className="text-xs font-semibold">{user.name}</p><p className="text-[10px] text-[var(--muted)]">{roleLabels[user.role]}</p></div>
-            <button type="button" disabled={logout.isPending} onClick={() => { logout.mutate(undefined, { onSuccess: () => router.replace("/") }); }} className="ml-2 flex items-center gap-2 rounded-lg border border-[var(--line)] px-3 py-2 text-xs hover:bg-slate-50"><DashboardIcon name="logout" className="h-4 w-4" />Sair</button>
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e8f5f8] text-xs font-semibold text-(--blue)">{user.name.split(" ").map((part) => part[0]).slice(0, 2).join("")}</div>
+            <div><p className="text-xs font-semibold">{user.name}</p><p className="text-[10px] text-(--muted)">{roleLabels[user.role]}</p></div>
+            <button type="button" disabled={logout.isPending} onClick={() => { logout.mutate(undefined, { onSuccess: () => router.replace("/") }); }} className="ml-2 flex items-center gap-2 rounded-lg border border-(--line) px-3 py-2 text-xs hover:bg-slate-50"><DashboardIcon name="logout" className="h-4 w-4" />Sair</button>
           </div>
         </header>
         <main id="overview" className="mx-auto max-w-[1440px] space-y-7 px-5 py-8 sm:px-8 lg:px-10">
-          <div><p className="text-xs font-medium text-[var(--blue)]">INÍCIO / VISÃO GERAL</p><h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">{description}</p></div>
+          <div><h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-(--muted)">{description}</p></div>
           {logout.error && <p role="alert" className="text-sm text-red-700">{logout.error.message}</p>}{children}
         </main>
       </div>
