@@ -26,6 +26,14 @@ Contrato conferido no projeto local PulsoBackend:
 - Não há etapa de troca de senha no fluxo de entrada.
 - `GET /me`: retorna o perfil completo após 2FA e aceite dos termos.
 - `POST /auth/logout`: revoga a sessão.
+- `POST /auth/password-reset/request`: recebe `{ email }` e envia um código de seis dígitos.
+- `POST /auth/password-reset/verify`: recebe `{ email, code }` e retorna `{ resetToken }`.
+- `POST /auth/password-reset/reset`: recebe `{ email, resetToken, newPassword, confirmPassword }`; o token deve ser válido por 10 minutos.
+- Ao redefinir a senha, o backend deve revogar todas as sessões/JWTs existentes do usuário.
+
+A tela pública `/forgot-password` (também acessível por `/esqueci-senha`) usa esse
+fluxo em três etapas: e-mail, código e nova senha. O `resetToken` fica somente
+em memória no navegador e é enviado apenas na etapa final.
 
 As chamadas usam Authorization Bearer, sem cookies antigos nem CSRF.
 A sessão fica no sessionStorage da aba; senhas não são persistidas.
