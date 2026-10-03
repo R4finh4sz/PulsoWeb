@@ -12,16 +12,17 @@ import Link from "next/link";
 import { useState, type SyntheticEvent } from "react";
 import { ErrorMessage, Protected, Workspace, actionClass, fieldClass } from "./shared";
 import { UsersHome } from "./Users";
-const base = (role: UserRole) => "/" + role;
+import { homeRoutes } from "@/interfaces/auth";
+const base = (role: UserRole) => homeRoutes[role];
 export function ClassroomList({ user }: { user: SessionUser }) {
   const query = useClassrooms();
   return <section className="space-y-4 rounded-xl bg-white p-6">
     <h2 className="text-lg font-semibold">Turmas</h2>
-    {(user.role === "coordenador" || user.role === "admin") && <div className="pt-1"><Link className={actionClass} href={base(user.role) + "/turmas/nova"}>Criar turma</Link></div>}
+    {(user.role === "coordenador" || user.role === "admin") && <div className="pt-1"><Link className={actionClass} href={base(user.role) + "/classrooms/new"}>Criar turma</Link></div>}
     {query.isPending && <p role="status">Carregando turmas…</p>}<ErrorMessage error={query.error} />
     {query.data && !query.data.length && <p className="mt-2">Nenhuma turma disponível.</p>}
     <div className="grid gap-4 pt-2 md:grid-cols-2 xl:grid-cols-3">{query.data?.map(room => <Link key={room.id}
-      href={base(user.role) + "/turmas/" + room.id} className="rounded-xl border border-(--line) p-5 hover:border-[var(--blue)]">
+      href={base(user.role) + "/classrooms/" + room.id} className="rounded-xl border border-(--line) p-5 hover:border-[var(--blue)]">
       <h3 className="font-semibold">{room.name} · {room.identifier}</h3><p className="mt-2 text-sm">{room.teacherIds.length} professores vinculados</p>
     </Link>)}</div>
   </section>;
@@ -65,7 +66,7 @@ function ClassroomForm({ existing, onCreated }: { existing?: Classroom; onCreate
 export function NewClassroomPage({ role = "coordenador" }: { role?: UserRole }) {
   const [created, setCreated] = useState<Classroom | null>(null);
   return <Protected role={role}>{user => <Workspace user={user} title="Criar turma">
-    {created ? <Link className={actionClass} href={base(role) + "/turmas/" + created.id}>Turma criada. Vincular alunos e professores</Link> : <ClassroomForm onCreated={setCreated} />}
+    {created ? <Link className={actionClass} href={base(role) + "/classrooms/" + created.id}>Turma criada. Vincular alunos e professores</Link> : <ClassroomForm onCreated={setCreated} />}
   </Workspace>}</Protected>;
 }
 function Assignment({ room, resource }: { room: Classroom; resource: "students" | "teachers" }) {

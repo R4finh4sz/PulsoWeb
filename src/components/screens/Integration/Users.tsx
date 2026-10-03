@@ -119,7 +119,7 @@ export function NewUserPage({ resource, role }: { resource: UserResource; role: 
 }
 export function TeachersPage() {
   return <Protected role="coordenador">{user => <Workspace user={user} title="Professores">
-    <div className="mb-6"><a className={actionClass} href="/coordenador/professores/novo">Convidar professor</a></div><UserList resource="teachers" />
+    <div className="mb-6"><a className={actionClass} href="/coordinator/teachers/new">Convidar professor</a></div><UserList resource="teachers" />
   </Workspace>}</Protected>;
 }
 export function UsersHome({ user }: { user: SessionUser }) {

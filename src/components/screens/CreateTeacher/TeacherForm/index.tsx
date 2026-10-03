@@ -24,7 +24,7 @@ export function TeacherForm({ user }: { user: SessionUser }) {
         </DashboardPanel>
         {error && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</p>}
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <Link href="/coordenador/professores" className="rounded-lg border border-(--line) px-6 py-3 text-center text-sm">Cancelar</Link>
+          <Link href="/coordinator/teachers" className="rounded-lg border border-(--line) px-6 py-3 text-center text-sm">Cancelar</Link>
           <Button type="submit" disabled={saving} className="sm:w-auto sm:px-8">{saving ? "Salvando…" : "Criar professor"}</Button>
         </div>
       </div>
@@ -39,4 +39,3 @@ export function TeacherForm({ user }: { user: SessionUser }) {
     </form>
   );
 }
-

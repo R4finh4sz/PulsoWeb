@@ -7,9 +7,9 @@ import { usePathname } from "next/navigation";
 
 export function ClassroomCard({ room }: { room: Classroom }) {
   const pathname = usePathname();
-  const base = pathname.startsWith("/professor") ? "/professor" : "/coordenador";
+  const base = pathname.startsWith("/professor") ? "/professor" : "/coordinator";
   return (
-    <Link href={`${base}/turmas/${encodeURIComponent(room.id)}`} aria-label={`Abrir turma ${room.name}`} className="group block w-full rounded-xl border border-(--line) bg-white p-4 text-left transition hover:border-[var(--blue)] hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--blue)]">
+    <Link href={`${base}/classrooms/${encodeURIComponent(room.id)}`} aria-label={`Abrir turma ${room.name}`} className="group block w-full rounded-xl border border-(--line) bg-white p-4 text-left transition hover:border-[var(--blue)] hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--blue)]">
       <span className="flex items-center gap-3">
         <span className={`rounded-xl p-3 ${room.color === "yellow" ? "bg-[#fff6d5] text-[#866b00]" : "bg-[#e8f5f8] text-(--blue)"}`}><DashboardIcon name="book" /></span>
         <span className="flex-1"><span className="block font-semibold">{room.name}</span><span className="mt-1 block text-xs text-(--muted)">Ensino médio · {room.period}</span></span>

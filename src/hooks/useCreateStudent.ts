@@ -46,7 +46,7 @@ export function useCreateStudent(user: SessionUser) {
     setSaving(true);
     try {
       addStudent(user, parsed.data);
-      router.push("/coordenador#students");
+      router.push("/coordinator#students");
     } catch (cause) {
       submitted.current = false;
       setSaving(false);

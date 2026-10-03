@@ -17,13 +17,17 @@ export function ForgotPassword() {
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [digits, setDigits] = useState<string[]>(Array(6).fill(""));
+  const [resetToken, setResetToken] = useState<string | null>(null);
   const [showSentModal, setShowSentModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
   const code = digits.join("");
   const request = useMutation({ mutationFn: authApi.requestPasswordReset });
   const verify = useMutation({ mutationFn: () => authApi.verifyPasswordReset(email, code) });
-  const reset = useMutation({ mutationFn: ({ password }: { password: string }) => authApi.resetPassword(email, code, password) });
+  const reset = useMutation({ mutationFn: ({ password, confirmation }: { password: string; confirmation: string }) => {
+    if (!resetToken) throw new Error("O token de recuperação não está disponível.");
+    return authApi.resetPassword(email, resetToken, password, confirmation);
+  } });
 
   useEffect(() => {
     if (step === "code") requestAnimationFrame(() => inputs.current[0]?.focus());
@@ -45,14 +49,24 @@ export function ForgotPassword() {
   async function submitEmail(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    try { await request.mutateAsync(email.trim()); } catch { }
-    setShowSentModal(true);
+    try {
+      await request.mutateAsync(email.trim());
+      setShowSentModal(true);
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "Não foi possível enviar o código.");
+    }
   }
 
   async function submitCode(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    try { await verify.mutateAsync(); setStep("password"); } catch (failure) { setError(failure instanceof Error ? failure.message : "Não foi possível verificar o código."); }
+    try {
+      const result = await verify.mutateAsync();
+      setResetToken(result.resetToken);
+      setStep("password");
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "Não foi possível verificar o código.");
+    }
   }
 
   async function submitPassword(event: SubmitEvent<HTMLFormElement>) {
@@ -62,7 +76,15 @@ export function ForgotPassword() {
     const confirmation = String(form.get("confirmPassword"));
     if (password !== confirmation) { setError("As senhas precisam ser iguais."); return; }
     setError(null);
-    try { await reset.mutateAsync({ password }); setStep("email"); setDigits(Array(6).fill("")); setShowSentModal(false); } catch (failure) { setError(failure instanceof Error ? failure.message : "Não foi possível redefinir a senha."); }
+    try {
+      await reset.mutateAsync({ password, confirmation });
+      setStep("email");
+      setDigits(Array(6).fill(""));
+      setResetToken(null);
+      setShowSentModal(false);
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "Não foi possível redefinir a senha.");
+    }
   }
 
   const busy = request.isPending || verify.isPending || reset.isPending;
