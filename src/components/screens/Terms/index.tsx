@@ -132,7 +132,7 @@ function TermsContent({ role, edit }: { role: UserRole; edit: boolean }) {
               </p>
             </div>
             {role === "admin" && (
-              <Link href="/admin/terms/editar" className={actionClass}>
+              <Link href="/admin/terms/edit" className={actionClass}>
                 Editar termos
               </Link>
             )}
@@ -153,7 +153,7 @@ function TermsContent({ role, edit }: { role: UserRole; edit: boolean }) {
           </p>
           {role === "admin" && (
             <Link
-              href="/admin/terms/editar"
+              href="/admin/terms/edit"
               className={`${actionClass} inline-block`}
             >
               Criar termos

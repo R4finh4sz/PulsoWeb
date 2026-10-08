@@ -67,7 +67,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const mounted = useSyncExternalStore(subscribe, () => true, () => false);
   const pathname = usePathname();
   const router = useRouter();
-  const publicRegistration = pathname === "/registro" || pathname.startsWith("/convite/") || pathname === "/esqueci-senha" || pathname === "/forgot-password";
+  const publicRegistration = pathname === "/registration" || pathname.startsWith("/invite/") || pathname === "/forgot-password";
   useEffect(() => {
     if (!mounted) return;
     if (!session) { if (pathname !== "/" && !publicRegistration) router.replace("/"); return; }

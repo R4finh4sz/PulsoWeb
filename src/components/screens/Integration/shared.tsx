@@ -84,10 +84,10 @@ export function Workspace({
   const navigation =
     user.role === "admin"
       ? [
-          { label: "Escolas", href: "/admin/escolas", icon: "school" as const },
+          { label: "Escolas", href: "/admin/schools", icon: "school" as const },
           {
             label: "Coordenadores",
-            href: "/admin/coordenadores",
+            href: "/admin/coordinators",
             icon: "users" as const,
           },
         ]
@@ -108,7 +108,7 @@ export function Workspace({
           ? [
               {
                 label: "Minhas turmas",
-                href: "/professor/turmas",
+                href: "/teacher/classrooms",
                 icon: "book" as const,
               },
             ]

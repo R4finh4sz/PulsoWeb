@@ -31,7 +31,7 @@ Contrato conferido no projeto local PulsoBackend:
 - `POST /auth/password-reset/reset`: recebe `{ email, resetToken, newPassword, confirmPassword }`; o token deve ser válido por 10 minutos.
 - Ao redefinir a senha, o backend deve revogar todas as sessões/JWTs existentes do usuário.
 
-A tela pública `/forgot-password` (também acessível por `/esqueci-senha`) usa esse
+A tela pública `/forgot-password` usa esse
 fluxo em três etapas: e-mail, código e nova senha. O `resetToken` fica somente
 em memória no navegador e é enviado apenas na etapa final.
 
@@ -51,15 +51,17 @@ backend consultado ainda exige troca de senha para contas com firstLogin=true, r
 de negócio por termsAccepted; essa restrição também precisa existir no backend
 para impedir chamadas diretas à API sem aceite.
 
+As rotas do frontend usam nomes em inglês. URLs antigas em português redirecionam permanentemente para as rotas correspondentes.
+
 ## Registro e convites
 
-- `/registro`: cadastro público de alunos com busca de escola, foto opcional e aceite da versão atual dos termos (`POST /auth/register`).
-- `/convite/[token]`: confirmação do código enviado por e-mail e preenchimento do cadastro (`/invitations/{token}`, `/verify`, `/resend` e `/complete`).
+- `/registration`: cadastro público de alunos com busca de escola, foto opcional e aceite da versão atual dos termos (`POST /auth/register`).
+- `/invite/[token]`: confirmação do código enviado por e-mail e preenchimento do cadastro (`/invitations/{token}`, `/verify`, `/resend` e `/complete`).
 - As telas de novo coordenador e professor enviam convites por `/invitations/coordinators` e `/invitations/teachers`.
-- `/admin/registros` e `/coordenador/registros`: consulta por situação, aprovação e recusa por `/registration-requests`. O backend delimita as solicitações acessíveis a cada perfil.
-- A rota antiga `/coordenador/alunos/novo` exibe as solicitações; alunos preenchem o próprio cadastro na rota pública.
+- `/admin/registration-requests` e `/coordinator/registration-requests`: consulta por situação, aprovação e recusa por `/registration-requests`. O backend delimita as solicitações acessíveis a cada perfil.
+- A rota antiga `/coordinator/students/new` exibe as solicitações; alunos preenchem o próprio cadastro na rota pública.
 
-No backend, configure `app.invitation.base-url` para a URL do frontend seguida de `/convite` (ex.: `http://localhost:3000/convite`), para que os links enviados por e-mail abram a tela de cadastro.
+No backend, configure `app.invitation.base-url` para a URL do frontend seguida de `/invite` (ex.: `http://localhost:3000/invite`), para que os links enviados por e-mail abram a tela de cadastro.
 
 Validação manual: cadastrar aluno com e sem foto; enviar convite; confirmar código; reenviar após o intervalo; concluir cadastro; aprovar/recusar como responsável; entrar com a conta aprovada. Convites inválidos, expirados ou utilizados devem apresentar o erro retornado pela API.
 

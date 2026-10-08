@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 
 export function ClassroomCard({ room }: { room: Classroom }) {
   const pathname = usePathname();
-  const base = pathname.startsWith("/professor") ? "/professor" : "/coordinator";
+  const base = pathname.startsWith("/teacher") ? "/teacher" : "/coordinator";
   return (
     <Link href={`${base}/classrooms/${encodeURIComponent(room.id)}`} aria-label={`Abrir turma ${room.name}`} className="group block w-full rounded-xl border border-(--line) bg-white p-4 text-left transition hover:border-[var(--blue)] hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--blue)]">
       <span className="flex items-center gap-3">

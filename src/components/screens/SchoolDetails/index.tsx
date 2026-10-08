@@ -12,8 +12,8 @@ export function SchoolDetails({ id }: { id: string }) {
   const query = useSchools();
   if (!user) return <p role="status" className="p-8 text-sm">Carregando escola…</p>;
   const school = query.data?.find((item) => String(item.id) === id);
-  return <DashboardShell user={user} title={school?.nome ?? "Escola não encontrada"} description={school ? "Dados da instituição e coordenação responsável." : "Esta escola não está disponível."} navigation={[{ label: "Escolas", href: "/admin/escolas", icon: "school" }, { label: "Coordenadores", href: "/admin/coordenadores", icon: "users" }]}>
-    <Link href="/admin/escolas" className="inline-flex items-center gap-2 text-sm text-(--blue)"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Voltar para escolas</Link>
+  return <DashboardShell user={user} title={school?.nome ?? "Escola não encontrada"} description={school ? "Dados da instituição e coordenação responsável." : "Esta escola não está disponível."} navigation={[{ label: "Escolas", href: "/admin/schools", icon: "school" }, { label: "Coordenadores", href: "/admin/coordinators", icon: "users" }]}>
+    <Link href="/admin/schools" className="inline-flex items-center gap-2 text-sm text-(--blue)"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Voltar para escolas</Link>
     {query.isPending && <p role="status" className="mt-6">Carregando dados da escola…</p>}
     {query.error && <p role="alert" className="mt-6 rounded-xl bg-red-50 p-4 text-sm text-red-700">Não foi possível carregar a escola.</p>}
     {school && <div className="mt-6 space-y-6">
