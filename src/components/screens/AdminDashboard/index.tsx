@@ -44,7 +44,7 @@ export function AdminDashboard() {
     </div>
     <div>
       <section className={panelClass}>
-        <div className="mb-2 flex items-center justify-between gap-3"><h2 className="font-semibold">Atividade recente</h2><Link href="/admin/escolas" className="text-xs font-medium text-(--blue)">Ver escolas</Link></div>
+        <div className="mb-2 flex items-center justify-between gap-3"><h2 className="font-semibold">Atividade recente</h2><Link href="/admin/schools" className="text-xs font-medium text-(--blue)">Ver escolas</Link></div>
         <ul><ActivityRow icon="school" tone="bg-[#e1f5f8] text-[#008da8]" title="Painel administrativo consultado" detail="Acompanhe escolas e coordenadores da rede" status="Ativo" /><ActivityRow icon="users" tone="bg-[#ddf8e8] text-[#18a957]" title="Gestão de coordenadores disponível" detail="Consulte ou cadastre novas lideranças" status="Pronto" /><ActivityRow icon="check" tone="bg-[#fff2c9] text-[#d99700]" title="Nenhuma pendência encontrada" detail="A plataforma está em dia" status="Estável" /></ul>
       </section>
     </div>

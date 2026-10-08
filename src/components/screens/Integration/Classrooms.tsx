@@ -9,21 +9,49 @@ import { useUsers } from "@/integrations/users/hooks";
 import type { SessionUser, UserRole } from "@/interfaces/auth";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { BookOpen, ChevronRight, Search } from "lucide-react";
 import { useState, type SyntheticEvent } from "react";
 import { ErrorMessage, Protected, Workspace, actionClass, fieldClass } from "./shared";
 import { UsersHome } from "./Users";
-const base = (role: UserRole) => "/" + role;
+import { homeRoutes } from "@/interfaces/auth";
+const base = (role: UserRole) => homeRoutes[role];
 export function ClassroomList({ user }: { user: SessionUser }) {
   const query = useClassrooms();
+  const [search, setSearch] = useState("");
+  const term = search.trim().toLocaleLowerCase("pt-BR");
+  const rooms = query.data?.filter(room =>
+    room.name.toLocaleLowerCase("pt-BR").includes(term)
+    || room.identifier.toLocaleLowerCase("pt-BR").includes(term)
+  );
   return <section className="space-y-4 rounded-xl bg-white p-6">
-    <h2 className="text-lg font-semibold">Turmas</h2>
-    {(user.role === "coordenador" || user.role === "admin") && <div className="pt-1"><Link className={actionClass} href={base(user.role) + "/turmas/nova"}>Criar turma</Link></div>}
-    {query.isPending && <p role="status">Carregando turmas…</p>}<ErrorMessage error={query.error} />
-    {query.data && !query.data.length && <p className="mt-2">Nenhuma turma disponível.</p>}
-    <div className="grid gap-4 pt-2 md:grid-cols-2 xl:grid-cols-3">{query.data?.map(room => <Link key={room.id}
-      href={base(user.role) + "/turmas/" + room.id} className="rounded-xl border border-(--line) p-5 hover:border-[var(--blue)]">
-      <h3 className="font-semibold">{room.name} · {room.identifier}</h3><p className="mt-2 text-sm">{room.teacherIds.length} professores vinculados</p>
-    </Link>)}</div>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <h2 className="text-lg font-semibold">Turmas cadastradas</h2>
+      {(user.role === "coordenador" || user.role === "admin") && <Link className={actionClass} href={base(user.role) + "/classrooms/new"}>Criar turma</Link>}
+    </div>
+    <div className="overflow-hidden rounded-xl border border-(--line) bg-white">
+      <div className="flex flex-wrap items-center gap-3 border-b border-(--line) p-3">
+        <label className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-(--line) bg-[var(--paper)] px-3 py-2 focus-within:border-[var(--blue)] focus-within:ring-2 focus-within:ring-[var(--blue)]/20">
+          <Search aria-hidden="true" className="h-4 w-4 shrink-0 text-(--muted)" />
+          <input type="search" aria-label="Buscar turmas por nome ou identificador" placeholder="Buscar por nome ou identificador" value={search} onChange={event => setSearch(event.target.value)} className="min-w-0 w-full bg-transparent text-sm text-[var(--ink)] outline-none placeholder:text-(--muted)" />
+        </label>
+        <span role="status" className="text-xs font-medium text-(--muted)">{query.data ? `${rooms?.length ?? 0} ${(rooms?.length ?? 0) === 1 ? "turma" : "turmas"}` : "-- turmas"}</span>
+      </div>
+      {query.isPending && <p role="status" className="p-4 text-sm text-(--muted)">Carregando turmas…</p>}
+      {query.error && <div className="p-3"><ErrorMessage error={query.error} /></div>}
+      {query.data && !rooms?.length && <p className="p-6 text-center text-sm text-(--muted)">{term ? "Nenhuma turma encontrada para esta busca." : "Nenhuma turma disponível."}</p>}
+      <ul className="divide-y divide-[var(--line)]">
+        {rooms?.map(room => <li key={room.id}>
+          <Link href={base(user.role) + "/classrooms/" + room.id} className="flex flex-wrap items-center gap-3 px-3 py-3 transition-colors hover:bg-[var(--paper)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--blue)] sm:flex-nowrap">
+            <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#e1f5f8] text-(--blue)"><BookOpen className="h-4 w-4" /></span>
+            <div className="min-w-0 flex-1">
+              <h3 className="truncate text-sm font-semibold text-[var(--ink)]">{room.name} · {room.identifier}</h3>
+              <p className="text-xs text-(--muted)">{room.teacherIds.length} {room.teacherIds.length === 1 ? "professor vinculado" : "professores vinculados"}</p>
+            </div>
+            <ChevronRight aria-hidden="true" className="ml-auto h-4 w-4 shrink-0 text-(--muted) sm:ml-0" />
+          </Link>
+        </li>)}
+      </ul>
+    </div>
   </section>;
 }
 function CoordinatorDashboard() {
@@ -65,7 +93,7 @@ function ClassroomForm({ existing, onCreated }: { existing?: Classroom; onCreate
 export function NewClassroomPage({ role = "coordenador" }: { role?: UserRole }) {
   const [created, setCreated] = useState<Classroom | null>(null);
   return <Protected role={role}>{user => <Workspace user={user} title="Criar turma">
-    {created ? <Link className={actionClass} href={base(role) + "/turmas/" + created.id}>Turma criada. Vincular alunos e professores</Link> : <ClassroomForm onCreated={setCreated} />}
+    {created ? <Link className={actionClass} href={base(role) + "/classrooms/" + created.id}>Turma criada. Vincular alunos e professores</Link> : <ClassroomForm onCreated={setCreated} />}
   </Workspace>}</Protected>;
 }
 function Assignment({ room, resource }: { room: Classroom; resource: "students" | "teachers" }) {

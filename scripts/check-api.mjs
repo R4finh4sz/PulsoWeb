@@ -34,6 +34,40 @@ test("login never sends previous credentials or requests CSRF", async () => {
   await api.apiRequest("/auth/login", { method: "POST", body: { email: "teacher@example.com", password: "test" } });
   assert.equal(calls, 1);
 });
+test("password reset requests are public and do not clear the current session", async () => {
+  const api = loadClient(async (url, options) => {
+    assert.equal(url, "/api/auth/password-reset/request");
+    assert.equal(options.headers.get("Authorization"), null);
+    return Response.json({}, { status: 401 });
+  });
+  await assert.rejects(api.apiRequest("/auth/password-reset/request", {
+    method: "POST",
+    body: { email: "teacher@example.com" },
+  }));
+  assert.deepEqual(api.state.getState().session, { accessToken: "teacher-token" });
+});
+test("password reset sends the backend reset payload", async () => {
+  const api = loadClient(async (url, options) => {
+    assert.equal(url, "/api/auth/password-reset/reset");
+    assert.equal(options.headers.get("Authorization"), null);
+    assert.deepEqual(JSON.parse(options.body), {
+      email: "teacher@example.com",
+      resetToken: "reset-token",
+      newPassword: "NovaSenha123",
+      confirmPassword: "NovaSenha123",
+    });
+    return new Response(null, { status: 204 });
+  });
+  await api.apiRequest("/auth/password-reset/reset", {
+    method: "POST",
+    body: {
+      email: "teacher@example.com",
+      resetToken: "reset-token",
+      newPassword: "NovaSenha123",
+      confirmPassword: "NovaSenha123",
+    },
+  });
+});
 test("204 works for verification and terms acceptance", async () => {
   const api = loadClient(async () => new Response(null, { status: 204 }));
   assert.equal(await api.apiRequest("/terms/accept", { method: "POST", body: { version: "1.0", termsAccepted: true } }), undefined);

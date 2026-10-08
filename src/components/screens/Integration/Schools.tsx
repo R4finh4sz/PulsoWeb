@@ -27,7 +27,7 @@ export function SchoolsPage() {
     <section className="space-y-4 rounded-xl bg-white p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">Escolas cadastradas</h2>
-        <Link className={actionClass} href="/admin/escolas/nova">Criar escola</Link>
+        <Link className={actionClass} href="/admin/schools/new">Criar escola</Link>
       </div>
       <div className="overflow-hidden rounded-xl border border-(--line) bg-white">
         <div className="flex flex-wrap items-center gap-3 border-b border-(--line) p-3">
@@ -43,7 +43,7 @@ export function SchoolsPage() {
         {query.data && query.data.length > 0 && !schools?.length && <p className="p-6 text-center text-sm text-(--muted)">Nenhuma escola encontrada para esta busca.</p>}
         <ul className="divide-y divide-[var(--line)]">
           {schools?.map(school => <li key={school.id}>
-            <Link href={`/admin/escolas/${school.id}`} className="flex flex-wrap items-center gap-3 px-3 py-3 transition-colors hover:bg-[var(--paper)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--blue)] sm:flex-nowrap">
+            <Link href={`/admin/schools/${school.id}`} className="flex flex-wrap items-center gap-3 px-3 py-3 transition-colors hover:bg-[var(--paper)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--blue)] sm:flex-nowrap">
               <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#e1f5f8] text-xs font-semibold text-(--blue)">{school.nome.trim().split(/\s+/).slice(0, 2).map(word => word[0]).join("").toLocaleUpperCase("pt-BR")}</span>
               <div className="min-w-0 flex-1">
                 <h3 className="truncate text-sm font-semibold text-[var(--ink)]">{school.nome}</h3>

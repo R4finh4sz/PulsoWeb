@@ -4,6 +4,12 @@ export class ApiError extends Error {
   constructor(public status: number, message: string, public errors: string[] = []) { super(message); this.name = "ApiError"; }
 }
 type Options = Omit<RequestInit, "body"> & { body?: unknown; responseType?: "blob" };
+const publicAuthPaths = new Set([
+  "/auth/login",
+  "/auth/password-reset/request",
+  "/auth/password-reset/verify",
+  "/auth/password-reset/reset",
+]);
 async function send<T>(path: string, options: RequestInit, responseType?: "blob"): Promise<T> {
   const response = await fetch(API_BASE_URL + path, { ...options, credentials: "omit", cache: "no-store" });
   if (!response.ok) {
@@ -24,6 +30,8 @@ export async function apiRequest<T>(path: string, { body, responseType, ...optio
   if (body !== undefined && !multipart) headers.set("Content-Type", "application/json");
   const session = useAuthState.getState().session;
   if (session && path !== "/auth/login") headers.set("Authorization", `Bearer ${session.accessToken}`);
+  const isPublicAuthPath = publicAuthPaths.has(path);
+  if (isPublicAuthPath) headers.delete("Authorization");
   try {
     const result = await send<T>(path, { ...options, method, headers, body: multipart ? body : body === undefined ? undefined : JSON.stringify(body) }, responseType);
     if (session !== useAuthState.getState().session && session?.accessToken !== useAuthState.getState().session?.accessToken) {
@@ -31,6 +39,7 @@ export async function apiRequest<T>(path: string, { body, responseType, ...optio
     }
     return result;
   } catch (error) {
+    if (isPublicAuthPath) throw error;
     if (error instanceof ApiError && error.status === 401 && session?.accessToken === useAuthState.getState().session?.accessToken) useAuthState.getState().setSession(null);
     throw error;
   }
