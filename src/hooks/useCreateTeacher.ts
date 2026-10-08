@@ -37,7 +37,7 @@ export function useCreateTeacher(user: SessionUser) {
     setSaving(true);
     try {
       addTeacher(user, parsed.data);
-      router.push("/coordenador/professores");
+      router.push("/coordinator/teachers");
     } catch (cause) {
       submitted.current = false;
       setSaving(false);
@@ -46,4 +46,3 @@ export function useCreateTeacher(user: SessionUser) {
   }
   return { values, errors, error, saving, setField, handleSubmit };
 }
-
