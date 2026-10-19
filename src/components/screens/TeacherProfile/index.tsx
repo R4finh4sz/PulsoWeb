@@ -11,6 +11,7 @@ import { BackLink } from "@/components/ui/BackLink";
 import { FeedbackModalContent } from "@/components/ui/FeedbackModal";
 import Input from "@/components/ui/Input";
 import { useAuthState } from "@/integrations/auth/state";
+import { useLogout } from "@/integrations/auth/hooks";
 import { profileApi, type ChangePassword } from "@/integrations/profile/api";
 import type { SessionUser } from "@/interfaces/auth";
 import { getDemoUser, mockAccessEnabled } from "@/mocks/access";
@@ -26,12 +27,15 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
 function Profile({ user }: { user: SessionUser }) {
   const token = useAuthState((state) => state.session?.accessToken);
   const demo = mockAccessEnabled && !!getDemoUser(token);
   const client = useQueryClient();
+  const router = useRouter();
+  const logout = useLogout();
   const profile = useQuery({
     queryKey: ["teacher-profile", user.id],
     queryFn: ({ signal }) => profileApi.get(signal),
@@ -41,7 +45,14 @@ function Profile({ user }: { user: SessionUser }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [deletionPassword, setDeletionPassword] = useState("");
   const [deletionReason, setDeletionReason] = useState("");
-  const password = useMutation({ mutationFn: profileApi.changePassword });
+  const password = useMutation({
+    mutationFn: profileApi.changePassword,
+    onSuccess: async () => {
+      // useLogout clears the local session and cache even if the request fails.
+      await logout.mutateAsync().catch(() => undefined);
+      router.replace("/");
+    },
+  });
   const deletion = useMutation({
     mutationFn: profileApi.requestDeletion,
     onSuccess: () =>
@@ -62,7 +73,7 @@ function Profile({ user }: { user: SessionUser }) {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     },
   });
-  const busy = password.isPending || deletion.isPending;
+  const busy = password.isPending || deletion.isPending || logout.isPending;
   function open(value: "password" | "deletion") {
     setActive(value);
     setDeletionPassword("");
@@ -312,15 +323,6 @@ function Profile({ user }: { user: SessionUser }) {
               </div>
             </form>
           )
-        ) : password.isSuccess ? (
-          <FeedbackModalContent
-            type="success"
-            titleId="profile-dialog-title"
-            title="Senha alterada"
-            message="Sua senha foi atualizada."
-            actionLabel="Fechar"
-            onClose={close}
-          />
         ) : (
           <form
             key="password"

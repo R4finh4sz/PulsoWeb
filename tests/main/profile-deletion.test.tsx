@@ -1,12 +1,14 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { TeacherProfileScreen } from '@/components/screens/TeacherProfile';
 import { profileApi } from '@/integrations/profile/api';
+import { authApi } from '@/integrations/auth/api';
 import { useAuthState } from '@/integrations/auth/state';
 import { createDemoSession, demoUsers } from '@/mocks/access';
 import { queryWrapper, router } from '../helpers';
 
 jest.mock('@/mocks/access', () => ({ ...jest.requireActual('@/mocks/access'), mockAccessEnabled: true }));
 jest.mock('next/navigation', () => ({ useRouter: () => router }));
+jest.mock('@/integrations/auth/api', () => ({ authApi: { logout: jest.fn() } }));
 jest.mock('@/integrations/profile/api', () => ({ profileApi: { get: jest.fn(), changePassword: jest.fn(), requestDeletion: jest.fn(), export: jest.fn() } }));
 jest.mock('@/components/screens/Dashboard/TeacherShell', () => ({ TeacherShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
 jest.mock('@/components/screens/Integration/shared', () => ({
@@ -15,6 +17,7 @@ jest.mock('@/components/screens/Integration/shared', () => ({
 }));
 
 beforeEach(() => {
+  jest.mocked(authApi.logout).mockReset().mockResolvedValue(undefined);
   jest.mocked(profileApi.changePassword).mockReset().mockResolvedValue(undefined);
   useAuthState.getState().setSession(createDemoSession(demoUsers[2]));
   jest.mocked(profileApi.get).mockResolvedValue({ user: demoUsers[2], schools: [], classrooms: [], deletionRequested: false });
@@ -94,4 +97,41 @@ test('cancelar não envia solicitação e limpa os campos ao reabrir', async () 
   fireEvent.click(screen.getByRole('button', { name: 'Solicitar exclusão de conta' }));
   expect(screen.getByLabelText('Senha atual')).toHaveValue('');
   expect(screen.getByLabelText('Motivo da exclusão')).toHaveValue('');
+});
+
+async function openPassword() {
+  const { client, wrapper } = queryWrapper();
+  render(<TeacherProfileScreen />, { wrapper });
+  await screen.findByText('Nenhuma escola vinculada');
+  fireEvent.click(screen.getByRole('button', { name: 'Alterar senha' }));
+  fireEvent.change(screen.getByLabelText('Senha atual'), { target: { value: 'Pulso123' } });
+  fireEvent.change(screen.getByLabelText('Nova senha'), { target: { value: 'Nova12345' } });
+  fireEvent.change(screen.getByLabelText('Confirmar nova senha'), { target: { value: 'Nova12345' } });
+  client.setQueryDefaults(['private-cache'], { gcTime: Infinity });
+  client.setQueryData(['private-cache'], { privateData: true });
+  return client;
+}
+
+test.each([false, true])('troca de senha desconecta e limpa o cache mesmo com falha no logout: %s', async logoutFails => {
+  if (logoutFails) jest.mocked(authApi.logout).mockRejectedValueOnce(new Error('Servidor indisponível'));
+  const client = await openPassword();
+  fireEvent.click(screen.getByRole('button', { name: 'Salvar senha' }));
+  await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/'));
+  expect(profileApi.changePassword).toHaveBeenCalledWith({ currentPassword: 'Pulso123', newPassword: 'Nova12345', confirmPassword: 'Nova12345' }, expect.anything());
+  expect(authApi.logout).toHaveBeenCalledTimes(1);
+  expect(useAuthState.getState().session).toBeNull();
+  expect(JSON.parse(sessionStorage.getItem('pulso-auth-v2')!).state.session).toBeNull();
+  expect(client.getQueryData(['private-cache'])).toBeUndefined();
+});
+
+test('falha ao trocar senha preserva a sessão e não chama logout', async () => {
+  jest.mocked(profileApi.changePassword).mockRejectedValueOnce(new Error('A senha atual está incorreta.'));
+  const client = await openPassword();
+  const session = useAuthState.getState().session;
+  fireEvent.click(screen.getByRole('button', { name: 'Salvar senha' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('A senha atual está incorreta.');
+  expect(useAuthState.getState().session).toEqual(session);
+  expect(client.getQueryData(['private-cache'])).toEqual({ privateData: true });
+  expect(authApi.logout).not.toHaveBeenCalled();
+  expect(router.replace).not.toHaveBeenCalled();
 });
