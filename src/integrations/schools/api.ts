@@ -1,6 +1,7 @@
 import { apiRequest } from "@/api/client";
 
 export type School = {
+  teacherIds?: number[];
   id: number;
   nome: string;
   cnpj: string;
@@ -16,5 +17,6 @@ export type CreateSchool = Omit<School, "id">;
 
 export const schoolsApi = {
   list: (signal?: AbortSignal) => apiRequest<School[]>("/schools", { signal }),
-  create: (body: CreateSchool) => apiRequest<School>("/schools", { method: "POST", body }),
+  create: (body: CreateSchool) =>
+    apiRequest<School>("/schools", { method: "POST", body }),
 };
