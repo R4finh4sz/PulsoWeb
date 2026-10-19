@@ -9,9 +9,10 @@ import {
 } from "@/components/screens/Integration/shared";
 import Input from "@/components/ui/Input";
 import { authApi, type Terms } from "@/integrations/auth/api";
-import { homeRoutes, type UserRole } from "@/interfaces/auth";
+import { type UserRole } from "@/interfaces/auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { BackLink } from "@/components/ui/BackLink";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
@@ -176,12 +177,7 @@ export function TermsScreen({
     <Protected role={role}>
       {(user) => (
         <Workspace user={user} title="Termos de uso">
-          <Link
-            href={edit ? `${homeRoutes[role]}/terms` : homeRoutes[role]}
-            className="inline-block text-sm text-(--blue)"
-          >
-            {edit ? "Voltar aos termos" : "Voltar ao início"}
-          </Link>
+          <BackLink />
           <TermsContent role={role} edit={edit} />
         </Workspace>
       )}
