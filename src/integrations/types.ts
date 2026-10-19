@@ -35,6 +35,7 @@ export type Classroom = {
 };
 export type CreateClassroom = Pick<Classroom, "name" | "identifier">;
 export type Subject = {
+  teacherIds?: number[];
   id: number;
   name: string;
   classroomId: number;

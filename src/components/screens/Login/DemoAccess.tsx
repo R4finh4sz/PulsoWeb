@@ -54,7 +54,7 @@ export function DemoAccess() {
             .filter((user) => user.role !== "STUDENT")
             .map((user) => (
               <option key={user.id} value={user.id}>
-                {roleLabels[toSessionUser(user).role]}
+                {roleLabels[toSessionUser(user).role]} · {user.fullName}
               </option>
             ))}
         </select>

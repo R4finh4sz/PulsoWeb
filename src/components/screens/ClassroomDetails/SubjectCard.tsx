@@ -1,8 +1,10 @@
 "use client";
 
+import { canAccessSubject } from "@/utils/subjectAccess";
+
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { BookOpen, MoreHorizontal, UserPlus } from "lucide-react";
+import { BookOpen, LockKeyhole, MoreHorizontal, UserPlus } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import type { Subject } from "@/integrations/types";
 import { subjectsApi } from "@/integrations/subjects/api";
@@ -14,13 +16,16 @@ import {
   fieldClass,
 } from "@/components/screens/Integration/shared";
 
-export function SubjectCard({ subject }: { subject: Subject }) {
+export function SubjectCard({ subject, viewerId }: { subject: Subject; viewerId?: number }) {
   const menu = useRef<HTMLDetailsElement>(null);
   const trigger = useRef<HTMLElement | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const [email, setEmail] = useState("");
   const token = useAuthState((state) => state.session?.accessToken);
   const demo = mockAccessEnabled && !!getDemoUser(token);
+  const teacherId = viewerId ?? getDemoUser(token)?.id ?? NaN;
+  const locked = !canAccessSubject(subject, teacherId);
+  const owner = subject.teacherId === teacherId;
   const invitation = useMutation({
     mutationFn: () =>
       subjectsApi.invite(
@@ -54,6 +59,21 @@ export function SubjectCard({ subject }: { subject: Subject }) {
   function closeDialog() {
     if (!invitation.isPending) dialog.current?.close();
   }
+  if (locked)
+    return (
+      <div
+        role="group"
+        aria-label={subject.name + " — Acesso bloqueado"}
+        aria-disabled="true"
+        className="h-full cursor-not-allowed rounded-2xl border border-(--line) bg-slate-50 p-7"
+      >
+        <LockKeyhole size={24} aria-hidden="true" className="mb-5 text-slate-500" />
+        <h3 className="break-words text-base font-semibold">{subject.name}</h3>
+        <p className="mt-2 text-sm text-(--muted)">
+          Acesso bloqueado. Aceite o convite do professor responsável para participar.
+        </p>
+      </div>
+    );
   return (
     <>
       <div className="choice-card relative h-full">
@@ -64,7 +84,7 @@ export function SubjectCard({ subject }: { subject: Subject }) {
           >
             <BookOpen size={24} strokeWidth={1.7} />
           </span>
-          <details ref={menu} className="relative z-10">
+          {owner && <details ref={menu} className="relative z-10">
             <summary
               ref={(node) => {
                 trigger.current = node;
@@ -89,7 +109,7 @@ export function SubjectCard({ subject }: { subject: Subject }) {
                 Adicionar professor
               </button>
             </div>
-          </details>
+          </details>}
         </div>
         <Link
           href={`/teacher/classrooms/${subject.classroomId}/subjects/${subject.id}`}

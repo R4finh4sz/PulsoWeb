@@ -1,3 +1,5 @@
+import { demoSubjectInvitations } from "./notifications";
+import { canAccessSubject } from "@/utils/subjectAccess";
 import type { Classroom, Subject, User } from "@/integrations/types";
 import type { School } from "@/integrations/schools/api";
 import { demoUsers, getDemoUser } from "./access";
@@ -45,7 +47,7 @@ users.push(
   })),
 );
 const rooms: Classroom[] = [
-  { id: 1, name: "6º ano A", identifier: "6A", teacherIds: [3], schoolId: 1 },
+  { id: 1, name: "6º ano A", identifier: "6A", teacherIds: [3, 5], schoolId: 1 },
   { id: 2, name: "7º ano B", identifier: "7B", teacherIds: [3], schoolId: 2 },
   { id: 3, name: "8º ano A", identifier: "8A", teacherIds: [3], schoolId: 3 },
   { id: 4, name: "6º ano B", identifier: "6B", teacherIds: [3], schoolId: 1 },
@@ -59,9 +61,10 @@ const rooms: Classroom[] = [
   { id: 12, name: "9º ano B", identifier: "9B", teacherIds: [3], schoolId: 1 },
 ];
 const subjects: Subject[] = [
-  { id: 1, name: "Matemática", classroomId: 1, teacherId: 3 },
+  { id: 1, name: "Matemática", classroomId: 1, teacherId: 3, teacherIds: [3] },
+  { id: 2, name: "Ciências", classroomId: 1, teacherId: 5, teacherIds: [5] },
 ];
-const subjectInvitations: SubjectInvitation[] = [];
+const subjectInvitations: SubjectInvitation[] = clone(demoSubjectInvitations);
 const schools: School[] = [
   {
     id: 1,
@@ -85,7 +88,7 @@ let terms = {
   content: "Ambiente local com dados fictícios para explorar o Pulso Escolar.",
 };
 
-schools[0] = { ...schools[0], nome: "EMEF Monte Serrat", teacherIds: [3] };
+schools[0] = { ...schools[0], nome: "EMEF Monte Serrat", teacherIds: [3, 5] };
 schools.push(
   { ...schools[0], id: 2, nome: "EMEF Jardim das Flores", teacherIds: [3] },
   { ...schools[0], id: 3, nome: "EMEF Vila Nova", teacherIds: [3] },
@@ -104,6 +107,32 @@ export function mockRequest(
   const parts = url.pathname.split("/").filter(Boolean);
   const data = (body ?? {}) as Record<string, unknown>;
   if (path === "/me") return { ...current };
+  if (parts[0] === "subject-invitations") {
+    if (current.role !== "TEACHER")
+      throw new Error("Somente professores podem responder convites de matérias.");
+    if (method === "GET" && !parts[1])
+      return clone(subjectInvitations.filter((invite) =>
+        invite.email === current.email.toLowerCase() && invite.status === "PENDING",
+      ));
+    const invite = subjectInvitations.find((invite) =>
+      invite.id === Number(parts[1]) && invite.email === current.email.toLowerCase(),
+    );
+    if (!invite) throw new Error("Convite não encontrado para este professor.");
+    if (method !== "PATCH" || (data.status !== "ACCEPTED" && data.status !== "REJECTED"))
+      throw new Error("Informe ACCEPTED ou REJECTED.");
+    if (invite.status !== "PENDING") throw new Error("Este convite já foi respondido.");
+    const subject = subjects.find((subject) => subject.id === invite.subjectId);
+    const room = rooms.find((room) => room.id === subject?.classroomId);
+    if (!subject || !room) throw new Error("Matéria não encontrada.");
+    if (data.status === "ACCEPTED") {
+      subject.teacherIds = [...new Set([subject.teacherId, ...(subject.teacherIds ?? []), current.id])];
+      room.teacherIds = [...new Set([...room.teacherIds, current.id])];
+      const school = schools.find((school) => school.id === room.schoolId);
+      if (school) school.teacherIds = [...new Set([...(school.teacherIds ?? []), current.id])];
+    }
+    invite.status = data.status;
+    return clone(invite);
+  }
   if (parts[0] === "me" && parts[1]) {
     if (current.role !== "TEACHER")
       throw new Error("Perfil disponível apenas para professores.");
@@ -122,7 +151,7 @@ export function mockRequest(
       return clone({
         exportedAt: new Date().toISOString(),
         ...profile,
-        quizzes: mockTeacherQuizzes(current),
+        quizzes: mockTeacherQuizzes(current, subjects),
         invitations: subjectInvitations.filter((invitation) =>
           subjects.some(
             (subject) =>
@@ -171,7 +200,7 @@ export function mockRequest(
     parts[3] === "results" &&
     method === "GET"
   ) {
-    const quiz = mockTeacherQuizzes(current).find(
+    const quiz = mockTeacherQuizzes(current, subjects).find(
       (quiz) => quiz.id === Number(parts[2]),
     );
     if (!quiz)
@@ -192,7 +221,7 @@ export function mockRequest(
   }
   if (path === "/teacher/activities" && method === "GET")
     return clone(
-      mockTeacherQuizzes(current).map((quiz) => {
+      mockTeacherQuizzes(current, subjects).map((quiz) => {
         const subject = subjects.find(
           (subject) => subject.id === quiz.subjectId,
         );
@@ -318,12 +347,14 @@ export function mockRequest(
                 : "",
             );
           if (!parsed.success) throw new Error("Informe um e-mail válido.");
-          if (parsed.data === current.email.toLowerCase())
+          if (users.some((user) => user.email.toLowerCase() === parsed.data && user.role !== "TEACHER"))
+            throw new Error("O convite deve ser enviado a um professor.");
+          if (users.some((user) => user.email.toLowerCase() === parsed.data && canAccessSubject(subject, user.id)))
             throw new Error("Você já faz parte desta matéria.");
           if (
             subjectInvitations.some(
               (invite) =>
-                invite.subjectId === subject.id && invite.email === parsed.data,
+                invite.subjectId === subject.id && invite.email === parsed.data && invite.status === "PENDING",
             )
           )
             throw new Error("Já existe um convite pendente para este e-mail.");
@@ -332,10 +363,15 @@ export function mockRequest(
             subjectId: subject.id,
             email: parsed.data,
             status: "PENDING",
+            classroomId: room.id,
+            subjectName: subject.name,
+            inviterName: current.fullName,
           };
           subjectInvitations.push(invitation);
           return clone(invitation);
         }
+        if (!canAccessSubject(subject, current.id))
+          throw new Error("Aceite o convite para acessar esta matéria.");
         return mockSubjectQuizzes(subject, current, parts[4], method, body);
       }
       if (method === "POST") {
@@ -356,6 +392,7 @@ export function mockRequest(
           name,
           classroomId: room.id,
           teacherId: current.id,
+          teacherIds: [current.id],
         };
         subjects.push(subject);
         return { ...subject };
@@ -364,7 +401,7 @@ export function mockRequest(
         subjects.filter(
           (subject) =>
             subject.classroomId === room.id &&
-            (current.role !== "TEACHER" || subject.teacherId === current.id),
+            (current.role !== "TEACHER" || room.teacherIds.includes(current.id)),
         ),
       );
     }

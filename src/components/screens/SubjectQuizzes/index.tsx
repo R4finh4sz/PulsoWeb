@@ -15,17 +15,20 @@ import { subjectsApi } from "@/integrations/subjects/api";
 import { getDemoUser, mockAccessEnabled } from "@/mocks/access";
 import type { CreateQuiz } from "@/validation/Quiz.validation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, MoreHorizontal, Plus } from "lucide-react";
+import { BookOpen, LockKeyhole, MoreHorizontal, Plus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { QuizForm } from "./QuizForm";
+import { canAccessSubject } from "@/utils/subjectAccess";
 
 function Content({
   classroomId,
   subjectId,
+  teacherId,
 }: {
   classroomId: number;
   subjectId: number;
+  teacherId: number;
 }) {
   const [creating, setCreating] = useState(false);
   const [expandedQuiz, setExpandedQuiz] = useState<number | null>(null);
@@ -39,17 +42,18 @@ function Content({
     queryFn: ({ signal }) => subjectsApi.list(classroomId, signal),
   });
   const subject = subjects.data?.find((subject) => subject.id === subjectId);
+  const allowed = !!subject && canAccessSubject(subject, teacherId);
   const queryKey = ["quizzes", classroomId, subjectId];
   const quizzes = useQuery({
     queryKey,
     queryFn: ({ signal }) => quizzesApi.list(classroomId, subjectId, signal),
-    enabled: demo && !!subject,
+    enabled: demo && allowed,
     refetchInterval: 30000,
   });
   const themes = useQuery({
     queryKey: ["quiz-themes", classroomId, subjectId],
     queryFn: ({ signal }) => quizzesApi.themes(classroomId, subjectId, signal),
-    enabled: demo && !!subject,
+    enabled: demo && allowed,
   });
   const create = useMutation({
     mutationFn: (body: CreateQuiz) =>
@@ -83,6 +87,14 @@ function Content({
   if (!subject)
     return (
       <p role="alert">Matéria não encontrada ou não vinculada ao seu perfil.</p>
+    );
+  if (!allowed)
+    return (
+      <div className="space-y-4">
+        <BackLink />
+        <LockKeyhole size={28} aria-hidden="true" />
+        <p role="alert">Aceite o convite do professor responsável para acessar esta matéria.</p>
+      </div>
     );
   return (
     <div className="space-y-8">
@@ -313,6 +325,7 @@ export function SubjectQuizzes({
               key={`${classroomId}:${subjectId}`}
               classroomId={classroomId}
               subjectId={subjectId}
+              teacherId={Number(user.id)}
             />
           ) : (
             <p role="alert">Matéria inválida.</p>

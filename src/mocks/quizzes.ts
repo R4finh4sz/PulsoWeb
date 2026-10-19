@@ -1,3 +1,4 @@
+import { canAccessSubject } from "@/utils/subjectAccess";
 import type { Quiz, StudentQuizResult } from "@/integrations/quizzes/api";
 import type { Subject, User } from "@/integrations/types";
 import { scoreQuiz } from "@/utils/quizResults";
@@ -74,11 +75,11 @@ const quizzes: Quiz[] = [
     questions: demoQuestions,
   },
 ];
-export function mockTeacherQuizzes(current: User): Quiz[] {
+export function mockTeacherQuizzes(current: User, subjects: Subject[] = []): Quiz[] {
   if (current.role !== "TEACHER")
     throw new Error("Somente professores podem consultar suas atividades.");
   return quizzes
-    .filter((quiz) => quiz.teacherId === current.id)
+    .filter((quiz) => quiz.teacherId === current.id || subjects.some((subject) => subject.id === quiz.subjectId && canAccessSubject(subject, current.id)))
     .map((quiz) => ({
       ...quiz,
       status:
@@ -167,18 +168,21 @@ export function mockSubjectQuizzes(
   method: string,
   body: unknown,
 ) {
-  if (current.role !== "TEACHER" || subject.teacherId !== current.id)
+  if (current.role !== "TEACHER" || !canAccessSubject(subject, current.id))
     throw new Error("Você não tem acesso aos quizzes desta matéria.");
   if (action === "themes" && method === "GET") return demoThemes(subject.name);
   if (action !== "quizzes") throw new Error("Ação de quiz não disponível.");
   if (method === "GET")
     return JSON.parse(
       JSON.stringify(
-        mockTeacherQuizzes(current).filter(
+        quizzes.filter(
           (quiz) =>
             quiz.subjectId === subject.id &&
             quiz.classroomId === subject.classroomId,
-        ),
+        ).map((quiz) => ({
+          ...quiz,
+          status: quiz.status === "CLOSED" || Date.parse(quiz.closesAt) <= Date.now() ? "CLOSED" : "OPEN",
+        })),
       ),
     );
   if (method !== "POST") throw new Error("Ação de quiz não disponível.");

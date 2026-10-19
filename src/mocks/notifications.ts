@@ -1,8 +1,13 @@
-export const demoTeacherNotifications = [
+import type { SubjectInvitation } from "@/integrations/subjects/api";
+
+export const demoSubjectInvitations: SubjectInvitation[] = [
   {
-    id: "subject-invitation-demo-1",
-    title: "Convite para uma matéria",
-    message:
-      "A professora Mariana Souza convidou você para participar de Matemática, na turma 6º ano A da EMEF Monte Serrat.",
+    id: 1,
+    subjectId: 2,
+    classroomId: 1,
+    subjectName: "Ciências",
+    inviterName: "Mariana Souza",
+    email: "professor@pulso.com",
+    status: "PENDING",
   },
 ];

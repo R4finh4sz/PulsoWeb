@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
-import { Bell, UserPlus, X } from "lucide-react";
+import { ErrorMessage } from "@/components/screens/Integration/shared";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FeedbackModalContent } from "@/components/ui/FeedbackModal";
-import { demoTeacherNotifications } from "@/mocks/notifications";
-import { getDemoUser, mockAccessEnabled } from "@/mocks/access";
 import { useAuthState } from "@/integrations/auth/state";
-import { useNotificationStore } from "@/store/notificationStore";
+import { subjectsApi } from "@/integrations/subjects/api";
+import { getDemoUser, mockAccessEnabled } from "@/mocks/access";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Bell, UserPlus, X } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
 
 export function TeacherNotifications({ userId }: { userId: string }) {
   const [open, setOpen] = useState(false);
@@ -17,17 +18,23 @@ export function TeacherNotifications({ userId }: { userId: string }) {
   const trigger = useRef<HTMLButtonElement>(null);
   const id = useId();
   const token = useAuthState((state) => state.session?.accessToken);
-  const notifications =
-    mockAccessEnabled && getDemoUser(token)?.role === "TEACHER"
-      ? demoTeacherNotifications
-      : [];
-  const responses = useNotificationStore((state) => state.responses);
-  const respond = useNotificationStore((state) => state.respond);
-  const invitation = notifications.find(
-    (notification) => notification.id === selected,
-  );
-  const pendingInvitations = notifications.filter(
-    (notification) => !responses[`${userId}:${notification.id}`],
+  const client = useQueryClient();
+  const demo = mockAccessEnabled && getDemoUser(token)?.role === "TEACHER";
+  const query = useQuery({
+    queryKey: ["subject-invitations", userId],
+    queryFn: ({ signal }) => subjectsApi.invitations(signal),
+    enabled: demo,
+    refetchInterval: 30000,
+  });
+  const pendingInvitations = (demo ? query.data ?? [] : []).map((invite) => ({
+    ...invite,
+    kind: "subject" as const,
+    key: "subject:" + invite.id,
+    title: "Convite para uma matéria",
+    message: invite.inviterName + " convidou você para participar de " + invite.subjectName + ".",
+  }));
+  const invitation = pendingInvitations.find(
+    (notification) => notification.key === selected,
   );
   useEffect(() => {
     if (selected) dialog.current?.showModal();
@@ -37,9 +44,28 @@ export function TeacherNotifications({ userId }: { userId: string }) {
     setSelected(null);
     trigger.current?.focus();
   }
+  const response = useMutation({
+    mutationFn: async ({ id, status }: {
+      id: number;
+      kind: "subject";
+      status: "ACCEPTED" | "REJECTED";
+    }) => { await subjectsApi.respond(id, status); },
+    onSuccess: async () => {
+      closeInvitation();
+      await Promise.all(
+        [
+          ["subject-invitations"],
+          ["teacher-profile"],
+          ["subjects"],
+          ["classrooms"],
+          ["schools"],
+        ].map((queryKey) => client.invalidateQueries({ queryKey })),
+      );
+    },
+  });
   function answer(value: "ACCEPTED" | "REJECTED") {
-    if (selected) respond(userId, selected, value);
-    closeInvitation();
+    if (invitation && !response.isPending)
+      response.mutate({ id: invitation.id, kind: invitation.kind, status: value });
   }
   const unread = pendingInvitations.length;
   useEffect(() => {
@@ -66,7 +92,7 @@ export function TeacherNotifications({ userId }: { userId: string }) {
       <button
         ref={trigger}
         type="button"
-        aria-label={`Notificações${unread ? `, ${unread} convite pendente` : ""}`}
+        aria-label={`Notificações${unread ? `, ${unread} ${unread === 1 ? "convite pendente" : "convites pendentes"}` : ""}`}
         aria-expanded={open}
         aria-controls={id}
         onClick={() => setOpen((value) => !value)}
@@ -100,23 +126,30 @@ export function TeacherNotifications({ userId }: { userId: string }) {
               <X size={18} aria-hidden="true" />
             </button>
           </div>
-          {!pendingInvitations.length ? (
+          {(query.error) && <ErrorMessage error={query.error} />}
+          {(query.isPending) && demo ? (
+            <p role="status" className="p-5 text-sm">
+              Carregando convites…
+            </p>
+          ) : !pendingInvitations.length ? (
             <EmptyState icon={Bell} title="Nenhum convite pendente" />
           ) : (
             <ul className="divide-y divide-[var(--line)]">
               {pendingInvitations.map((notification) => {
+                const Icon = UserPlus;
                 return (
-                  <li key={notification.id} className="bg-cyan-50/50 p-5">
+                  <li key={notification.key} className="bg-cyan-50/50 p-5">
                     <button
                       type="button"
                       onClick={() => {
                         setOpen(false);
-                        setSelected(notification.id);
+                        response.reset();
+                        setSelected(notification.key);
                       }}
                       className="flex w-full items-start gap-3 rounded-lg text-left"
                     >
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e8f7fa] text-(--blue-dark)">
-                        <UserPlus size={18} aria-hidden="true" />
+                        <Icon size={18} aria-hidden="true" />
                       </span>
                       <span className="min-w-0">
                         <span className="block text-sm font-semibold">
@@ -139,7 +172,7 @@ export function TeacherNotifications({ userId }: { userId: string }) {
         aria-labelledby={`${id}-invitation-title`}
         onCancel={(event) => {
           event.preventDefault();
-          closeInvitation();
+          if (!response.isPending) closeInvitation();
         }}
         className="fixed inset-0 m-auto max-h-[90dvh] w-[min(calc(100vw-40px),528px)] overflow-y-auto rounded-[20px] bg-white p-0 backdrop:bg-black/70"
       >
@@ -147,6 +180,7 @@ export function TeacherNotifications({ userId }: { userId: string }) {
           <>
             <button
               type="button"
+              disabled={response.isPending}
               aria-label="Fechar convite"
               onClick={closeInvitation}
               className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-lg text-(--muted) hover:bg-slate-50"
@@ -155,10 +189,13 @@ export function TeacherNotifications({ userId }: { userId: string }) {
             </button>
             <FeedbackModalContent
               type="invitation"
+              icon={UserPlus}
+              disabled={response.isPending}
+              error={response.error ? <ErrorMessage error={response.error} /> : undefined}
               titleId={`${id}-invitation-title`}
               title={invitation.title}
               message={invitation.message}
-              actionLabel="Aceitar"
+              actionLabel={response.isPending ? "Registrando…" : "Aceitar"}
               onClose={() => answer("ACCEPTED")}
               secondaryAction={{
                 label: "Negar",

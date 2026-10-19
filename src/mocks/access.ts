@@ -43,6 +43,15 @@ export const demoUsers: User[] = [
     classroomId: 1,
     schoolId: 1,
   },
+  {
+    id: 5,
+    fullName: "Mariana Souza",
+    email: "mariana@pulso.com",
+    ra: "005",
+    role: "TEACHER",
+    classroomId: null,
+    schoolId: 1,
+  },
 ];
 
 export function createDemoSession(user: User): LoginResponse {

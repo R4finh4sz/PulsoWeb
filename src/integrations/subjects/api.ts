@@ -5,9 +5,19 @@ export type SubjectInvitation = {
   id: number;
   email: string;
   subjectId: number;
-  status: "PENDING";
+  status: "PENDING" | "ACCEPTED" | "REJECTED";
+  classroomId: number;
+  subjectName: string;
+  inviterName: string;
 };
 export const subjectsApi = {
+  invitations: (signal?: AbortSignal) =>
+    apiRequest<SubjectInvitation[]>("/subject-invitations", { signal }),
+  respond: (id: number, status: "ACCEPTED" | "REJECTED") =>
+    apiRequest<SubjectInvitation>("/subject-invitations/" + id, {
+      method: "PATCH",
+      body: { status },
+    }),
   list: (classroomId: number, signal?: AbortSignal) =>
     apiRequest<Subject[]>("/classrooms/" + classroomId + "/subjects", {
       signal,

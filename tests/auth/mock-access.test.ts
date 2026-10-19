@@ -14,7 +14,7 @@ test.each(demoUsers)('perfil $role acessa sessão, termos e painel sem rede', as
   useAuthState.getState().setSession(createDemoSession(user));
   expect(await apiRequest('/me')).toEqual(user);
   expect(await apiRequest('/terms/accepted')).toEqual(['demo-1']);
-  expect(await apiRequest('/classrooms')).toHaveLength(user.role === 'STUDENT' ? 1 : 12);
+  expect(await apiRequest('/classrooms')).toHaveLength(user.role === 'STUDENT' || user.id === 5 ? 1 : 12);
   expect(await apiRequest('/schools')).toHaveLength(3);
   expect(global.fetch).not.toHaveBeenCalled();
 });

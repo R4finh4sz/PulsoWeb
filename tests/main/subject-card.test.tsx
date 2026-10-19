@@ -6,7 +6,7 @@ jest.mock('@/mocks/access', () => ({ ...jest.requireActual('@/mocks/access'), mo
 jest.mock('@/integrations/subjects/api', () => ({ subjectsApi: { invite: jest.fn() } }));
 
 test('menu abre convite separado do link da matéria e registra o professor convidado', async () => {
-  jest.mocked(subjectsApi.invite).mockResolvedValue({ id: 1, subjectId: 1, email: 'prof@escola.com', status: 'PENDING' });
+  jest.mocked(subjectsApi.invite).mockResolvedValue({ id: 1, subjectId: 1, email: 'prof@escola.com', status: 'PENDING', classroomId: 1, subjectName: 'Matemática', inviterName: 'Paulo Professor' });
   render(<SubjectCard subject={{ id: 1, name: 'Matemática', classroomId: 1, teacherId: 3 }} />, { wrapper: queryWrapper().wrapper });
   expect(screen.getByRole('link')).toHaveAttribute('href', '/teacher/classrooms/1/subjects/1');
   fireEvent.click(screen.getByLabelText('Opções de Matemática'));
@@ -16,4 +16,17 @@ test('menu abre convite separado do link da matéria e registra o professor conv
   fireEvent.submit(screen.getByRole('button', { name: 'Convidar professor' }).closest('form')!);
   await waitFor(() => expect(subjectsApi.invite).toHaveBeenCalledWith(1, 1, 'prof@escola.com'));
   expect(await screen.findByRole('status')).toHaveTextContent('Convite criado');
+});
+
+test('matéria de outro professor fica com cadeado e sem link ou menu', () => {
+  render(<SubjectCard subject={{ id: 2, name: 'Ciências', classroomId: 1, teacherId: 5, teacherIds: [5] }} viewerId={3} />, { wrapper: queryWrapper().wrapper });
+  expect(screen.getByRole('group', { name: 'Ciências — Acesso bloqueado' })).toHaveAttribute('aria-disabled', 'true');
+  expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Opções de Ciências')).not.toBeInTheDocument();
+});
+
+test('professor aceito acessa a matéria, mas apenas o dono pode convidar', () => {
+  render(<SubjectCard subject={{ id: 2, name: 'Ciências', classroomId: 1, teacherId: 5, teacherIds: [5, 3] }} viewerId={3} />, { wrapper: queryWrapper().wrapper });
+  expect(screen.getByRole('link')).toHaveAttribute('href', '/teacher/classrooms/1/subjects/2');
+  expect(screen.queryByLabelText('Opções de Ciências')).not.toBeInTheDocument();
 });

@@ -16,7 +16,7 @@ test('registra convite na matéria, valida email e impede duplicidade e autoconv
 });
 
 test('limita matérias a sete por turma e permite criar em outra turma', async () => {
-  for (let index = 0; index < 6; index++) await subjectsApi.create(1, `Matéria ${index}`);
+  for (let index = 0; index < 5; index++) await subjectsApi.create(1, `Matéria ${index}`);
   expect(await subjectsApi.list(1)).toHaveLength(7);
   await expect(subjectsApi.create(1, 'Oitava matéria')).rejects.toThrow('limite de 7');
   expect(await subjectsApi.create(2, 'Ciências')).toMatchObject({ classroomId: 2 });

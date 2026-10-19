@@ -624,7 +624,7 @@ function Subjects({ room, user }: { room: Classroom; user: SessionUser }) {
         {query.data?.map((subject) => (
           <li key={subject.id} className="min-w-0">
             {user.role === "professor" ? (
-              <SubjectCard subject={subject} />
+              <SubjectCard subject={subject} viewerId={Number(user.id)} />
             ) : (
               <div className="rounded-2xl border border-(--line) bg-white p-6">
                 <span
