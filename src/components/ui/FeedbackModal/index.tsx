@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, UserPlus } from "lucide-react";
+import { AlertTriangle, CheckCircle2, UserPlus, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 type FeedbackModalProps = {
@@ -11,6 +11,9 @@ type FeedbackModalProps = {
   actionLabel?: string;
   secondaryAction?: { label: string; onClick: () => void };
   autoFocusAction?: boolean;
+  icon?: LucideIcon;
+  error?: ReactNode;
+  disabled?: boolean;
 };
 
 export function FeedbackModalContent({
@@ -21,6 +24,9 @@ export function FeedbackModalContent({
   actionLabel,
   secondaryAction,
   autoFocusAction,
+  icon: InvitationIcon = UserPlus,
+  error,
+  disabled = false,
   titleId = "feedback-title",
 }: FeedbackModalProps & { titleId?: string }) {
   const success = type === "success";
@@ -31,7 +37,7 @@ export function FeedbackModalContent({
         className={`mx-auto flex h-[72px] w-[72px] items-center justify-center rounded-full ${invitation ? "bg-[#e8f7fa] text-(--blue-dark)" : success ? "bg-[#a9dfb1] text-[#5a873d]" : "bg-[#fac4c1] text-[#e63e32]"}`}
       >
         {invitation ? (
-          <UserPlus className="h-10 w-10" strokeWidth={2} />
+          <InvitationIcon aria-hidden="true" className="h-10 w-10" strokeWidth={2} />
         ) : success ? (
           <CheckCircle2 className="h-10 w-10" strokeWidth={2.5} />
         ) : (
@@ -47,11 +53,13 @@ export function FeedbackModalContent({
       <div className="mt-8 text-[21px] leading-[1.55] text-[#55565b]">
         {message}
       </div>
+      {error && <div className="mt-4 text-left text-sm text-red-700">{error}</div>}
       <div
         className={`mt-8 grid gap-3 ${secondaryAction ? "grid-cols-2" : "grid-cols-1"}`}
       >
         <button
           type="button"
+          disabled={disabled}
           autoFocus={autoFocusAction}
           onClick={onClose}
           className={`min-h-16 min-w-0 w-full rounded-xl px-3 py-3 ${secondaryAction ? "text-sm sm:text-base" : "text-xl"} font-semibold text-white ${invitation ? "bg-[var(--blue-dark)]" : success ? "bg-[#5d8c3e]" : "bg-[#e83e32]"}`}
@@ -61,6 +69,7 @@ export function FeedbackModalContent({
         {secondaryAction && (
           <button
             type="button"
+            disabled={disabled}
             onClick={secondaryAction.onClick}
             className="min-h-16 min-w-0 w-full rounded-xl border border-(--line) px-3 py-3 text-sm font-semibold text-[#55565b] hover:bg-slate-50 sm:text-base"
           >

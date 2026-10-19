@@ -141,7 +141,7 @@ export function TeacherNotifications({ userId }: { userId: string }) {
           event.preventDefault();
           closeInvitation();
         }}
-        className="fixed inset-0 m-auto max-h-[90dvh] w-[min(calc(100vw-40px),528px)] overflow-y-auto rounded-[20px] bg-transparent p-0 backdrop:bg-black/70"
+        className="fixed inset-0 m-auto max-h-[90dvh] w-[min(calc(100vw-40px),528px)] overflow-y-auto rounded-[20px] bg-white p-0 backdrop:bg-black/70"
       >
         {invitation && (
           <>
