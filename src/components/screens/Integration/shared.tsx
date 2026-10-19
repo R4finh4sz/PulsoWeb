@@ -1,31 +1,16 @@
 "use client";
 import { ApiError } from "@/api/client";
-import emptyImage from "@/assets/images/Empty.svg";
 import { DashboardShell } from "@/components/screens/Dashboard/DashboardShell";
 import { useMe } from "@/integrations/auth/hooks";
 import { toSessionUser } from "@/integrations/auth/session";
 import { homeRoutes, type SessionUser, type UserRole } from "@/interfaces/auth";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 export const fieldClass =
-  "mt-2 w-full rounded-lg border border-(--line) bg-white px-3 py-3 text-sm";
+  "mt-2 min-h-12 w-full rounded-xl border border-(--line) bg-white px-4 py-3 text-sm outline-none transition-colors focus:border-[var(--blue-dark)] focus:ring-2 focus:ring-cyan-100 disabled:bg-slate-50";
 export const actionClass =
-  "rounded-lg bg-[var(--blue)] px-4 py-2 text-sm text-white disabled:opacity-50 ";
-export function EmptyState() {
-  return (
-    <div className="flex flex-col items-center gap-3 py-8 text-center">
-      <Image
-        src={emptyImage}
-        alt=""
-        width={180}
-        height={180}
-        className="h-auto w-44"
-      />
-      <p>Nenhum cadastro encontrado.</p>
-    </div>
-  );
-}
+  "inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--blue-dark)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#076a83] disabled:opacity-50 ";
+export { EmptyState } from "@/components/ui/EmptyState";
 export function ErrorMessage({ error }: { error: unknown }) {
   if (!error) return null;
   return (
