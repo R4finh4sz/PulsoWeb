@@ -4,10 +4,11 @@ import { ErrorMessage } from "@/components/screens/Integration/shared";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FeedbackModalContent } from "@/components/ui/FeedbackModal";
 import { useAuthState } from "@/integrations/auth/state";
+import { schoolsApi } from "@/integrations/schools/api";
 import { subjectsApi } from "@/integrations/subjects/api";
 import { getDemoUser, mockAccessEnabled } from "@/mocks/access";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, UserPlus, X } from "lucide-react";
+import { Bell, School, UserPlus, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 
 export function TeacherNotifications({ userId }: { userId: string }) {
@@ -26,13 +27,28 @@ export function TeacherNotifications({ userId }: { userId: string }) {
     enabled: demo,
     refetchInterval: 30000,
   });
-  const pendingInvitations = (demo ? query.data ?? [] : []).map((invite) => ({
-    ...invite,
-    kind: "subject" as const,
-    key: "subject:" + invite.id,
-    title: "Convite para uma matéria",
-    message: invite.inviterName + " convidou você para participar de " + invite.subjectName + ".",
-  }));
+  const schoolQuery = useQuery({
+    queryKey: ["school-invitations", userId],
+    queryFn: ({ signal }) => schoolsApi.invitations(signal),
+    enabled: demo,
+    refetchInterval: 30000,
+  });
+  const pendingInvitations = [
+    ...(demo ? query.data ?? [] : []).map((invite) => ({
+      ...invite,
+      kind: "subject" as const,
+      key: "subject:" + invite.id,
+      title: "Convite para uma matéria",
+      message: invite.inviterName + " convidou você para participar de " + invite.subjectName + ".",
+    })),
+    ...(demo ? schoolQuery.data ?? [] : []).map((invite) => ({
+      ...invite,
+      kind: "school" as const,
+      key: "school:" + invite.id,
+      title: "Convite para uma escola",
+      message: invite.inviterName + " convidou você para se vincular à escola " + invite.schoolName + ".",
+    })),
+  ];
   const invitation = pendingInvitations.find(
     (notification) => notification.key === selected,
   );
@@ -45,16 +61,24 @@ export function TeacherNotifications({ userId }: { userId: string }) {
     trigger.current?.focus();
   }
   const response = useMutation({
-    mutationFn: async ({ id, status }: {
+    mutationFn: async ({
+      id,
+      kind,
+      status,
+    }: {
       id: number;
-      kind: "subject";
+      kind: "subject" | "school";
       status: "ACCEPTED" | "REJECTED";
-    }) => { await subjectsApi.respond(id, status); },
+    }) => {
+      if (kind === "school") await schoolsApi.respond(id, status);
+      else await subjectsApi.respond(id, status);
+    },
     onSuccess: async () => {
       closeInvitation();
       await Promise.all(
         [
           ["subject-invitations"],
+          ["school-invitations"],
           ["teacher-profile"],
           ["subjects"],
           ["classrooms"],
@@ -126,8 +150,8 @@ export function TeacherNotifications({ userId }: { userId: string }) {
               <X size={18} aria-hidden="true" />
             </button>
           </div>
-          {(query.error) && <ErrorMessage error={query.error} />}
-          {(query.isPending) && demo ? (
+          {(query.error || schoolQuery.error) && <ErrorMessage error={query.error || schoolQuery.error} />}
+          {(query.isPending || schoolQuery.isPending) && demo ? (
             <p role="status" className="p-5 text-sm">
               Carregando convites…
             </p>
@@ -136,7 +160,7 @@ export function TeacherNotifications({ userId }: { userId: string }) {
           ) : (
             <ul className="divide-y divide-[var(--line)]">
               {pendingInvitations.map((notification) => {
-                const Icon = UserPlus;
+                const Icon = notification.kind === "school" ? School : UserPlus;
                 return (
                   <li key={notification.key} className="bg-cyan-50/50 p-5">
                     <button
@@ -189,7 +213,7 @@ export function TeacherNotifications({ userId }: { userId: string }) {
             </button>
             <FeedbackModalContent
               type="invitation"
-              icon={UserPlus}
+              icon={invitation.kind === "school" ? School : UserPlus}
               disabled={response.isPending}
               error={response.error ? <ErrorMessage error={response.error} /> : undefined}
               titleId={`${id}-invitation-title`}

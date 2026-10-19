@@ -1,7 +1,7 @@
-import { demoSubjectInvitations } from "./notifications";
+import { demoSubjectInvitations, demoSchoolInvitations } from "./notifications";
 import { canAccessSubject } from "@/utils/subjectAccess";
 import type { Classroom, Subject, User } from "@/integrations/types";
-import type { School } from "@/integrations/schools/api";
+import type { School, SchoolInvitation } from "@/integrations/schools/api";
 import { demoUsers, getDemoUser } from "./access";
 import {
   mockSubjectQuizzes,
@@ -65,6 +65,7 @@ const subjects: Subject[] = [
   { id: 2, name: "Ciências", classroomId: 1, teacherId: 5, teacherIds: [5] },
 ];
 const subjectInvitations: SubjectInvitation[] = clone(demoSubjectInvitations);
+const schoolInvitations: SchoolInvitation[] = clone(demoSchoolInvitations);
 const schools: School[] = [
   {
     id: 1,
@@ -92,6 +93,7 @@ schools[0] = { ...schools[0], nome: "EMEF Monte Serrat", teacherIds: [3, 5] };
 schools.push(
   { ...schools[0], id: 2, nome: "EMEF Jardim das Flores", teacherIds: [3] },
   { ...schools[0], id: 3, nome: "EMEF Vila Nova", teacherIds: [3] },
+  { ...schools[0], id: 4, nome: "EMEF Parque das Árvores", teacherIds: [] },
 );
 
 // Dados mantidos apenas na memória da aba; recarregar restaura os exemplos.
@@ -107,6 +109,27 @@ export function mockRequest(
   const parts = url.pathname.split("/").filter(Boolean);
   const data = (body ?? {}) as Record<string, unknown>;
   if (path === "/me") return { ...current };
+  if (parts[0] === "school-invitations") {
+    if (current.role !== "TEACHER")
+      throw new Error("Somente professores podem responder convites de escolas.");
+    if (method === "GET" && !parts[1])
+      return clone(schoolInvitations.filter((invite) =>
+        invite.email === current.email.toLowerCase() && invite.status === "PENDING",
+      ));
+    const invite = schoolInvitations.find((invite) =>
+      invite.id === Number(parts[1]) && invite.email === current.email.toLowerCase(),
+    );
+    if (!invite) throw new Error("Convite de escola não encontrado para este professor.");
+    if (method !== "PATCH" || (data.status !== "ACCEPTED" && data.status !== "REJECTED"))
+      throw new Error("Informe ACCEPTED ou REJECTED.");
+    if (invite.status !== "PENDING") throw new Error("Este convite já foi respondido.");
+    const school = schools.find((school) => school.id === invite.schoolId);
+    if (!school) throw new Error("Escola não encontrada.");
+    if (data.status === "ACCEPTED")
+      school.teacherIds = [...new Set([...(school.teacherIds ?? []), current.id])];
+    invite.status = data.status;
+    return clone(invite);
+  }
   if (parts[0] === "subject-invitations") {
     if (current.role !== "TEACHER")
       throw new Error("Somente professores podem responder convites de matérias.");
