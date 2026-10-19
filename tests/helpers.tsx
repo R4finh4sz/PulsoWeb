@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import type { LoginResponse } from '@/integrations/auth/state';
 
-export const router = { push: jest.fn(), replace: jest.fn(), refresh: jest.fn() };
+export const router = { push: jest.fn(), replace: jest.fn(), refresh: jest.fn(), back: jest.fn() };
 const clients: QueryClient[] = [];
 afterEach(() => { for (const client of clients.splice(0)) client.clear(); });
 export function queryWrapper() {
