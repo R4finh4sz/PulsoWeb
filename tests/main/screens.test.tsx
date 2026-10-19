@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor, cleanup, within } from '@testing-li
 import { SchoolsPage } from '@/components/screens/Integration/Schools';
 import { SchoolDetails } from '@/components/screens/SchoolDetails';
 import { AdminDashboard } from '@/components/screens/AdminDashboard';
-import { UserForm, UserList, NewUserPage, TeachersPage, CoordinatorsPage, UsersHome } from '@/components/screens/Integration/Users';
+import { UserForm, UserList, TeachersPage, CoordinatorsPage, UsersHome } from '@/components/screens/Integration/Users';
 import { HomePage, ClassroomsPage, ClassroomDetailsPage, NewClassroomPage } from '@/components/screens/Integration/Classrooms';
 import { TermsScreen } from '@/components/screens/Terms';
 import { CreateSchool } from '@/components/screens/CreateSchool';
@@ -123,6 +123,7 @@ test('formulário preserva dados ao falhar e lista permite editar/cancelar', asy
   jest.mocked(usersApi.update).mockRejectedValueOnce(new Error('Falha ao salvar'));
   fireEvent.submit(container.querySelector('form')!); await waitFor(() => expect(useFeedbackStore.getState().feedback?.message).toBe('Falha ao salvar'));
   expect(screen.getByLabelText('Nome completo')).toHaveValue('Ana Silva');
+  expect(screen.queryByText(/senha de acesso.*enviada/i)).not.toBeInTheDocument();
   fireEvent.submit(container.querySelector('form')!); await waitFor(() => expect(screen.queryByLabelText('Nome completo')).toBeNull());
   fireEvent.click(screen.getByRole('button', { name: /Editar cadastro de/ })); fireEvent.click(screen.getByRole('button', { name: 'Cancelar edição' })); expect(screen.queryByLabelText('Nome completo')).toBeNull();
 });
@@ -135,7 +136,6 @@ test('lista mostra vazio, nenhum resultado e erros', async () => {
 test('páginas de pessoas respeitam papel', async () => {
   show(<CoordinatorsPage />); expect(await screen.findByRole('link', { name: 'Convidar coordenador' })).toBeVisible(); cleanup();
   identity('PEDAGOGICAL_COORDINATOR'); show(<TeachersPage />); expect(await screen.findByRole('link', { name: 'Convidar professor' })).toBeVisible(); cleanup();
-  show(<NewUserPage resource="students" role="coordenador" />); expect(await screen.findByLabelText('Nome completo')).toBeVisible(); cleanup();
   show(<UsersHome user={teacher} />); expect(screen.queryByRole('heading')).toBeNull(); cleanup();
   show(<UsersHome user={admin} />); expect(await screen.findByRole('heading', { name: 'Coordenadores' })).toBeVisible(); cleanup();
   show(<UsersHome user={coordinator} />); expect(await screen.findByRole('heading', { name: 'Alunos' })).toBeVisible();
