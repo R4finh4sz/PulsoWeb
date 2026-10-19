@@ -87,6 +87,19 @@ textarea::placeholder {
   outline-offset: 3px;
 }
 
+/* Search fields share their focus indicator with the surrounding control. */
+input[type="search"] {
+  appearance: none;
+  border: 0;
+  outline: none;
+  box-shadow: none;
+}
+
+label:has(> input[type="search"]):focus-within {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 20%, transparent);
+}
+
 .page-title {
   font-size: clamp(1.75rem, 1.25rem + 1.6vw, 2.5rem);
   font-weight: 600;

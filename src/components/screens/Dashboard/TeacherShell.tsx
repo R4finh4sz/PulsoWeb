@@ -58,8 +58,10 @@ export function TeacherShell({
                   (
                     href === "/teacher"
                       ? pathname === href
-                      : pathname.startsWith(href) ||
-                        pathname.startsWith("/teacher/schools/")
+                      : pathname === href ||
+                        pathname.startsWith(href + "/") ||
+                        (href === "/teacher/classrooms" &&
+                          pathname.startsWith("/teacher/schools/"))
                   )
                     ? "page"
                     : undefined

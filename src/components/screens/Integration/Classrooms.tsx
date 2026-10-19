@@ -53,7 +53,7 @@ export function ClassroomList({
             <input
               type="search"
               aria-label="Buscar turmas por nome ou identificador"
-              placeholder="Buscar por nome ou identificador"
+              placeholder="Buscar por nome"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               className="min-w-0 w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
@@ -98,9 +98,7 @@ export function ClassroomList({
                 <h2 className="text-lg font-semibold leading-7 tracking-tight text-[var(--ink)]">
                   {room.name}
                 </h2>
-                <p className="mt-2 text-sm text-slate-500">
-                  Identificador: {room.identifier}
-                </p>
+
                 <span className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[#e8f7fa] px-3 py-2 text-sm font-medium text-[#087e9b]">
                   <Users size={17} aria-hidden="true" />
                   {room.teacherIds.length}{" "}
@@ -137,7 +135,7 @@ export function ClassroomList({
             <input
               type="search"
               aria-label="Buscar turmas por nome ou identificador"
-              placeholder="Buscar por nome ou identificador"
+              placeholder="Buscar por nome"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               className="min-w-0 w-full bg-transparent text-sm text-[var(--ink)] outline-none placeholder:text-(--muted)"
