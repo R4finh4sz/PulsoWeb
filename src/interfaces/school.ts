@@ -8,4 +8,3 @@ export type School = {
   coordinatorId: string | null;
   initials: string;
 };
-

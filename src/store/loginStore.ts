@@ -24,4 +24,3 @@ export const useLoginStore = create<LoginState>()(
     },
   ),
 );
-

@@ -6,4 +6,3 @@ export type Coordinator = {
   role: "coordenador";
   email?: string;
 };
-

@@ -7,4 +7,3 @@ export type Classroom = {
   teacherIds: string[];
   color: string;
 };
-

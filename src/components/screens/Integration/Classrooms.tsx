@@ -1,39 +1,21 @@
 "use client";
-
 import { StudentList } from "@/components/screens/ClassroomDetails/StudentList";
-
 import { SubjectCard } from "@/components/screens/ClassroomDetails/SubjectCard";
-
 import { TeacherShell } from "@/components/screens/Dashboard/TeacherShell";
-
 import { EmptyState } from "@/components/ui/EmptyState";
-
 import { StatCard } from "@/components/ui/StatCard";
-
 import { classroomsApi } from "@/integrations/classrooms/api";
-
 import { useClassroom, useClassrooms } from "@/integrations/classrooms/hooks";
-
 import { MAX_SUBJECTS, subjectsApi } from "@/integrations/subjects/api";
-
 import type { Classroom, CreateClassroom, User } from "@/integrations/types";
-
 import { useApiMutation } from "@/integrations/useApiMutation";
-
 import { useUsers } from "@/integrations/users/hooks";
-
 import type { SessionUser, UserRole } from "@/interfaces/auth";
-
 import { homeRoutes } from "@/interfaces/auth";
-
 import { useQuery } from "@tanstack/react-query";
-
 import { BookOpen, ChevronRight, Search, Users } from "lucide-react";
-
 import Link from "next/link";
-
 import { useState, type SyntheticEvent } from "react";
-
 import {
   ErrorMessage,
   Protected,
@@ -41,11 +23,8 @@ import {
   actionClass,
   fieldClass,
 } from "./shared";
-
 import { UsersHome } from "./Users";
-
 const base = (role: UserRole) => homeRoutes[role];
-
 export function ClassroomList({
   user,
   schoolId,
@@ -221,54 +200,151 @@ export function ClassroomList({
     </section>
   );
 }
-
 function CoordinatorDashboard() {
   const teachers = useUsers("teachers", { page: 0, size: 1 });
   const students = useUsers("students", { page: 0, size: 1 });
-  return <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-    <StatCard label="Professores criados" value={teachers.data?.totalElements ?? "--"} detail="Cadastros disponíveis" icon="users" />
-    <StatCard label="Quizzes criados" value="--" detail="Integração pendente" icon="help" />
-    <StatCard label="Quizzes respondidos" value="--" detail="Integração pendente" icon="chart" />
-    <StatCard label="Alunos cadastrados" value={students.data?.totalElements ?? "--"} detail="Cadastros disponíveis" icon="users" />
-  </div>;
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <StatCard
+        label="Professores criados"
+        value={teachers.data?.totalElements ?? "--"}
+        detail="Cadastros disponíveis"
+        icon="users"
+      />
+      <StatCard
+        label="Quizzes criados"
+        value="--"
+        detail="Integração pendente"
+        icon="help"
+      />
+      <StatCard
+        label="Quizzes respondidos"
+        value="--"
+        detail="Integração pendente"
+        icon="chart"
+      />
+      <StatCard
+        label="Alunos cadastrados"
+        value={students.data?.totalElements ?? "--"}
+        detail="Cadastros disponíveis"
+        icon="users"
+      />
+    </div>
+  );
 }
-
 export function HomePage({ role }: { role: UserRole }) {
-  return <Protected role={role}>{user => <Workspace user={user} title="Visão geral">
-    {user.role === "coordenador" && <CoordinatorDashboard />}<ClassroomList user={user} /><UsersHome user={user} />
-  </Workspace>}</Protected>;
+  return (
+    <Protected role={role}>
+      {(user) => (
+        <Workspace user={user} title="Visão geral">
+          {user.role === "coordenador" && <CoordinatorDashboard />}
+          <ClassroomList user={user} />
+          <UsersHome user={user} />
+        </Workspace>
+      )}
+    </Protected>
+  );
 }
-
 export function ClassroomsPage({ role }: { role: UserRole }) {
-  return <Protected role={role}>{user => <Workspace user={user} title="Turmas"><ClassroomList user={user} /></Workspace>}</Protected>;
+  return (
+    <Protected role={role}>
+      {(user) => (
+        <Workspace user={user} title="Turmas">
+          <ClassroomList user={user} />
+        </Workspace>
+      )}
+    </Protected>
+  );
 }
-
-function ClassroomForm({ existing, onCreated }: { existing?: Classroom; onCreated?: (room: Classroom) => void }) {
+function ClassroomForm({
+  existing,
+  onCreated,
+}: {
+  existing?: Classroom;
+  onCreated?: (room: Classroom) => void;
+}) {
   const [success, setSuccess] = useState(false);
-  const mutation = useApiMutation((body: CreateClassroom) => existing ? classroomsApi.update(existing.id, body) : classroomsApi.create(body));
+  const mutation = useApiMutation((body: CreateClassroom) =>
+    existing
+      ? classroomsApi.update(existing.id, body)
+      : classroomsApi.create(body),
+  );
   async function submit(event: SyntheticEvent<HTMLFormElement>) {
-    event.preventDefault(); if (mutation.isPending) return;
-    const form = event.currentTarget; const data = new FormData(form); setSuccess(false);
+    event.preventDefault();
+    if (mutation.isPending) return;
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    setSuccess(false);
     try {
-      const room = await mutation.mutateAsync({ name: String(data.get("name")).trim(), identifier: String(data.get("identifier")) });
-      setSuccess(true); onCreated?.(room);
-    } catch { /* Render the server error. */ }
+      const room = await mutation.mutateAsync({
+        name: String(data.get("name")).trim(),
+        identifier: String(data.get("identifier")),
+      });
+      setSuccess(true);
+      onCreated?.(room);
+    } catch {
+      /* Render the server error. */
+    }
   }
-  return <form onSubmit={submit} className="space-y-4 rounded-xl bg-white p-6">
-    <label className="block text-sm">Nome da turma<input name="name" maxLength={100} required defaultValue={existing?.name} placeholder="3º ano" className={fieldClass} /></label>
-    <label className="block text-sm">Identificador<input name="identifier" pattern="[A-Z]" maxLength={1} required defaultValue={existing?.identifier} placeholder="A" title="Uma letra maiúscula de A a Z" className={fieldClass} /></label>
-    <ErrorMessage error={mutation.error} />{success && <p role="status">Turma salva.</p>}
-    <button disabled={mutation.isPending} className={actionClass}>{mutation.isPending ? "Salvando…" : "Salvar turma"}</button>
-  </form>;
+  return (
+    <form onSubmit={submit} className="space-y-4 rounded-xl bg-white p-6">
+      <label className="block text-sm">
+        Nome da turma
+        <input
+          name="name"
+          maxLength={100}
+          required
+          defaultValue={existing?.name}
+          placeholder="3º ano"
+          className={fieldClass}
+        />
+      </label>
+      <label className="block text-sm">
+        Identificador
+        <input
+          name="identifier"
+          pattern="[A-Z]"
+          maxLength={1}
+          required
+          defaultValue={existing?.identifier}
+          placeholder="A"
+          title="Uma letra maiúscula de A a Z"
+          className={fieldClass}
+        />
+      </label>
+      <ErrorMessage error={mutation.error} />
+      {success && <p role="status">Turma salva.</p>}
+      <button disabled={mutation.isPending} className={actionClass}>
+        {mutation.isPending ? "Salvando…" : "Salvar turma"}
+      </button>
+    </form>
+  );
 }
-
-export function NewClassroomPage({ role = "coordenador" }: { role?: UserRole }) {
+export function NewClassroomPage({
+  role = "coordenador",
+}: {
+  role?: UserRole;
+}) {
   const [created, setCreated] = useState<Classroom | null>(null);
-  return <Protected role={role}>{user => <Workspace user={user} title="Criar turma">
-    {created ? <Link className={actionClass} href={base(role) + "/classrooms/" + created.id}>Turma criada. Vincular alunos e professores</Link> : <ClassroomForm onCreated={setCreated} />}
-  </Workspace>}</Protected>;
+  return (
+    <Protected role={role}>
+      {(user) => (
+        <Workspace user={user} title="Criar turma">
+          {created ? (
+            <Link
+              className={actionClass}
+              href={base(role) + "/classrooms/" + created.id}
+            >
+              Turma criada. Vincular alunos e professores
+            </Link>
+          ) : (
+            <ClassroomForm onCreated={setCreated} />
+          )}
+        </Workspace>
+      )}
+    </Protected>
+  );
 }
-
 function Assignment({
   room,
   resource,
@@ -378,7 +454,6 @@ function Assignment({
     </form>
   );
 }
-
 function Roster({
   room,
   resource,
@@ -481,7 +556,6 @@ function Roster({
     </section>
   );
 }
-
 function Subjects({ room, user }: { room: Classroom; user: SessionUser }) {
   const query = useQuery({
     queryKey: ["subjects", room.id],
@@ -572,7 +646,6 @@ function Subjects({ room, user }: { room: Classroom; user: SessionUser }) {
     </section>
   );
 }
-
 function Details({ id, user }: { id: number; user: SessionUser }) {
   const query = useClassroom(id);
   const manager = user.role === "admin" || user.role === "coordenador";
@@ -640,7 +713,6 @@ function Details({ id, user }: { id: number; user: SessionUser }) {
     </div>
   );
 }
-
 export function ClassroomDetailsPage({
   id,
   role,
