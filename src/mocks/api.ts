@@ -17,7 +17,7 @@ const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 
 const users: User[] = clone(demoUsers);
 const passwords = new Map<number, string>();
-const deletionRequests = new Set<number>();
+const deletionRequests = new Map<number, { reason: string }>();
 const studentNames = [
   "Beatriz",
   "Bruno",
@@ -152,7 +152,16 @@ export function mockRequest(
       return undefined;
     }
     if (parts[1] === "deletion-request" && method === "POST") {
-      deletionRequests.add(current.id);
+      if (data.currentPassword !== (passwords.get(current.id) ?? mockPassword))
+        throw new Error("A senha atual está incorreta.");
+      if (typeof data.reason !== "string" || !data.reason.trim())
+        throw new Error("Informe o motivo da exclusão.");
+      const reason = data.reason.trim();
+      if (reason.length > 2000)
+        throw new Error("O motivo deve ter no máximo 2000 caracteres.");
+      if (deletionRequests.has(current.id))
+        throw new Error("Já existe um pedido de exclusão pendente.");
+      deletionRequests.set(current.id, { reason });
       return undefined;
     }
   }

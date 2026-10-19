@@ -13,12 +13,16 @@ export type ChangePassword = {
   newPassword: string;
   confirmPassword: string;
 };
+export type DeletionRequest = {
+  currentPassword: string;
+  reason: string;
+};
 export const profileApi = {
   get: (signal?: AbortSignal) =>
     apiRequest<TeacherProfile>("/me/profile", { signal }),
   changePassword: (body: ChangePassword) =>
     apiRequest<void>("/me/password", { method: "PUT", body }),
   export: () => apiRequest<Record<string, unknown>>("/me/export"),
-  requestDeletion: () =>
-    apiRequest<void>("/me/deletion-request", { method: "POST" }),
+  requestDeletion: (body: DeletionRequest) =>
+    apiRequest<void>("/me/deletion-request", { method: "POST", body }),
 };

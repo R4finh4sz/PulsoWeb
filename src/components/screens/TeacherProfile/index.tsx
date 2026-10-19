@@ -5,6 +5,7 @@ import {
   ErrorMessage,
   Protected,
   actionClass,
+  fieldClass,
 } from "@/components/screens/Integration/shared";
 import { BackLink } from "@/components/ui/BackLink";
 import { FeedbackModalContent } from "@/components/ui/FeedbackModal";
@@ -38,6 +39,8 @@ function Profile({ user }: { user: SessionUser }) {
   });
   const [active, setActive] = useState<"password" | "deletion">("password");
   const dialog = useRef<HTMLDialogElement>(null);
+  const [deletionPassword, setDeletionPassword] = useState("");
+  const [deletionReason, setDeletionReason] = useState("");
   const password = useMutation({ mutationFn: profileApi.changePassword });
   const deletion = useMutation({
     mutationFn: profileApi.requestDeletion,
@@ -62,6 +65,8 @@ function Profile({ user }: { user: SessionUser }) {
   const busy = password.isPending || deletion.isPending;
   function open(value: "password" | "deletion") {
     setActive(value);
+    setDeletionPassword("");
+    setDeletionReason("");
     password.reset();
     deletion.reset();
     dialog.current?.showModal();
@@ -196,6 +201,10 @@ function Profile({ user }: { user: SessionUser }) {
       <dialog
         ref={dialog}
         aria-labelledby="profile-dialog-title"
+        onClose={() => {
+          setDeletionPassword("");
+          setDeletionReason("");
+        }}
         onCancel={(event) => {
           if (busy) event.preventDefault();
         }}
@@ -211,44 +220,98 @@ function Profile({ user }: { user: SessionUser }) {
           <X size={18} />
         </button>
         {active === "deletion" ? (
-          <>
+          deletion.isSuccess ? (
             <FeedbackModalContent
-              type={deletion.isSuccess ? "success" : "error"}
+              type="success"
               titleId="profile-dialog-title"
-              title={
-                deletion.isSuccess
-                  ? "Solicitação registrada"
-                  : "Solicitar exclusão de conta?"
-              }
-              message={
-                deletion.isSuccess
-                  ? "Sua solicitação de exclusão foi registrada."
-                  : "Deseja solicitar a exclusão da sua conta? A solicitação ficará pendente de análise."
-              }
-              actionLabel={
-                deletion.isSuccess
-                  ? "Fechar"
-                  : deletion.isPending
-                    ? "Solicitando…"
-                    : "Solicitar exclusão"
-              }
-              onClose={
-                deletion.isSuccess
-                  ? close
-                  : () => {
-                      if (!busy) deletion.mutate();
-                    }
-              }
-              secondaryAction={
-                deletion.isSuccess
-                  ? undefined
-                  : { label: "Cancelar", onClick: close }
-              }
+              title="Solicitação registrada"
+              message="Sua solicitação de exclusão foi registrada e ficará pendente de análise."
+              actionLabel="Fechar"
+              onClose={close}
             />
-            <div className="px-6">
+          ) : (
+            <form
+              key="deletion"
+              className="space-y-5 px-6 py-10 sm:px-10"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const reason = deletionReason.trim();
+                if (busy || !deletionPassword || !reason || reason.length > 2000)
+                  return;
+                deletion.mutate(
+                  { currentPassword: deletionPassword, reason },
+                  { onSuccess: () => setDeletionPassword("") },
+                );
+              }}
+            >
+              <div className="mb-6 text-center">
+                <Trash2
+                  size={32}
+                  aria-hidden="true"
+                  className="mx-auto mb-4 text-red-700"
+                />
+                <h2 id="profile-dialog-title" className="text-2xl font-semibold">
+                  Solicitar exclusão de conta
+                </h2>
+                <p className="mt-3 text-sm text-(--muted)">
+                  Confirme sua senha atual e informe o motivo da exclusão.
+                  Sua solicitação ficará pendente de análise.
+                </p>
+              </div>
+              <fieldset disabled={busy} className="space-y-5">
+                <Input
+                  id="deletion-current-password"
+                  name="currentPassword"
+                  label="Senha atual"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={deletionPassword}
+                  onChange={(event) => setDeletionPassword(event.target.value)}
+                />
+                <div>
+                  <label
+                    htmlFor="deletion-reason"
+                    className="block text-sm font-medium text-[var(--ink)]"
+                  >
+                    Motivo da exclusão
+                  </label>
+                  <textarea
+                    id="deletion-reason"
+                    name="reason"
+                    required
+                    maxLength={2000}
+                    rows={4}
+                    value={deletionReason}
+                    onChange={(event) => setDeletionReason(event.target.value)}
+                    aria-describedby="deletion-reason-limit"
+                    className={fieldClass + " resize-y"}
+                  />
+                  <p id="deletion-reason-limit" className="mt-2 text-xs text-(--muted)">
+                    Até 2000 caracteres.
+                  </p>
+                </div>
+              </fieldset>
               <ErrorMessage error={deletion.error} />
-            </div>
-          </>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={close}
+                  className="min-h-12 rounded-xl border border-(--line) text-sm font-medium"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={busy || !deletionPassword || !deletionReason.trim()}
+                  className="min-h-12 rounded-xl bg-red-700 px-4 py-3 text-sm font-medium text-white hover:bg-red-800 disabled:opacity-50"
+                >
+                  {deletion.isPending ? "Solicitando…" : "Solicitar exclusão"}
+                </button>
+              </div>
+            </form>
+          )
         ) : password.isSuccess ? (
           <FeedbackModalContent
             type="success"
@@ -260,6 +323,7 @@ function Profile({ user }: { user: SessionUser }) {
           />
         ) : (
           <form
+            key="password"
             className="space-y-5 px-6 py-10 sm:px-10"
             onSubmit={(event) => {
               event.preventDefault();
