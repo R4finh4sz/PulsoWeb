@@ -1,19 +1,19 @@
-import { demoSubjectInvitations, demoSchoolInvitations } from "./notifications";
-import { canAccessSubject } from "@/utils/subjectAccess";
-import type { Classroom, Subject, User } from "@/integrations/types";
 import type { School, SchoolInvitation } from "@/integrations/schools/api";
-import { demoUsers, getDemoUser } from "./access";
-import {
-  mockSubjectQuizzes,
-  mockTeacherQuizzes,
-  mockQuizStudents,
-} from "./quizzes";
 import {
   MAX_SUBJECTS,
   type SubjectInvitation,
 } from "@/integrations/subjects/api";
+import type { Classroom, Subject, User } from "@/integrations/types";
+import { canAccessSubject } from "@/utils/subjectAccess";
 import { z } from "zod";
+import { demoUsers, getDemoUser } from "./access";
+import { demoSchoolInvitations, demoSubjectInvitations } from "./notifications";
 import { mockPassword } from "./platform";
+import {
+  mockQuizStudents,
+  mockSubjectQuizzes,
+  mockTeacherQuizzes,
+} from "./quizzes";
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 
@@ -36,18 +36,27 @@ const studentNames = [
   "Mariana",
 ];
 users.push(
-  ...Array.from({ length: 39 }, (_, index): User => ({
-    id: 100 + index,
-    fullName: `${studentNames[index % studentNames.length]} ${["Santos", "Oliveira", "Souza"][Math.floor(index / studentNames.length)]}`,
-    email: `aluno${index + 2}@exemplo.com`,
-    ra: String(index + 2).padStart(5, "0"),
-    role: "STUDENT",
-    classroomId: 1,
-    schoolId: 1,
-  })),
+  ...Array.from(
+    { length: 39 },
+    (_, index): User => ({
+      id: 100 + index,
+      fullName: `${studentNames[index % studentNames.length]} ${["Santos", "Oliveira", "Souza"][Math.floor(index / studentNames.length)]}`,
+      email: `aluno${index + 2}@exemplo.com`,
+      ra: String(index + 2).padStart(5, "0"),
+      role: "STUDENT",
+      classroomId: 1,
+      schoolId: 1,
+    }),
+  ),
 );
 const rooms: Classroom[] = [
-  { id: 1, name: "6º ano A", identifier: "6A", teacherIds: [3, 5], schoolId: 1 },
+  {
+    id: 1,
+    name: "6º ano A",
+    identifier: "6A",
+    teacherIds: [3, 5],
+    schoolId: 1,
+  },
   { id: 2, name: "7º ano B", identifier: "7B", teacherIds: [3], schoolId: 2 },
   { id: 3, name: "8º ano A", identifier: "8A", teacherIds: [3], schoolId: 3 },
   { id: 4, name: "6º ano B", identifier: "6B", teacherIds: [3], schoolId: 1 },
@@ -64,6 +73,37 @@ const subjects: Subject[] = [
   { id: 1, name: "Matemática", classroomId: 1, teacherId: 3, teacherIds: [3] },
   { id: 2, name: "Ciências", classroomId: 1, teacherId: 5, teacherIds: [5] },
 ];
+
+// Turmas adicionais para explorar relatórios com diferentes volumes de alunos.
+for (const [classroomId, count] of [
+  [2, 32],
+  [3, 28],
+  [4, 35],
+  [6, 24],
+]) {
+  const room = rooms.find((item) => item.id === classroomId)!;
+  subjects.push({
+    id: 100 + classroomId,
+    name: "Matemática",
+    classroomId,
+    teacherId: 3,
+    teacherIds: [3],
+  });
+  users.push(
+    ...Array.from(
+      { length: count },
+      (_, index): User => ({
+        id: 1000 + classroomId * 100 + index,
+        fullName: `${studentNames[(index + classroomId) % studentNames.length]} ${["Almeida", "Costa", "Pereira"][Math.floor(index / studentNames.length)]}`,
+        email: `turma${classroomId}.aluno${index + 1}@exemplo.com`,
+        ra: `${classroomId}${String(index + 1).padStart(4, "0")}`,
+        role: "STUDENT",
+        classroomId,
+        schoolId: room.schoolId,
+      }),
+    ),
+  );
+}
 const subjectInvitations: SubjectInvitation[] = clone(demoSubjectInvitations);
 const schoolInvitations: SchoolInvitation[] = clone(demoSchoolInvitations);
 const schools: School[] = [
@@ -111,47 +151,83 @@ export function mockRequest(
   if (path === "/me") return { ...current };
   if (parts[0] === "school-invitations") {
     if (current.role !== "TEACHER")
-      throw new Error("Somente professores podem responder convites de escolas.");
+      throw new Error(
+        "Somente professores podem responder convites de escolas.",
+      );
     if (method === "GET" && !parts[1])
-      return clone(schoolInvitations.filter((invite) =>
-        invite.email === current.email.toLowerCase() && invite.status === "PENDING",
-      ));
-    const invite = schoolInvitations.find((invite) =>
-      invite.id === Number(parts[1]) && invite.email === current.email.toLowerCase(),
+      return clone(
+        schoolInvitations.filter(
+          (invite) =>
+            invite.email === current.email.toLowerCase() &&
+            invite.status === "PENDING",
+        ),
+      );
+    const invite = schoolInvitations.find(
+      (invite) =>
+        invite.id === Number(parts[1]) &&
+        invite.email === current.email.toLowerCase(),
     );
-    if (!invite) throw new Error("Convite de escola não encontrado para este professor.");
-    if (method !== "PATCH" || (data.status !== "ACCEPTED" && data.status !== "REJECTED"))
+    if (!invite)
+      throw new Error("Convite de escola não encontrado para este professor.");
+    if (
+      method !== "PATCH" ||
+      (data.status !== "ACCEPTED" && data.status !== "REJECTED")
+    )
       throw new Error("Informe ACCEPTED ou REJECTED.");
-    if (invite.status !== "PENDING") throw new Error("Este convite já foi respondido.");
+    if (invite.status !== "PENDING")
+      throw new Error("Este convite já foi respondido.");
     const school = schools.find((school) => school.id === invite.schoolId);
     if (!school) throw new Error("Escola não encontrada.");
     if (data.status === "ACCEPTED")
-      school.teacherIds = [...new Set([...(school.teacherIds ?? []), current.id])];
+      school.teacherIds = [
+        ...new Set([...(school.teacherIds ?? []), current.id]),
+      ];
     invite.status = data.status;
     return clone(invite);
   }
   if (parts[0] === "subject-invitations") {
     if (current.role !== "TEACHER")
-      throw new Error("Somente professores podem responder convites de matérias.");
+      throw new Error(
+        "Somente professores podem responder convites de matérias.",
+      );
     if (method === "GET" && !parts[1])
-      return clone(subjectInvitations.filter((invite) =>
-        invite.email === current.email.toLowerCase() && invite.status === "PENDING",
-      ));
-    const invite = subjectInvitations.find((invite) =>
-      invite.id === Number(parts[1]) && invite.email === current.email.toLowerCase(),
+      return clone(
+        subjectInvitations.filter(
+          (invite) =>
+            invite.email === current.email.toLowerCase() &&
+            invite.status === "PENDING",
+        ),
+      );
+    const invite = subjectInvitations.find(
+      (invite) =>
+        invite.id === Number(parts[1]) &&
+        invite.email === current.email.toLowerCase(),
     );
     if (!invite) throw new Error("Convite não encontrado para este professor.");
-    if (method !== "PATCH" || (data.status !== "ACCEPTED" && data.status !== "REJECTED"))
+    if (
+      method !== "PATCH" ||
+      (data.status !== "ACCEPTED" && data.status !== "REJECTED")
+    )
       throw new Error("Informe ACCEPTED ou REJECTED.");
-    if (invite.status !== "PENDING") throw new Error("Este convite já foi respondido.");
+    if (invite.status !== "PENDING")
+      throw new Error("Este convite já foi respondido.");
     const subject = subjects.find((subject) => subject.id === invite.subjectId);
     const room = rooms.find((room) => room.id === subject?.classroomId);
     if (!subject || !room) throw new Error("Matéria não encontrada.");
     if (data.status === "ACCEPTED") {
-      subject.teacherIds = [...new Set([subject.teacherId, ...(subject.teacherIds ?? []), current.id])];
+      subject.teacherIds = [
+        ...new Set([
+          subject.teacherId,
+          ...(subject.teacherIds ?? []),
+          current.id,
+        ]),
+      ];
       room.teacherIds = [...new Set([...room.teacherIds, current.id])];
       const school = schools.find((school) => school.id === room.schoolId);
-      if (school) school.teacherIds = [...new Set([...(school.teacherIds ?? []), current.id])];
+      if (school)
+        school.teacherIds = [
+          ...new Set([...(school.teacherIds ?? []), current.id]),
+        ];
     }
     invite.status = data.status;
     return clone(invite);
@@ -370,14 +446,28 @@ export function mockRequest(
                 : "",
             );
           if (!parsed.success) throw new Error("Informe um e-mail válido.");
-          if (users.some((user) => user.email.toLowerCase() === parsed.data && user.role !== "TEACHER"))
+          if (
+            users.some(
+              (user) =>
+                user.email.toLowerCase() === parsed.data &&
+                user.role !== "TEACHER",
+            )
+          )
             throw new Error("O convite deve ser enviado a um professor.");
-          if (users.some((user) => user.email.toLowerCase() === parsed.data && canAccessSubject(subject, user.id)))
+          if (
+            users.some(
+              (user) =>
+                user.email.toLowerCase() === parsed.data &&
+                canAccessSubject(subject, user.id),
+            )
+          )
             throw new Error("Você já faz parte desta matéria.");
           if (
             subjectInvitations.some(
               (invite) =>
-                invite.subjectId === subject.id && invite.email === parsed.data && invite.status === "PENDING",
+                invite.subjectId === subject.id &&
+                invite.email === parsed.data &&
+                invite.status === "PENDING",
             )
           )
             throw new Error("Já existe um convite pendente para este e-mail.");
@@ -424,7 +514,8 @@ export function mockRequest(
         subjects.filter(
           (subject) =>
             subject.classroomId === room.id &&
-            (current.role !== "TEACHER" || room.teacherIds.includes(current.id)),
+            (current.role !== "TEACHER" ||
+              room.teacherIds.includes(current.id)),
         ),
       );
     }

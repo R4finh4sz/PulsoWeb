@@ -2,7 +2,6 @@
 
 import logo from "@/assets/images/LogoImage.png";
 import { DemoAccess } from "@/components/screens/Login/DemoAccess";
-import { TeacherNotifications } from "./TeacherNotifications";
 import { useLogout } from "@/integrations/auth/hooks";
 import type { SessionUser } from "@/interfaces/auth";
 import {
@@ -11,12 +10,12 @@ import {
   ClipboardList,
   House,
   LogOut,
-  Megaphone,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
+import { TeacherNotifications } from "./TeacherNotifications";
 
 export function TeacherShell({
   user,
@@ -32,6 +31,7 @@ export function TeacherShell({
     { label: "Início", href: "/teacher", icon: House },
     { label: "Minhas Turmas", href: "/teacher/classrooms", icon: BookOpen },
     { label: "Atividades", href: "/teacher/activities", icon: ClipboardList },
+    { label: "Relatório", href: "/teacher/reports", icon: ChartColumn },
   ];
   return (
     <div className="min-h-screen bg-[#f2f8fa]">
@@ -71,22 +71,6 @@ export function TeacherShell({
                 <Icon aria-hidden="true" size={19} />
                 {label}
               </Link>
-            ))}
-            {[
-              { label: "Avaliações", icon: ChartColumn },
-              { label: "Relatórios", icon: Megaphone },
-            ].map(({ label, icon: Icon }) => (
-              <button
-                key={label}
-                type="button"
-                disabled
-                title="Em breve"
-                className="flex shrink-0 items-center gap-2.5 rounded-xl px-4 py-3 text-sm text-slate-400"
-              >
-                <Icon size={19} aria-hidden="true" />
-                {label}
-                <span className="sr-only"> (em breve)</span>
-              </button>
             ))}
           </nav>
           <div className="ml-auto flex min-w-0 max-w-full items-center gap-2 sm:gap-3 xl:border-l xl:border-slate-200 xl:pl-4">

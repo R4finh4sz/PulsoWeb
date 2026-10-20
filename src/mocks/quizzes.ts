@@ -1,7 +1,7 @@
-import { canAccessSubject } from "@/utils/subjectAccess";
 import type { Quiz, StudentQuizResult } from "@/integrations/quizzes/api";
 import type { Subject, User } from "@/integrations/types";
 import { scoreQuiz } from "@/utils/quizResults";
+import { canAccessSubject } from "@/utils/subjectAccess";
 import { CreateQuizSchema } from "@/validation/Quiz.validation";
 
 const demoQuestions = [
@@ -75,11 +75,42 @@ const quizzes: Quiz[] = [
     questions: demoQuestions,
   },
 ];
-export function mockTeacherQuizzes(current: User, subjects: Subject[] = []): Quiz[] {
+// Amostras persistentes durante a sessão, com atividades abertas e encerradas.
+for (const classroomId of [2, 3, 4, 6]) {
+  for (const status of ["CLOSED", "OPEN"] as const) {
+    quizzes.push({
+      id: quizzes.length + 1,
+      subjectId: 100 + classroomId,
+      classroomId,
+      teacherId: 3,
+      status,
+      createdAt: new Date(
+        Date.now() - (status === "CLOSED" ? 12 : 3) * 86400000,
+      ).toISOString(),
+      closesAt: new Date(
+        Date.now() + (status === "CLOSED" ? -2 : 5) * 86400000,
+      ).toISOString(),
+      questions: demoQuestions,
+    });
+  }
+}
+const seededQuizIds = new Set(quizzes.map((quiz) => quiz.id));
+export function mockTeacherQuizzes(
+  current: User,
+  subjects: Subject[] = [],
+): Quiz[] {
   if (current.role !== "TEACHER")
     throw new Error("Somente professores podem consultar suas atividades.");
   return quizzes
-    .filter((quiz) => quiz.teacherId === current.id || subjects.some((subject) => subject.id === quiz.subjectId && canAccessSubject(subject, current.id)))
+    .filter(
+      (quiz) =>
+        quiz.teacherId === current.id ||
+        subjects.some(
+          (subject) =>
+            subject.id === quiz.subjectId &&
+            canAccessSubject(subject, current.id),
+        ),
+    )
     .map((quiz) => ({
       ...quiz,
       status:
@@ -98,11 +129,24 @@ export function mockQuizStudents(
         user.role === "STUDENT" && user.classroomId === quiz.classroomId,
     )
     .map((student, index) => {
-      // Somente os dois quizzes de exemplo possuem entregas simuladas.
+      // Apenas atividades de exemplo têm respostas; novas atividades começam vazias.
+      const participation =
+        ({ 2: 90, 3: 65, 4: 80, 6: 100 } as Record<number, number>)[
+          quiz.classroomId
+        ] ?? 75;
       const submitted =
-        quiz.id <= 2 && (quiz.status === "CLOSED" || index < 30);
+        quiz.id <= 2
+          ? quiz.status === "CLOSED" || index < 30
+          : seededQuizIds.has(quiz.id) &&
+            (index * 37 + quiz.id * 11) % 100 <
+              participation - (quiz.status === "OPEN" ? 15 : 0);
+      const errors =
+        quiz.id <= 2
+          ? index % 11
+          : (index + quiz.id) %
+            (quiz.classroomId === 3 ? 9 : quiz.classroomId === 6 ? 3 : 6);
       const answers = quiz.questions.map((question, questionIndex) =>
-        questionIndex < index % 11
+        questionIndex < errors
           ? (question.correctOption + 1) % 4
           : question.correctOption,
       );
@@ -175,14 +219,20 @@ export function mockSubjectQuizzes(
   if (method === "GET")
     return JSON.parse(
       JSON.stringify(
-        quizzes.filter(
-          (quiz) =>
-            quiz.subjectId === subject.id &&
-            quiz.classroomId === subject.classroomId,
-        ).map((quiz) => ({
-          ...quiz,
-          status: quiz.status === "CLOSED" || Date.parse(quiz.closesAt) <= Date.now() ? "CLOSED" : "OPEN",
-        })),
+        quizzes
+          .filter(
+            (quiz) =>
+              quiz.subjectId === subject.id &&
+              quiz.classroomId === subject.classroomId,
+          )
+          .map((quiz) => ({
+            ...quiz,
+            status:
+              quiz.status === "CLOSED" ||
+              Date.parse(quiz.closesAt) <= Date.now()
+                ? "CLOSED"
+                : "OPEN",
+          })),
       ),
     );
   if (method !== "POST") throw new Error("Ação de quiz não disponível.");
