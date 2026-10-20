@@ -1,9 +1,10 @@
 "use client";
 import { StudentList } from "@/components/screens/ClassroomDetails/StudentList";
+import { CoordinatorClassroom } from "@/components/screens/ClassroomDetails/CoordinatorClassroom";
 import { SubjectCard } from "@/components/screens/ClassroomDetails/SubjectCard";
 import { TeacherShell } from "@/components/screens/Dashboard/TeacherShell";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { StatCard } from "@/components/ui/StatCard";
+import { CoordinatorHome } from "@/components/screens/CoordinatorHome";
 import { classroomsApi } from "@/integrations/classrooms/api";
 import { useClassroom, useClassrooms } from "@/integrations/classrooms/hooks";
 import { MAX_SUBJECTS, subjectsApi } from "@/integrations/subjects/api";
@@ -198,44 +199,12 @@ export function ClassroomList({
     </section>
   );
 }
-function CoordinatorDashboard() {
-  const teachers = useUsers("teachers", { page: 0, size: 1 });
-  const students = useUsers("students", { page: 0, size: 1 });
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <StatCard
-        label="Professores criados"
-        value={teachers.data?.totalElements ?? "--"}
-        detail="Cadastros disponíveis"
-        icon="users"
-      />
-      <StatCard
-        label="Quizzes criados"
-        value="--"
-        detail="Integração pendente"
-        icon="help"
-      />
-      <StatCard
-        label="Quizzes respondidos"
-        value="--"
-        detail="Integração pendente"
-        icon="chart"
-      />
-      <StatCard
-        label="Alunos cadastrados"
-        value={students.data?.totalElements ?? "--"}
-        detail="Cadastros disponíveis"
-        icon="users"
-      />
-    </div>
-  );
-}
 export function HomePage({ role }: { role: UserRole }) {
+  if (role === "coordenador") return <CoordinatorHome />;
   return (
     <Protected role={role}>
       {(user) => (
         <Workspace user={user} title="Visão geral">
-          {user.role === "coordenador" && <CoordinatorDashboard />}
           <ClassroomList user={user} />
           <UsersHome user={user} />
         </Workspace>
@@ -262,10 +231,14 @@ function ClassroomForm({
   onCreated?: (room: Classroom) => void;
 }) {
   const [success, setSuccess] = useState(false);
-  const mutation = useApiMutation((body: CreateClassroom) =>
-    existing
-      ? classroomsApi.update(existing.id, body)
-      : classroomsApi.create(body),
+  const mutation = useApiMutation(
+    (body: Partial<CreateClassroom> & Pick<CreateClassroom, "name">) =>
+      existing
+        ? classroomsApi.update(existing.id, body)
+        : classroomsApi.create({
+            name: body.name,
+            identifier: body.identifier!,
+          }),
   );
   async function submit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -276,7 +249,7 @@ function ClassroomForm({
     try {
       const room = await mutation.mutateAsync({
         name: String(data.get("name")).trim(),
-        identifier: String(data.get("identifier")),
+        ...(!existing ? { identifier: String(data.get("identifier")) } : {}),
       });
       setSuccess(true);
       onCreated?.(room);
@@ -301,13 +274,19 @@ function ClassroomForm({
         Identificador
         <input
           name="identifier"
-          pattern="[A-Z]"
-          maxLength={1}
-          required
+          pattern={existing ? undefined : "[A-Z]"}
+          maxLength={existing ? undefined : 1}
+          required={!existing}
+          readOnly={!!existing}
+          disabled={!!existing}
           defaultValue={existing?.identifier}
           placeholder="A"
-          title="Uma letra maiúscula de A a Z"
-          className={fieldClass}
+          title={
+            existing
+              ? "Identificador definido pelo sistema"
+              : "Uma letra maiúscula de A a Z"
+          }
+          className={`${fieldClass} read-only:bg-slate-50 read-only:text-(--muted)`}
         />
       </label>
       <ErrorMessage error={mutation.error} />
@@ -664,6 +643,19 @@ function Details({ id, user }: { id: number; user: SessionUser }) {
       </div>
     );
   const room = query.data;
+  if (user.role === "coordenador")
+    return (
+      <>
+        <ErrorMessage error={query.error} />
+        <CoordinatorClassroom
+          key={room.id}
+          room={room}
+          studentsAssignment={<Assignment room={room} resource="students" />}
+          teachers={<Assignment room={room} resource="teachers" />}
+          edit={<ClassroomForm key={room.id} existing={room} />}
+        />
+      </>
+    );
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center gap-5 border-b border-(--line) pb-8">
@@ -696,18 +688,20 @@ function Details({ id, user }: { id: number; user: SessionUser }) {
         )}
       </div>
       <ErrorMessage error={query.error} />
-      {manager && <ClassroomForm key={room.id} existing={room} />}
-      <div className="grid min-w-0 grid-cols-1 gap-8">
-        <Subjects room={room} user={user} />
-        {user.role !== "aluno" && (
-          <div className="space-y-6">
-            {manager && (
-              <Roster room={room} resource="teachers" manager={manager} />
-            )}
-            <Roster room={room} resource="students" manager={manager} />
-          </div>
-        )}
-      </div>
+      <>
+        {manager && <ClassroomForm key={room.id} existing={room} />}
+        <div className="grid min-w-0 grid-cols-1 gap-8">
+          <Subjects room={room} user={user} />
+          {user.role !== "aluno" && (
+            <div className="space-y-6">
+              {manager && (
+                <Roster room={room} resource="teachers" manager={manager} />
+              )}
+              <Roster room={room} resource="students" manager={manager} />
+            </div>
+          )}
+        </div>
+      </>
     </div>
   );
 }
@@ -726,7 +720,11 @@ export function ClassroomDetailsPage({
             <Details id={Number(id)} user={user} />
           </TeacherShell>
         ) : (
-          <Workspace user={user} title="Detalhes da turma">
+          <Workspace
+            user={user}
+            title="Detalhes da turma"
+            description="Acompanhe e organize os alunos, professores e matérias da turma."
+          >
             <Details id={Number(id)} user={user} />
           </Workspace>
         )

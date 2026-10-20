@@ -148,6 +148,17 @@ test('listagem vazia e erro de turmas', async () => {
   jest.mocked(classroomsApi.list).mockResolvedValue([]); show(<ClassroomsPage role="admin" />); await screen.findByText('Nenhuma turma disponível.'); cleanup();
   jest.mocked(classroomsApi.list).mockRejectedValue(new Error('Turmas offline')); show(<ClassroomsPage role="admin" />); expect(await screen.findByRole('alert')).toHaveTextContent('Turmas offline');
 });
+test('edição da turma mantém identificador do backend somente para leitura e não o envia', async () => {
+  identity('PEDAGOGICAL_COORDINATOR');
+  const { container } = show(<ClassroomDetailsPage role="coordenador" id="1" />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Dados da turma' }));
+  expect(screen.getByLabelText('Identificador')).toHaveAttribute('readonly');
+  expect(screen.getByLabelText('Identificador')).toBeDisabled();
+  expect(screen.getByLabelText('Identificador')).toHaveValue('A');
+  fireEvent.change(screen.getByLabelText('Nome da turma'), { target: { value: '1º ano A' } });
+  fireEvent.submit(container.querySelector('form')!);
+  await waitFor(() => expect(classroomsApi.update).toHaveBeenCalledWith(1, { name: '1º ano A' }));
+});
 test('criação de turma salva e oferece vínculo', async () => {
   identity('PEDAGOGICAL_COORDINATOR'); const { container } = show(<NewClassroomPage />);
   await screen.findByLabelText('Nome da turma'); formValues(container, { name: ' 3º ano ', identifier: 'A' }); fireEvent.submit(container.querySelector('form')!);

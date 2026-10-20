@@ -93,7 +93,9 @@ function Content({
       <div className="space-y-4">
         <BackLink />
         <LockKeyhole size={28} aria-hidden="true" />
-        <p role="alert">Aceite o convite do professor responsável para acessar esta matéria.</p>
+        <p role="alert">
+          Aceite o convite do professor responsável para acessar esta matéria.
+        </p>
       </div>
     );
   return (

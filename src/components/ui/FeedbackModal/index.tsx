@@ -1,6 +1,11 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, UserPlus, type LucideIcon } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  UserPlus,
+  type LucideIcon,
+} from "lucide-react";
 import type { ReactNode } from "react";
 
 type FeedbackModalProps = {
@@ -37,7 +42,11 @@ export function FeedbackModalContent({
         className={`mx-auto flex h-[72px] w-[72px] items-center justify-center rounded-full ${invitation ? "bg-[#e8f7fa] text-(--blue-dark)" : success ? "bg-[#a9dfb1] text-[#5a873d]" : "bg-[#fac4c1] text-[#e63e32]"}`}
       >
         {invitation ? (
-          <InvitationIcon aria-hidden="true" className="h-10 w-10" strokeWidth={2} />
+          <InvitationIcon
+            aria-hidden="true"
+            className="h-10 w-10"
+            strokeWidth={2}
+          />
         ) : success ? (
           <CheckCircle2 className="h-10 w-10" strokeWidth={2.5} />
         ) : (
@@ -53,7 +62,9 @@ export function FeedbackModalContent({
       <div className="mt-8 text-[21px] leading-[1.55] text-[#55565b]">
         {message}
       </div>
-      {error && <div className="mt-4 text-left text-sm text-red-700">{error}</div>}
+      {error && (
+        <div className="mt-4 text-left text-sm text-red-700">{error}</div>
+      )}
       <div
         className={`mt-8 grid gap-3 ${secondaryAction ? "grid-cols-2" : "grid-cols-1"}`}
       >

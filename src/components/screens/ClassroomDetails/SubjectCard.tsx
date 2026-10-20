@@ -16,7 +16,13 @@ import {
   fieldClass,
 } from "@/components/screens/Integration/shared";
 
-export function SubjectCard({ subject, viewerId }: { subject: Subject; viewerId?: number }) {
+export function SubjectCard({
+  subject,
+  viewerId,
+}: {
+  subject: Subject;
+  viewerId?: number;
+}) {
   const menu = useRef<HTMLDetailsElement>(null);
   const trigger = useRef<HTMLElement | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -67,10 +73,15 @@ export function SubjectCard({ subject, viewerId }: { subject: Subject; viewerId?
         aria-disabled="true"
         className="h-full cursor-not-allowed rounded-2xl border border-(--line) bg-slate-50 p-7"
       >
-        <LockKeyhole size={24} aria-hidden="true" className="mb-5 text-slate-500" />
+        <LockKeyhole
+          size={24}
+          aria-hidden="true"
+          className="mb-5 text-slate-500"
+        />
         <h3 className="break-words text-base font-semibold">{subject.name}</h3>
         <p className="mt-2 text-sm text-(--muted)">
-          Acesso bloqueado. Aceite o convite do professor responsável para participar.
+          Acesso bloqueado. Aceite o convite do professor responsável para
+          participar.
         </p>
       </div>
     );
@@ -84,32 +95,34 @@ export function SubjectCard({ subject, viewerId }: { subject: Subject; viewerId?
           >
             <BookOpen size={24} strokeWidth={1.7} />
           </span>
-          {owner && <details ref={menu} className="relative z-10">
-            <summary
-              ref={(node) => {
-                trigger.current = node;
-              }}
-              aria-label={`Opções de ${subject.name}`}
-              className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-lg text-(--muted) hover:bg-cyan-50 [&::-webkit-details-marker]:hidden"
-            >
-              <MoreHorizontal size={22} aria-hidden="true" />
-            </summary>
-            <div className="absolute right-0 top-full mt-1 w-52 rounded-xl border border-(--line) bg-white p-1.5 shadow-lg">
-              <button
-                type="button"
-                onClick={() => {
-                  if (menu.current) menu.current.open = false;
-                  invitation.reset();
-                  setEmail("");
-                  dialog.current?.showModal();
+          {owner && (
+            <details ref={menu} className="relative z-10">
+              <summary
+                ref={(node) => {
+                  trigger.current = node;
                 }}
-                className="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm text-(--ink) hover:bg-cyan-50"
+                aria-label={`Opções de ${subject.name}`}
+                className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-lg text-(--muted) hover:bg-cyan-50 [&::-webkit-details-marker]:hidden"
               >
-                <UserPlus size={17} aria-hidden="true" />
-                Adicionar professor
-              </button>
-            </div>
-          </details>}
+                <MoreHorizontal size={22} aria-hidden="true" />
+              </summary>
+              <div className="absolute right-0 top-full mt-1 w-52 rounded-xl border border-(--line) bg-white p-1.5 shadow-lg">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (menu.current) menu.current.open = false;
+                    invitation.reset();
+                    setEmail("");
+                    dialog.current?.showModal();
+                  }}
+                  className="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm text-(--ink) hover:bg-cyan-50"
+                >
+                  <UserPlus size={17} aria-hidden="true" />
+                  Adicionar professor
+                </button>
+              </div>
+            </details>
+          )}
         </div>
         <Link
           href={`/teacher/classrooms/${subject.classroomId}/subjects/${subject.id}`}

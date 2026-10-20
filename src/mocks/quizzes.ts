@@ -95,6 +95,11 @@ for (const classroomId of [2, 3, 4, 6]) {
   }
 }
 const seededQuizIds = new Set(quizzes.map((quiz) => quiz.id));
+export function mockDeleteClassroomQuizzes(classroomId: number) {
+  for (let index = quizzes.length - 1; index >= 0; index--) {
+    if (quizzes[index].classroomId === classroomId) quizzes.splice(index, 1);
+  }
+}
 export function mockTeacherQuizzes(
   current: User,
   subjects: Subject[] = [],

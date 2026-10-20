@@ -13,6 +13,22 @@ jest.mock('@/integrations/schools/api', () => ({ schoolsApi: { list: jest.fn() }
 jest.mock('@/utils/viacep', () => ({ ...jest.requireActual('@/utils/viacep'), findAddressByCep: jest.fn() }));
 const request = { id: 1, name: 'Ana Silva', email: 'a@b.com', ra: '123', birthDate: '2000-01-01', role: 'STUDENT' as const, schoolName: 'Escola', status: 'PENDING' as const, reviewReason: 'Parecer', hasPhoto: true };
 const school = { id: 1, nome: 'Escola São Paulo', cnpj: '11222333000181', cidade: 'São Paulo', bairro: 'Centro', logradouro: 'Rua Teste' };
+test('coordenação separa professores e alunos, busca e aprova sem transferências', async () => {
+  jest.mocked(authApi.me).mockResolvedValue({ id: 2, role: 'PEDAGOGICAL_COORDINATOR', fullName: 'Coord', email: 'c@b.com' } as Awaited<ReturnType<typeof authApi.me>>);
+  jest.mocked(registrationApi.list).mockResolvedValue({ content: [
+    { ...request, hasPhoto: false },
+    { ...request, id: 2, name: 'Paula Mendes', email: 'paula@exemplo.com', role: 'TEACHER', hasPhoto: false },
+  ], totalPages: 1 });
+  render(<RegistrationRequests role="coordenador" />, { wrapper: queryWrapper().wrapper });
+  expect(await screen.findByRole('button', { name: 'Aprovar cadastro de Paula Mendes' })).toBeVisible();
+  expect(screen.queryByText('Ana Silva')).not.toBeInTheDocument();
+  expect(screen.queryByText('Transferências')).not.toBeInTheDocument();
+  fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'ausente' } });
+  expect(screen.getByText('Nenhuma solicitação encontrada para esta busca.')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Alunos' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Aprovar cadastro de Ana Silva' }));
+  await waitFor(() => expect(registrationApi.review).toHaveBeenCalledWith(1, 'APPROVED', ''));
+});
 beforeEach(() => {
   jest.mocked(authApi.me).mockResolvedValue({ id: 1, role: 'ADMIN', fullName: 'Admin', email: 'admin@b.com' } as Awaited<ReturnType<typeof authApi.me>>);
   jest.mocked(registrationApi.list).mockResolvedValue({ content: [request], totalPages: 2 });

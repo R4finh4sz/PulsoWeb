@@ -6,6 +6,8 @@ import {
 import type { Classroom, Subject, User } from "@/integrations/types";
 import { canAccessSubject } from "@/utils/subjectAccess";
 import { z } from "zod";
+import type { Registration } from "@/integrations/registration/api";
+import type { AccountDeletion } from "@/integrations/profile/deletions";
 import { demoUsers, getDemoUser } from "./access";
 import { demoSchoolInvitations, demoSubjectInvitations } from "./notifications";
 import { mockPassword } from "./platform";
@@ -13,13 +15,61 @@ import {
   mockQuizStudents,
   mockSubjectQuizzes,
   mockTeacherQuizzes,
+  mockDeleteClassroomQuizzes,
 } from "./quizzes";
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 
 const users: User[] = clone(demoUsers);
+users.push(
+  ...["Ricardo Almeida", "Fernanda Lima", "Carlos Oliveira"].map(
+    (fullName, index): User => ({
+      id: 6 + index,
+      fullName,
+      email: `docente${index + 1}@exemplo.com`,
+      ra: `P00${6 + index}`,
+      role: "TEACHER",
+      classroomId: null,
+      schoolId: 1,
+    }),
+  ),
+);
 const passwords = new Map<number, string>();
-const deletionRequests = new Map<number, { reason: string }>();
+const deletionRequests = new Map<
+  number,
+  AccountDeletion & { schoolId: number | null }
+>();
+const deletedAccountIds = new Set<number>();
+const registrations: Registration[] = [
+  ...["Paula Mendes", "Lucas Ferreira", "Juliana Costa", "Rafael Almeida"].map(
+    (name, index): Registration => ({
+      id: 5000 + index,
+      name,
+      email: `professor${index + 1}@exemplo.com`,
+      ra: `P${100 + index}`,
+      birthDate: null,
+      role: "TEACHER",
+      schoolName: "Escola Estadual Monte Serrat",
+      status: "PENDING",
+      reviewReason: null,
+      hasPhoto: false,
+    }),
+  ),
+  ...["Beatriz Souza", "Gabriel Santos", "Mariana Lima", "Pedro Oliveira"].map(
+    (name, index): Registration => ({
+      id: 5100 + index,
+      name,
+      email: `estudante${index + 1}@exemplo.com`,
+      ra: `A${100 + index}`,
+      birthDate: null,
+      role: "STUDENT",
+      schoolName: "Escola Estadual Monte Serrat",
+      status: "PENDING",
+      reviewReason: null,
+      hasPhoto: false,
+    }),
+  ),
+];
 const studentNames = [
   "Beatriz",
   "Bruno",
@@ -36,42 +86,80 @@ const studentNames = [
   "Mariana",
 ];
 users.push(
-  ...Array.from(
-    { length: 39 },
-    (_, index): User => ({
-      id: 100 + index,
-      fullName: `${studentNames[index % studentNames.length]} ${["Santos", "Oliveira", "Souza"][Math.floor(index / studentNames.length)]}`,
-      email: `aluno${index + 2}@exemplo.com`,
-      ra: String(index + 2).padStart(5, "0"),
-      role: "STUDENT",
-      classroomId: 1,
-      schoolId: 1,
-    }),
-  ),
+  ...Array.from({ length: 39 }, (_, index): User => ({
+    id: 100 + index,
+    fullName: `${studentNames[index % studentNames.length]} ${["Santos", "Oliveira", "Souza"][Math.floor(index / studentNames.length)]}`,
+    email: `aluno${index + 2}@exemplo.com`,
+    ra: String(index + 2).padStart(5, "0"),
+    role: "STUDENT",
+    classroomId: 1,
+    schoolId: 1,
+  })),
 );
 const rooms: Classroom[] = [
   {
     id: 1,
-    name: "6º ano A",
-    identifier: "6A",
-    teacherIds: [3, 5],
+    name: "1º ano A",
+    identifier: "1A",
+    teacherIds: [3, 5, 6, 7, 8],
     schoolId: 1,
   },
-  { id: 2, name: "7º ano B", identifier: "7B", teacherIds: [3], schoolId: 2 },
-  { id: 3, name: "8º ano A", identifier: "8A", teacherIds: [3], schoolId: 3 },
-  { id: 4, name: "6º ano B", identifier: "6B", teacherIds: [3], schoolId: 1 },
-  { id: 5, name: "6º ano C", identifier: "6C", teacherIds: [3], schoolId: 1 },
-  { id: 6, name: "7º ano A", identifier: "7A", teacherIds: [3], schoolId: 1 },
-  { id: 7, name: "7º ano B", identifier: "7B", teacherIds: [3], schoolId: 1 },
-  { id: 8, name: "7º ano C", identifier: "7C", teacherIds: [3], schoolId: 1 },
-  { id: 9, name: "8º ano A", identifier: "8A", teacherIds: [3], schoolId: 1 },
-  { id: 10, name: "8º ano B", identifier: "8B", teacherIds: [3], schoolId: 1 },
-  { id: 11, name: "9º ano A", identifier: "9A", teacherIds: [3], schoolId: 1 },
-  { id: 12, name: "9º ano B", identifier: "9B", teacherIds: [3], schoolId: 1 },
+  { id: 2, name: "2º ano B", identifier: "2B", teacherIds: [3], schoolId: 2 },
+  { id: 3, name: "3º ano A", identifier: "3A", teacherIds: [3], schoolId: 3 },
+  { id: 4, name: "1º ano B", identifier: "1B", teacherIds: [3], schoolId: 1 },
+  { id: 5, name: "1º ano C", identifier: "1C", teacherIds: [3], schoolId: 1 },
+  { id: 6, name: "2º ano A", identifier: "2A", teacherIds: [3], schoolId: 1 },
+  { id: 7, name: "2º ano B", identifier: "2B", teacherIds: [3], schoolId: 1 },
+  { id: 8, name: "2º ano C", identifier: "2C", teacherIds: [3], schoolId: 1 },
+  { id: 9, name: "3º ano A", identifier: "3A", teacherIds: [3], schoolId: 1 },
+  { id: 10, name: "3º ano B", identifier: "3B", teacherIds: [3], schoolId: 1 },
+  { id: 11, name: "3º ano C", identifier: "3C", teacherIds: [3], schoolId: 1 },
+  { id: 12, name: "3º ano D", identifier: "3D", teacherIds: [3], schoolId: 1 },
 ];
 const subjects: Subject[] = [
-  { id: 1, name: "Matemática", classroomId: 1, teacherId: 3, teacherIds: [3] },
-  { id: 2, name: "Ciências", classroomId: 1, teacherId: 5, teacherIds: [5] },
+  {
+    id: 1,
+    name: "Matemática",
+    classroomId: 1,
+    teacherId: 3,
+    teacherIds: [3, 6, 7],
+  },
+  { id: 2, name: "Ciências", classroomId: 1, teacherId: 5, teacherIds: [5, 7] },
+  {
+    id: 10,
+    name: "Física",
+    classroomId: 1,
+    teacherId: 3,
+    teacherIds: [3, 6, 7],
+  },
+  {
+    id: 11,
+    name: "Química",
+    classroomId: 1,
+    teacherId: 5,
+    teacherIds: [5, 6, 7],
+  },
+  {
+    id: 12,
+    name: "Língua Portuguesa",
+    classroomId: 1,
+    teacherId: 5,
+    teacherIds: [5, 8],
+  },
+  {
+    id: 13,
+    name: "História",
+    classroomId: 1,
+    teacherId: 5,
+    teacherIds: [5, 8],
+  },
+  {
+    id: 14,
+    name: "Filosofia",
+    classroomId: 1,
+    teacherId: 3,
+    teacherIds: [3, 8],
+  },
 ];
 
 // Turmas adicionais para explorar relatórios com diferentes volumes de alunos.
@@ -90,18 +178,15 @@ for (const [classroomId, count] of [
     teacherIds: [3],
   });
   users.push(
-    ...Array.from(
-      { length: count },
-      (_, index): User => ({
-        id: 1000 + classroomId * 100 + index,
-        fullName: `${studentNames[(index + classroomId) % studentNames.length]} ${["Almeida", "Costa", "Pereira"][Math.floor(index / studentNames.length)]}`,
-        email: `turma${classroomId}.aluno${index + 1}@exemplo.com`,
-        ra: `${classroomId}${String(index + 1).padStart(4, "0")}`,
-        role: "STUDENT",
-        classroomId,
-        schoolId: room.schoolId,
-      }),
-    ),
+    ...Array.from({ length: count }, (_, index): User => ({
+      id: 1000 + classroomId * 100 + index,
+      fullName: `${studentNames[(index + classroomId) % studentNames.length]} ${["Almeida", "Costa", "Pereira"][Math.floor(index / studentNames.length)]}`,
+      email: `turma${classroomId}.aluno${index + 1}@exemplo.com`,
+      ra: `${classroomId}${String(index + 1).padStart(4, "0")}`,
+      role: "STUDENT",
+      classroomId,
+      schoolId: room.schoolId,
+    })),
   );
 }
 const subjectInvitations: SubjectInvitation[] = clone(demoSubjectInvitations);
@@ -129,12 +214,43 @@ let terms = {
   content: "Ambiente local com dados fictícios para explorar o Pulso Escolar.",
 };
 
-schools[0] = { ...schools[0], nome: "EMEF Monte Serrat", teacherIds: [3, 5] };
+schools[0] = {
+  ...schools[0],
+  nome: "Escola Estadual Monte Serrat",
+  teacherIds: [3, 5, 6, 7, 8],
+};
 schools.push(
-  { ...schools[0], id: 2, nome: "EMEF Jardim das Flores", teacherIds: [3] },
-  { ...schools[0], id: 3, nome: "EMEF Vila Nova", teacherIds: [3] },
-  { ...schools[0], id: 4, nome: "EMEF Parque das Árvores", teacherIds: [] },
+  {
+    ...schools[0],
+    id: 2,
+    nome: "Escola Estadual Jardim das Flores",
+    teacherIds: [3],
+  },
+  { ...schools[0], id: 3, nome: "Escola Estadual Vila Nova", teacherIds: [3] },
+  {
+    ...schools[0],
+    id: 4,
+    nome: "Escola Estadual Parque das Árvores",
+    teacherIds: [],
+  },
 );
+
+for (const id of [6, 100]) {
+  const user = users.find((item) => item.id === id)!;
+  deletionRequests.set(id, {
+    id,
+    name: user.fullName,
+    email: user.email,
+    role: user.role as "TEACHER" | "STUDENT",
+    schoolId: user.schoolId ?? null,
+    reason:
+      id === 6
+        ? "Não faço mais parte da equipe da escola."
+        : "Não utilizarei mais esta conta.",
+    createdAt: new Date().toISOString(),
+    status: "PENDING",
+  });
+}
 
 // Dados mantidos apenas na memória da aba; recarregar restaura os exemplos.
 export function mockRequest(
@@ -144,7 +260,8 @@ export function mockRequest(
   token: string,
 ): unknown {
   const current = getDemoUser(token);
-  if (!current) throw new Error("Sessão de demonstração inválida.");
+  if (!current || deletedAccountIds.has(current.id))
+    throw new Error("Sessão de demonstração inválida.");
   const url = new URL(path, "http://mock.local");
   const parts = url.pathname.split("/").filter(Boolean);
   const data = (body ?? {}) as Record<string, unknown>;
@@ -233,24 +350,38 @@ export function mockRequest(
     return clone(invite);
   }
   if (parts[0] === "me" && parts[1]) {
-    if (current.role !== "TEACHER")
-      throw new Error("Perfil disponível apenas para professores.");
+    if (
+      current.role !== "TEACHER" &&
+      current.role !== "PEDAGOGICAL_COORDINATOR" &&
+      !(current.role === "STUDENT" && parts[1] === "deletion-request")
+    )
+      throw new Error(
+        "Perfil disponível apenas para professores e coordenadores.",
+      );
     const profile = {
       user: current,
       schools: schools.filter(
         (school) =>
-          school.teacherIds?.includes(current.id) ||
+          (current.role === "TEACHER" &&
+            school.teacherIds?.includes(current.id)) ||
           school.id === current.schoolId,
       ),
-      classrooms: rooms.filter((room) => room.teacherIds.includes(current.id)),
-      deletionRequested: deletionRequests.has(current.id),
+      classrooms: rooms.filter((room) =>
+        current.role === "TEACHER"
+          ? room.teacherIds.includes(current.id)
+          : room.schoolId === current.schoolId,
+      ),
+      deletionRequested: deletionRequests.get(current.id)?.status === "PENDING",
     };
     if (parts[1] === "profile" && method === "GET") return clone(profile);
     if (parts[1] === "export" && method === "GET")
       return clone({
         exportedAt: new Date().toISOString(),
         ...profile,
-        quizzes: mockTeacherQuizzes(current, subjects),
+        quizzes:
+          current.role === "TEACHER"
+            ? mockTeacherQuizzes(current, subjects)
+            : [],
         invitations: subjectInvitations.filter((invitation) =>
           subjects.some(
             (subject) =>
@@ -287,9 +418,20 @@ export function mockRequest(
       const reason = data.reason.trim();
       if (reason.length > 2000)
         throw new Error("O motivo deve ter no máximo 2000 caracteres.");
-      if (deletionRequests.has(current.id))
+      if (deletionRequests.get(current.id)?.status === "PENDING")
         throw new Error("Já existe um pedido de exclusão pendente.");
-      deletionRequests.set(current.id, { reason });
+      if (current.role !== "TEACHER" && current.role !== "STUDENT")
+        throw new Error("Esta solicitação é destinada a alunos e professores.");
+      deletionRequests.set(current.id, {
+        id: current.id,
+        name: current.fullName,
+        email: current.email,
+        role: current.role,
+        schoolId: current.schoolId ?? null,
+        reason,
+        createdAt: new Date().toISOString(),
+        status: "PENDING",
+      });
       return undefined;
     }
   }
@@ -350,8 +492,96 @@ export function mockRequest(
     }
     return clone(schools);
   }
-  if (parts[0] === "registration-requests" && method === "GET")
-    return { content: [], totalPages: 0 };
+  if (parts[0] === "account-deletion-requests") {
+    if (current.role !== "ADMIN" && current.role !== "PEDAGOGICAL_COORDINATOR")
+      throw new Error(
+        "Você não tem permissão para analisar exclusões de conta.",
+      );
+    const accessible = [...deletionRequests.values()].filter(
+      (request) =>
+        current.role === "ADMIN" || request.schoolId === current.schoolId,
+    );
+    if (method === "GET" && !parts[1])
+      return clone(
+        accessible.filter(
+          (request) =>
+            request.status === (url.searchParams.get("status") ?? "PENDING"),
+        ),
+      );
+    const request = accessible.find((item) => item.id === Number(parts[1]));
+    if (method !== "PATCH" || !request)
+      throw new Error("Pedido de exclusão não encontrado.");
+    if (request.status !== "PENDING")
+      throw new Error("Este pedido já foi analisado.");
+    if (data.status !== "APPROVED" && data.status !== "REJECTED")
+      throw new Error("Informe uma decisão válida.");
+    request.status = data.status;
+    if (data.status === "APPROVED") {
+      deletedAccountIds.add(request.id);
+      const index = users.findIndex((user) => user.id === request.id);
+      if (index >= 0) users.splice(index, 1);
+      for (const room of rooms)
+        room.teacherIds = room.teacherIds.filter((id) => id !== request.id);
+      for (const school of schools)
+        school.teacherIds = school.teacherIds?.filter(
+          (id) => id !== request.id,
+        );
+      for (const subject of subjects) {
+        subject.teacherIds = (subject.teacherIds ?? [subject.teacherId]).filter(
+          (id) => id !== request.id,
+        );
+        if (subject.teacherId === request.id)
+          subject.teacherId = subject.teacherIds[0] ?? 0;
+      }
+    }
+    return undefined;
+  }
+  if (parts[0] === "registration-requests") {
+    if (current.role !== "ADMIN" && current.role !== "PEDAGOGICAL_COORDINATOR")
+      throw new Error("Você não tem permissão para analisar cadastros.");
+    const schoolName = schools.find(
+      (school) => school.id === current.schoolId,
+    )?.nome;
+    const accessible = registrations.filter(
+      (request) =>
+        current.role === "ADMIN" || request.schoolName === schoolName,
+    );
+    if (method === "GET" && !parts[1]) {
+      const status = url.searchParams.get("status") ?? "PENDING";
+      const page = Math.max(0, Number(url.searchParams.get("page")) || 0);
+      const size = Math.max(1, Number(url.searchParams.get("size")) || 20);
+      const filtered = accessible.filter(
+        (request) => request.status === status,
+      );
+      return clone({
+        content: filtered.slice(page * size, (page + 1) * size),
+        totalPages: Math.ceil(filtered.length / size),
+      });
+    }
+    if (method === "PATCH" && parts[1]) {
+      const request = accessible.find((item) => item.id === Number(parts[1]));
+      if (!request) throw new Error("Solicitação não encontrada.");
+      if (request.status !== "PENDING")
+        throw new Error("Esta solicitação já foi analisada.");
+      if (data.status !== "APPROVED" && data.status !== "REJECTED")
+        throw new Error("Informe uma decisão válida.");
+      request.status = data.status;
+      request.reviewReason =
+        typeof data.reason === "string" ? data.reason : null;
+      if (request.status === "APPROVED")
+        users.push({
+          id: request.id,
+          fullName: request.name,
+          email: request.email,
+          ra: request.ra,
+          role: request.role,
+          classroomId: null,
+          schoolId: schools.find((school) => school.nome === request.schoolName)
+            ?.id,
+        });
+      return clone(request);
+    }
+  }
   if (parts[0] === "invitations" && method === "POST") return undefined;
   const role = {
     students: "STUDENT",
@@ -374,7 +604,16 @@ export function mockRequest(
     if (id) {
       const user = users.find((user) => user.id === id && user.role === role);
       if (!user) throw new Error("Cadastro não encontrado no mock.");
-      if (method === "PATCH") Object.assign(user, data);
+      if (method === "PATCH") {
+        if (
+          current.role === "PEDAGOGICAL_COORDINATOR" &&
+          (parts[0] === "students" || parts[0] === "teachers")
+        )
+          throw new Error(
+            "O coordenador não pode editar os dados de alunos ou professores.",
+          );
+        Object.assign(user, data);
+      }
       return { ...user };
     }
     const q = (url.searchParams.get("q") ?? "").toLocaleLowerCase();
@@ -538,6 +777,28 @@ export function mockRequest(
             : user.classroomId === room.id,
         ),
       );
+    }
+    if (method === "DELETE") {
+      if (
+        current.role !== "ADMIN" &&
+        !(
+          current.role === "PEDAGOGICAL_COORDINATOR" &&
+          current.schoolId === room.schoolId
+        )
+      )
+        throw new Error("Você não tem permissão para excluir esta turma.");
+      for (const student of users)
+        if (student.classroomId === room.id) student.classroomId = null;
+      for (let index = subjectInvitations.length - 1; index >= 0; index--) {
+        if (subjectInvitations[index].classroomId === room.id)
+          subjectInvitations.splice(index, 1);
+      }
+      for (let index = subjects.length - 1; index >= 0; index--) {
+        if (subjects[index].classroomId === room.id) subjects.splice(index, 1);
+      }
+      mockDeleteClassroomQuizzes(room.id);
+      rooms.splice(rooms.indexOf(room), 1);
+      return undefined;
     }
     if (method === "PATCH") Object.assign(room, data);
     return clone(room);

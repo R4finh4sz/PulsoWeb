@@ -82,7 +82,7 @@ export function DashboardShell({
     );
   };
 
-  if (user.role === "professor")
+  if (user.role === "professor" || user.role === "coordenador")
     return (
       <TeacherShell user={user}>
         <div className="space-y-7">

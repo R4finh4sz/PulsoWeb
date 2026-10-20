@@ -11,7 +11,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, School, UserPlus, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 
-export function TeacherNotifications({ userId }: { userId: string }) {
+export function TeacherNotifications({
+  userId,
+  dark = false,
+}: {
+  userId: string;
+  dark?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -34,19 +40,27 @@ export function TeacherNotifications({ userId }: { userId: string }) {
     refetchInterval: 30000,
   });
   const pendingInvitations = [
-    ...(demo ? query.data ?? [] : []).map((invite) => ({
+    ...(demo ? (query.data ?? []) : []).map((invite) => ({
       ...invite,
       kind: "subject" as const,
       key: "subject:" + invite.id,
       title: "Convite para uma matéria",
-      message: invite.inviterName + " convidou você para participar de " + invite.subjectName + ".",
+      message:
+        invite.inviterName +
+        " convidou você para participar de " +
+        invite.subjectName +
+        ".",
     })),
-    ...(demo ? schoolQuery.data ?? [] : []).map((invite) => ({
+    ...(demo ? (schoolQuery.data ?? []) : []).map((invite) => ({
       ...invite,
       kind: "school" as const,
       key: "school:" + invite.id,
       title: "Convite para uma escola",
-      message: invite.inviterName + " convidou você para se vincular à escola " + invite.schoolName + ".",
+      message:
+        invite.inviterName +
+        " convidou você para se vincular à escola " +
+        invite.schoolName +
+        ".",
     })),
   ];
   const invitation = pendingInvitations.find(
@@ -89,7 +103,11 @@ export function TeacherNotifications({ userId }: { userId: string }) {
   });
   function answer(value: "ACCEPTED" | "REJECTED") {
     if (invitation && !response.isPending)
-      response.mutate({ id: invitation.id, kind: invitation.kind, status: value });
+      response.mutate({
+        id: invitation.id,
+        kind: invitation.kind,
+        status: value,
+      });
   }
   const unread = pendingInvitations.length;
   useEffect(() => {
@@ -120,7 +138,7 @@ export function TeacherNotifications({ userId }: { userId: string }) {
         aria-expanded={open}
         aria-controls={id}
         onClick={() => setOpen((value) => !value)}
-        className="relative flex h-11 w-11 items-center justify-center rounded-xl text-slate-600 hover:bg-cyan-50"
+        className={`relative flex h-11 w-11 items-center justify-center rounded-xl ${dark ? "text-[#d8e9ee] hover:bg-[#245362] focus-visible:outline-white" : "text-slate-600 hover:bg-cyan-50"}`}
       >
         <Bell size={21} aria-hidden="true" />
         {unread > 0 && (
@@ -150,7 +168,9 @@ export function TeacherNotifications({ userId }: { userId: string }) {
               <X size={18} aria-hidden="true" />
             </button>
           </div>
-          {(query.error || schoolQuery.error) && <ErrorMessage error={query.error || schoolQuery.error} />}
+          {(query.error || schoolQuery.error) && (
+            <ErrorMessage error={query.error || schoolQuery.error} />
+          )}
           {(query.isPending || schoolQuery.isPending) && demo ? (
             <p role="status" className="p-5 text-sm">
               Carregando convites…
@@ -215,7 +235,11 @@ export function TeacherNotifications({ userId }: { userId: string }) {
               type="invitation"
               icon={invitation.kind === "school" ? School : UserPlus}
               disabled={response.isPending}
-              error={response.error ? <ErrorMessage error={response.error} /> : undefined}
+              error={
+                response.error ? (
+                  <ErrorMessage error={response.error} />
+                ) : undefined
+              }
               titleId={`${id}-invitation-title`}
               title={invitation.title}
               message={invitation.message}

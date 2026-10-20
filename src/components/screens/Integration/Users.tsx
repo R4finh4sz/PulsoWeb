@@ -240,7 +240,13 @@ export function UserForm({
     </form>
   );
 }
-export function UserList({ resource }: { resource: UserResource }) {
+export function UserList({
+  resource,
+  canEdit = true,
+}: {
+  resource: UserResource;
+  canEdit?: boolean;
+}) {
   const [q, setQ] = useState("");
   const [page, setPage] = useState(0);
   const [unassigned, setUnassigned] = useState(false);
@@ -337,7 +343,7 @@ export function UserList({ resource }: { resource: UserResource }) {
                   {person.email} · RA: {person.ra || "Não informado"}
                 </p>
               </div>
-              {resource !== "coordinators" && (
+              {canEdit && resource !== "coordinators" && (
                 <button
                   className="ml-12 inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-(--blue) hover:bg-[#e1f5f8] focus-visible:outline-2 focus-visible:outline-[var(--blue)] sm:ml-0"
                   aria-label={`Editar cadastro de ${person.fullName}`}
@@ -374,7 +380,7 @@ export function UserList({ resource }: { resource: UserResource }) {
           </div>
         </>
       )}
-      {editing && (
+      {canEdit && editing && (
         <div>
           <button onClick={() => setEditing(null)}>Cancelar edição</button>
           <UserForm
@@ -398,7 +404,7 @@ export function TeachersPage() {
               Convidar professor
             </a>
           </div>
-          <UserList resource="teachers" />
+          <UserList resource="teachers" canEdit={false} />
         </Workspace>
       )}
     </Protected>
@@ -408,7 +414,7 @@ export function UsersHome({ user }: { user: SessionUser }) {
   return user.role === "admin" ? (
     <UserList resource="coordinators" />
   ) : user.role === "coordenador" ? (
-    <UserList resource="students" />
+    <UserList resource="students" canEdit={false} />
   ) : null;
 }
 

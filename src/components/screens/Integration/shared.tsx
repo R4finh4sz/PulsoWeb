@@ -60,10 +60,12 @@ export function Protected({
 export function Workspace({
   user,
   title,
+  description = "Acompanhe os cadastros e as turmas da plataforma.",
   children,
 }: {
   user: SessionUser;
   title: string;
+  description?: string;
   children: ReactNode;
 }) {
   const navigation =
@@ -102,7 +104,7 @@ export function Workspace({
     <DashboardShell
       user={user}
       title={title}
-      description="Acompanhe os cadastros e as turmas da plataforma."
+      description={description}
       navigation={navigation}
     >
       {children}

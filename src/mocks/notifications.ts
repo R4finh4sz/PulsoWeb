@@ -17,8 +17,8 @@ export const demoSchoolInvitations: SchoolInvitation[] = [
   {
     id: 1,
     schoolId: 4,
-    schoolName: "EMEF Parque das Árvores",
-    inviterName: "Coordenação da EMEF Parque das Árvores",
+    schoolName: "Escola Estadual Parque das Árvores",
+    inviterName: "Coordenação da Escola Estadual Parque das Árvores",
     email: "professor@pulso.com",
     status: "PENDING",
   },

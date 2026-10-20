@@ -10,10 +10,11 @@ import {
 import { BackLink } from "@/components/ui/BackLink";
 import { FeedbackModalContent } from "@/components/ui/FeedbackModal";
 import Input from "@/components/ui/Input";
-import { useAuthState } from "@/integrations/auth/state";
 import { useLogout } from "@/integrations/auth/hooks";
+import { useAuthState } from "@/integrations/auth/state";
 import { profileApi, type ChangePassword } from "@/integrations/profile/api";
 import type { SessionUser } from "@/interfaces/auth";
+import { homeRoutes } from "@/interfaces/auth";
 import { getDemoUser, mockAccessEnabled } from "@/mocks/access";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -31,6 +32,8 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
 function Profile({ user }: { user: SessionUser }) {
+  const profileLabel =
+    user.role === "coordenador" ? "Dados do coordenador" : "Dados do professor";
   const token = useAuthState((state) => state.session?.accessToken);
   const demo = mockAccessEnabled && !!getDemoUser(token);
   const client = useQueryClient();
@@ -110,10 +113,10 @@ function Profile({ user }: { user: SessionUser }) {
             </h2>
           </div>
           <section
-            aria-label="Dados do professor"
+            aria-label={profileLabel}
             className="space-y-4 border-0 rounded-2xl bg-[#e8faff] px-5 py-6 shadow-sm"
           >
-            <h2 className="text-lg font-semibold">Dados do professor</h2>
+            <h2 className="text-lg font-semibold">{profileLabel}</h2>
             {demo && profile.isPending ? (
               <p role="status">Carregando dados…</p>
             ) : (
@@ -189,7 +192,7 @@ function Profile({ user }: { user: SessionUser }) {
             {download.isPending ? "Exportando…" : "Exportação de dados"}
             <ChevronRight size={18} className="ml-auto" aria-hidden="true" />
           </button>
-          <Link href="/teacher/terms" className={optionClass}>
+          <Link href={`${homeRoutes[user.role]}/terms`} className={optionClass}>
             <FileText size={21} aria-hidden="true" />
             Termos de uso
             <ChevronRight size={18} className="ml-auto" aria-hidden="true" />
@@ -247,7 +250,12 @@ function Profile({ user }: { user: SessionUser }) {
               onSubmit={(event) => {
                 event.preventDefault();
                 const reason = deletionReason.trim();
-                if (busy || !deletionPassword || !reason || reason.length > 2000)
+                if (
+                  busy ||
+                  !deletionPassword ||
+                  !reason ||
+                  reason.length > 2000
+                )
                   return;
                 deletion.mutate(
                   { currentPassword: deletionPassword, reason },
@@ -261,12 +269,15 @@ function Profile({ user }: { user: SessionUser }) {
                   aria-hidden="true"
                   className="mx-auto mb-4 text-red-700"
                 />
-                <h2 id="profile-dialog-title" className="text-2xl font-semibold">
+                <h2
+                  id="profile-dialog-title"
+                  className="text-2xl font-semibold"
+                >
                   Solicitar exclusão de conta
                 </h2>
                 <p className="mt-3 text-sm text-(--muted)">
-                  Confirme sua senha atual e informe o motivo da exclusão.
-                  Sua solicitação ficará pendente de análise.
+                  Confirme sua senha atual e informe o motivo da exclusão. Sua
+                  solicitação ficará pendente de análise.
                 </p>
               </div>
               <fieldset disabled={busy} className="space-y-5">
@@ -298,7 +309,10 @@ function Profile({ user }: { user: SessionUser }) {
                     aria-describedby="deletion-reason-limit"
                     className={fieldClass + " resize-y"}
                   />
-                  <p id="deletion-reason-limit" className="mt-2 text-xs text-(--muted)">
+                  <p
+                    id="deletion-reason-limit"
+                    className="mt-2 text-xs text-(--muted)"
+                  >
                     Até 2000 caracteres.
                   </p>
                 </div>
@@ -398,9 +412,13 @@ function Profile({ user }: { user: SessionUser }) {
   );
 }
 
-export function TeacherProfileScreen() {
+export function TeacherProfileScreen({
+  role = "professor",
+}: {
+  role?: "professor" | "coordenador";
+}) {
   return (
-    <Protected role="professor">
+    <Protected role={role}>
       {(user) => (
         <TeacherShell user={user}>
           <Profile user={user} />
