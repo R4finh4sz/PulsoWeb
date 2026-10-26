@@ -14,7 +14,7 @@ function CoordinatorInvitationForm() {
   const schools = useSchools(true);
   const [schoolId, setSchoolId] = useState("");
   const [formVersion, setFormVersion] = useState(0);
-  const mutation = useApiMutation((body: { email: string; schoolId: number; }) =>
+  const mutation = useApiMutation((body: { email: string; schoolId: number }) =>
     registrationApi.invite("coordinators", body),
   );
   async function submit(event: SyntheticEvent<HTMLFormElement>) {
@@ -66,7 +66,9 @@ function CoordinatorInvitationForm() {
           </Button>
           {mutation.isSuccess && (
             <p role="status" className="text-sm text-(--blue)">
-              {mutation.data?.delivery === "INTERNAL" ? "Convite enviado nas notifica??es do professor." : "Convite enviado por e-mail com link de cadastro."}
+              {mutation.data?.delivery === "INTERNAL"
+                ? "Convite enviado nas notificações do professor."
+                : "Convite enviado por e-mail com link de cadastro."}
             </p>
           )}
         </div>
