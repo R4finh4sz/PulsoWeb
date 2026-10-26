@@ -6,22 +6,62 @@ export type PasswordResetVerification = { resetToken: string };
 export const authApi = {
   activeSchool: (schoolId: number) => apiRequest<void>("/me/active-school", { method: "PATCH", body: { schoolId } }),
   me: async (signal?: AbortSignal) => {
-    try { return await apiRequest<User>("/me", { signal }); }
-    catch (error) { if (error instanceof ApiError && error.status === 401) return null; throw error; }
+    try {
+      return await apiRequest<User>("/me", { signal });
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) return null;
+      throw error;
+    }
   },
-  login: (body: { email: string; password: string }) => apiRequest<LoginResponse>("/auth/login", { method: "POST", body }),
-  requestPasswordReset: (email: string) => apiRequest<void>("/auth/password-reset/request", { method: "POST", body: { email } }),
-  verifyPasswordReset: (email: string, code: string) => apiRequest<PasswordResetVerification>("/auth/password-reset/verify", { method: "POST", body: { email, code } }),
-  resetPassword: (email: string, resetToken: string, newPassword: string, confirmPassword: string) => apiRequest<void>("/auth/password-reset/reset", { method: "POST", body: { email, resetToken, newPassword, confirmPassword } }),
-  verify: (code: string) => apiRequest<void>("/auth/2fa/verify", { method: "POST", body: { code } }),
-  resend: () => apiRequest<Pick<LoginResponse, "twoFactorRequired" | "codeExpiresAt" | "resendAvailableAt">>("/auth/2fa/resend", { method: "POST" }),
+  login: (body: { email: string; password: string }) =>
+    apiRequest<LoginResponse>("/auth/login", { method: "POST", body }),
+  requestPasswordReset: (email: string) =>
+    apiRequest<void>("/auth/password-reset/request", {
+      method: "POST",
+      body: { email },
+    }),
+  verifyPasswordReset: (email: string, code: string) =>
+    apiRequest<PasswordResetVerification>("/auth/password-reset/verify", {
+      method: "POST",
+      body: { email, code },
+    }),
+  resetPassword: (
+    email: string,
+    resetToken: string,
+    newPassword: string,
+    confirmPassword: string,
+  ) =>
+    apiRequest<void>("/auth/password-reset/reset", {
+      method: "POST",
+      body: { email, resetToken, newPassword, confirmPassword },
+    }),
+  verify: (code: string) =>
+    apiRequest<void>("/auth/2fa/verify", { method: "POST", body: { code } }),
+  resend: () =>
+    apiRequest<
+      Pick<
+        LoginResponse,
+        "twoFactorRequired" | "codeExpiresAt" | "resendAvailableAt"
+      >
+    >("/auth/2fa/resend", { method: "POST" }),
   terms: async (signal?: AbortSignal) => {
-    try { return await apiRequest<Terms>("/terms", { signal }); }
-    catch (error) { if (error instanceof ApiError && error.status === 404) return null; throw error; }
+    try {
+      return await apiRequest<Terms>("/terms", { signal });
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) return null;
+      throw error;
+    }
   },
-  createTerms: (body: Pick<Terms, "title" | "content">) => apiRequest<Terms>("/terms", { method: "POST", body }),
-  updateTerms: (body: Pick<Terms, "title" | "content">) => apiRequest<Terms>("/terms", { method: "PUT", body }),
-  accepted: (signal?: AbortSignal) => apiRequest<string[]>("/terms/accepted", { signal }),
-  accept: (version: string) => apiRequest<void>("/terms/accept", { method: "POST", body: { version, termsAccepted: true } }),
+  createTerms: (body: Pick<Terms, "title" | "content">) =>
+    apiRequest<Terms>("/terms", { method: "POST", body }),
+  updateTerms: (body: Pick<Terms, "title" | "content">) =>
+    apiRequest<Terms>("/terms", { method: "PUT", body }),
+  accepted: (signal?: AbortSignal) =>
+    apiRequest<string[]>("/terms/accepted", { signal }),
+  accept: (version: string) =>
+    apiRequest<void>("/terms/accept", {
+      method: "POST",
+      body: { version, termsAccepted: true },
+    }),
   logout: () => apiRequest<void>("/auth/logout", { method: "POST" }),
 };

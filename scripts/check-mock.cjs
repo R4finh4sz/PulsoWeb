@@ -202,28 +202,24 @@ test("remoção preserva os demais vínculos e revoga acesso somente à turma re
   assert.deepEqual(removeClassroomTeacher(mockUsers[1], "class-1", "teacher-2", multiple)[0].teacherIds, ["teacher-1"]);
 });
 
-test("cadastro de escola valida campos, CNPJ e duplicidade", () => {
+test("cadastro de escola valida campos sem documento fiscal", () => {
   const { createSchool } = require("../src/services/schools.ts");
-  const { SchoolSchema, isValidCnpj } = require("../src/validation/School.validation.ts");
-  const form = { name: "Escola Nova", cnpj: "11.222.333/0001-81", street: "Rua das Flores", state: "SP", city: "Campinas", coordinatorId: "coordinator-1" };
-  assert.equal(isValidCnpj(form.cnpj), true);
-  assert.equal(isValidCnpj("00.000.000/E08G-12"), true);
-  for (const cnpj of ["00000000000000", "11.222.333/0001-80", "123", "11@222333000181"]) assert.equal(isValidCnpj(cnpj), false);
+  const { SchoolSchema } = require("../src/validation/School.validation.ts");
+  const form = { name: "Escola Nova", street: "Rua das Flores", state: "SP", city: "Campinas", coordinatorId: "coordinator-1" };
   for (const field of Object.keys(form)) assert.equal(SchoolSchema.safeParse({ ...form, [field]: "" }).success, false);
   assert.equal(SchoolSchema.safeParse({ ...form, state: "XX" }).success, false);
   const school = createSchool(mockUsers[0], form, []);
-  assert.equal(school.cnpj, "11222333000181");
+  assert.equal("cnpj" in school, false);
   assert.equal(school.coordinatorId, "coordinator-1");
   assert.equal(school.city, "Campinas");
   assert.equal(school.street, "Rua das Flores");
-  assert.throws(() => createSchool(mockUsers[0], { ...form, cnpj: school.cnpj }, [school]), /Já existe/);
   assert.throws(() => createSchool(mockUsers[1], form, []), /administrador/);
 });
 
 test("escola exige um coordenador válido e libera a criação de turmas para ele", () => {
   const { createSchool } = require("../src/services/schools.ts");
   const { SchoolSchema } = require("../src/validation/School.validation.ts");
-  const form = { name: "Escola Teste", cnpj: "11222333000181", street: "Rua Teste", state: "SP", city: "Campinas", coordinatorId: "coordinator-1" };
+  const form = { name: "Escola Teste", street: "Rua Teste", state: "SP", city: "Campinas", coordinatorId: "coordinator-1" };
   assert.equal(SchoolSchema.safeParse({ ...form, coordinatorId: ["coordinator-1", "coordinator-2"] }).success, false);
   assert.throws(() => createSchool(mockUsers[0], { ...form, coordinatorId: "teacher-1" }, []));
   const school = createSchool(mockUsers[0], form, []);
@@ -248,6 +244,6 @@ test("cadastro de coordenador valida dados e disponibiliza vínculo com escola",
   assert.equal(person.role, "coordenador");
   assert.throws(() => createCoordinator(mockUsers[0], form, [person]), /matrícula/);
   assert.throws(() => createCoordinator(mockUsers[1], form, []), /administrador/);
-  const school = createSchool(mockUsers[0], { name: "Escola Nova", cnpj: "11222333000181", street: "Rua Teste", state: "SP", city: "Campinas", coordinatorId: person.id }, [], [person]);
+  const school = createSchool(mockUsers[0], { name: "Escola Nova", street: "Rua Teste", state: "SP", city: "Campinas", coordinatorId: person.id }, [], [person]);
   assert.equal(school.coordinatorId, person.id);
 });

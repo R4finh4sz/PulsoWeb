@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor, cleanup, within } from '@testing-li
 import { SchoolsPage } from '@/components/screens/Integration/Schools';
 import { SchoolDetails } from '@/components/screens/SchoolDetails';
 import { AdminDashboard } from '@/components/screens/AdminDashboard';
-import { UserForm, UserList, NewUserPage, TeachersPage, CoordinatorsPage, UsersHome } from '@/components/screens/Integration/Users';
+import { UserForm, UserList, TeachersPage, CoordinatorsPage, UsersHome } from '@/components/screens/Integration/Users';
 import { HomePage, ClassroomsPage, ClassroomDetailsPage, NewClassroomPage } from '@/components/screens/Integration/Classrooms';
 import { TermsScreen } from '@/components/screens/Terms';
 import { CreateSchool } from '@/components/screens/CreateSchool';
@@ -24,7 +24,7 @@ jest.mock('@/integrations/schools/api', () => ({ schoolsApi: { list: jest.fn() }
 jest.mock('@/integrations/classrooms/api', () => ({ classroomsApi: { list: jest.fn(), get: jest.fn(), create: jest.fn(), update: jest.fn(), students: jest.fn(), teachers: jest.fn(), enroll: jest.fn(), unenroll: jest.fn(), assign: jest.fn(), unassign: jest.fn() } }));
 jest.mock('@/integrations/subjects/api', () => ({ subjectsApi: { list: jest.fn(), create: jest.fn() } }));
 jest.mock('@/utils/viacep', () => ({ ...jest.requireActual('@/utils/viacep'), findAddressByCep: jest.fn() }));
-const school = { id: 1, nome: 'Escola Horizonte', cnpj: '11.222.333/0001-81', cidade: 'São Paulo', logradouro: 'Rua Teste', bairro: 'Centro', coordinator: { id: 2, fullName: 'Maria Costa', email: 'm@b.com' } };
+const school = { id: 1, nome: 'Escola Horizonte', cidade: 'São Paulo', logradouro: 'Rua Teste', bairro: 'Centro', coordinator: { id: 2, fullName: 'Maria Costa', email: 'm@b.com' } };
 const person = { id: 3, fullName: 'Ana Silva', email: 'a@b.com', ra: '123', role: 'STUDENT' as const, classroomId: null, schoolId: 1 };
 const room = { id: 1, name: '3º ano', identifier: 'A', teacherIds: [4] };
 function identity(role: 'ADMIN' | 'TEACHER' | 'STUDENT' | 'PEDAGOGICAL_COORDINATOR' = 'ADMIN') {
@@ -56,14 +56,14 @@ beforeEach(() => {
   jest.mocked(authApi.updateTerms).mockResolvedValue({ title: 'Novo', version: '2', content: 'Texto' });
   jest.mocked(authApi.logout).mockResolvedValue(); useFeedbackStore.getState().closeFeedback();
 });
-test('escolas filtram nome e CNPJ, mostram vínculo e link de detalhes', async () => {
+test('escolas filtram nome, mostram vínculo e link de detalhes', async () => {
   show(<SchoolsPage />); expect(await screen.findByText('Escola Horizonte')).toBeVisible();
   expect(screen.getByText('Maria Costa')).toBeVisible();
   const search = screen.getByRole('searchbox');
-  for (const value of ['horizonte', '11222333', '11.222']) { fireEvent.change(search, { target: { value } }); expect(screen.getByText('Escola Horizonte')).toBeVisible(); }
+  for (const value of ['horizonte', 'Escola', 'Horizonte']) { fireEvent.change(search, { target: { value } }); expect(screen.getByText('Escola Horizonte')).toBeVisible(); }
   fireEvent.change(search, { target: { value: 'ausente' } }); expect(screen.getByText(/Nenhuma escola encontrada/)).toBeVisible();
 });
-test.each([{ data: [] }, { data: [{ ...school, cidade: '', cnpj: '', coordinator: null }] }])('escolas tratam ausência de cadastros/dados: %s', async ({ data }) => {
+test.each([{ data: [] }, { data: [{ ...school, cidade: '', coordinator: null }] }])('escolas tratam ausência de cadastros/dados: %s', async ({ data }) => {
   jest.mocked(schoolsApi.list).mockResolvedValue(data); show(<SchoolsPage />);
   expect(await screen.findByText(data.length ? 'Coordenação não informada' : 'Nenhum cadastro encontrado.')).toBeVisible();
 });
@@ -88,7 +88,7 @@ test('dashboard mostra métricas e logout', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Sair' })); await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/'));
 });
 test('criação de escola exibe formulário e navegação', async () => {
-  show(<CreateSchool />); expect(await screen.findByLabelText('CNPJ')).toBeVisible(); expect(screen.getByRole('link', { name: 'Voltar para escolas' })).toHaveAttribute('href', '/admin/escolas');
+  show(<CreateSchool />); expect(await screen.findByLabelText('Nome')).toBeVisible(); expect(screen.getByRole('link', { name: 'Voltar para escolas' })).toHaveAttribute('href', '/admin/escolas');
 });
 test.each(['students', 'teachers', 'coordinators'] as const)('cria usuário %s com dados corretos', async resource => {
   const done = jest.fn(); const { container } = show(<UserForm resource={resource} onDone={done} />);
@@ -98,13 +98,13 @@ test.each(['students', 'teachers', 'coordinators'] as const)('cria usuário %s c
   await waitFor(() => expect(done).toHaveBeenCalled());
   expect(usersApi.create).toHaveBeenCalledWith(resource, { fullName: 'Ana Silva', email: 'a@b.com', ra: '123', schoolId: resource === 'coordinators' ? 1 : undefined });
 });
-test('coordenador exige escola e permite filtrar por CNPJ e CEP', async () => {
+test('coordenador exige escola e permite filtrar por nome e CEP', async () => {
   jest.mocked(findAddressByCep).mockResolvedValue({ logradouro: 'Rua Teste', bairro: 'Centro', localidade: 'São Paulo' });
   const { container } = show(<UserForm resource="coordinators" />);
   fireEvent.submit(container.querySelector('form')!); expect(useFeedbackStore.getState().feedback?.type).toBe('error');
   await screen.findByRole('option', { name: 'Escola Horizonte' });
-  fireEvent.change(screen.getByLabelText('Buscar escola por CNPJ'), { target: { value: '999' } }); expect(screen.getByText('Nenhuma escola encontrada para a busca.')).toBeVisible();
-  fireEvent.change(screen.getByLabelText('Buscar escola por CNPJ'), { target: { value: '11222' } });
+  fireEvent.change(screen.getByLabelText('Buscar escola por nome'), { target: { value: '999' } }); expect(screen.getByText('Nenhuma escola encontrada para a busca.')).toBeVisible();
+  fireEvent.change(screen.getByLabelText('Buscar escola por nome'), { target: { value: 'Escola' } });
   fireEvent.change(screen.getByLabelText('Buscar escola por CEP'), { target: { value: '01001000' } }); await waitFor(() => expect(findAddressByCep).toHaveBeenCalled());
   await waitFor(() => expect(screen.getByRole('option', { name: 'Escola Horizonte' })).toBeVisible());
 });
@@ -123,6 +123,7 @@ test('formulário preserva dados ao falhar e lista permite editar/cancelar', asy
   jest.mocked(usersApi.update).mockRejectedValueOnce(new Error('Falha ao salvar'));
   fireEvent.submit(container.querySelector('form')!); await waitFor(() => expect(useFeedbackStore.getState().feedback?.message).toBe('Falha ao salvar'));
   expect(screen.getByLabelText('Nome completo')).toHaveValue('Ana Silva');
+  expect(screen.queryByText(/senha de acesso.*enviada/i)).not.toBeInTheDocument();
   fireEvent.submit(container.querySelector('form')!); await waitFor(() => expect(screen.queryByLabelText('Nome completo')).toBeNull());
   fireEvent.click(screen.getByRole('button', { name: /Editar cadastro de/ })); fireEvent.click(screen.getByRole('button', { name: 'Cancelar edição' })); expect(screen.queryByLabelText('Nome completo')).toBeNull();
 });
@@ -135,7 +136,6 @@ test('lista mostra vazio, nenhum resultado e erros', async () => {
 test('páginas de pessoas respeitam papel', async () => {
   show(<CoordinatorsPage />); expect(await screen.findByRole('link', { name: 'Convidar coordenador' })).toBeVisible(); cleanup();
   identity('PEDAGOGICAL_COORDINATOR'); show(<TeachersPage />); expect(await screen.findByRole('link', { name: 'Convidar professor' })).toBeVisible(); cleanup();
-  show(<NewUserPage resource="students" role="coordenador" />); expect(await screen.findByLabelText('Nome completo')).toBeVisible(); cleanup();
   show(<UsersHome user={teacher} />); expect(screen.queryByRole('heading')).toBeNull(); cleanup();
   show(<UsersHome user={admin} />); expect(await screen.findByRole('heading', { name: 'Coordenadores' })).toBeVisible(); cleanup();
   show(<UsersHome user={coordinator} />); expect(await screen.findByRole('heading', { name: 'Alunos' })).toBeVisible();
@@ -147,6 +147,17 @@ test.each(['admin', 'coordenador', 'professor', 'aluno'] as const)('página inic
 test('listagem vazia e erro de turmas', async () => {
   jest.mocked(classroomsApi.list).mockResolvedValue([]); show(<ClassroomsPage role="admin" />); await screen.findByText('Nenhuma turma disponível.'); cleanup();
   jest.mocked(classroomsApi.list).mockRejectedValue(new Error('Turmas offline')); show(<ClassroomsPage role="admin" />); expect(await screen.findByRole('alert')).toHaveTextContent('Turmas offline');
+});
+test('edição da turma mantém identificador do backend somente para leitura e não o envia', async () => {
+  identity('PEDAGOGICAL_COORDINATOR');
+  const { container } = show(<ClassroomDetailsPage role="coordenador" id="1" />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Dados da turma' }));
+  expect(screen.getByLabelText('Identificador')).toHaveAttribute('readonly');
+  expect(screen.getByLabelText('Identificador')).toBeDisabled();
+  expect(screen.getByLabelText('Identificador')).toHaveValue('A');
+  fireEvent.change(screen.getByLabelText('Nome da turma'), { target: { value: '1º ano A' } });
+  fireEvent.submit(container.querySelector('form')!);
+  await waitFor(() => expect(classroomsApi.update).toHaveBeenCalledWith(1, { name: '1º ano A' }));
 });
 test('criação de turma salva e oferece vínculo', async () => {
   identity('PEDAGOGICAL_COORDINATOR'); const { container } = show(<NewClassroomPage />);

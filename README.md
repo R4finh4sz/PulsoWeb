@@ -4,6 +4,10 @@ Aplicação web do Pulso Escolar para acompanhar e organizar informações da ro
 
 ## Como iniciar
 
+Para usar sem backend, execute `yarn dev` e escolha um perfil em **Acesso mock · sem backend** na tela de login. O mesmo seletor aparece no painel para trocar entre Administrador, Coordenador, Professor e Aluno, sem senha ou 2FA. A sessão dura até 24 horas e fica salva na aba; os dados fictícios e alterações são restaurados ao recarregar a página.
+
+O mock está ativo por padrão somente em desenvolvimento. Para usar apenas o backend, defina `NEXT_PUBLIC_MOCK_ACCESS=false` em `.env.local` e reinicie o frontend. Em produção o acesso mock fica sempre desativado. Ações ainda não simuladas exibem uma mensagem local.
+
 Tenha Node.js e Yarn instalados.
 
 1. Instale as dependências:

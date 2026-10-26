@@ -15,7 +15,7 @@ test('stores persistem cadastros na sessão', () => {
   useCoordinatorStore.getState().addCoordinator(admin, coordinatorForm);
   expect(useCoordinatorStore.getState().coordinators).toHaveLength(1);
   useSchoolStore.getState().addSchool(admin, schoolForm);
-  useSchoolStore.getState().addSchool(admin, { ...schoolForm, cnpj: '00.000.000/0001-91' }, []);
+  useSchoolStore.getState().addSchool(admin, { ...schoolForm, name: 'Outra escola' }, []);
   expect(useSchoolStore.getState().schools).toHaveLength(4);
   useTeacherStore.getState().addTeacher(coordinator, { ...teacherForm, registration: 'other', email: 'other@example.com' });
   expect(useTeacherStore.getState().teachers).toHaveLength(2);

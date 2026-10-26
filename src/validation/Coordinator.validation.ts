@@ -5,7 +5,12 @@ export function isValidBirthDate(value: string) {
   const [year, month, day] = value.split("-").map(Number);
   if (year < 1900) return false;
   const date = new Date(year, month - 1, day);
-  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day && date <= new Date();
+  return (
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day &&
+    date <= new Date()
+  );
 }
 
 export function isAtLeast18(value: string) {
@@ -16,7 +21,8 @@ export function isAtLeast18(value: string) {
   let age = today.getFullYear() - birth.getFullYear();
   const hasHadBirthdayThisYear =
     today.getMonth() > birth.getMonth() ||
-    (today.getMonth() === birth.getMonth() && today.getDate() >= birth.getDate());
+    (today.getMonth() === birth.getMonth() &&
+      today.getDate() >= birth.getDate());
 
   if (!hasHadBirthdayThisYear) age--;
 
@@ -29,10 +35,16 @@ export const CoordinatorSchema = z.object({
     .trim()
     .min(3, "Informe o nome completo.")
     .max(50, "Use até 50 caracteres.")
-    .refine((value) => value.split(/\s+/).filter(Boolean).length >= 2, "Informe nome e sobrenome."),
+    .refine(
+      (value) => value.split(/\s+/).filter(Boolean).length >= 2,
+      "Informe nome e sobrenome.",
+    ),
   birthDate: z
     .string()
-    .refine(isValidBirthDate, "Informe uma data de nascimento válida, não futura.")
+    .refine(
+      isValidBirthDate,
+      "Informe uma data de nascimento válida, não futura.",
+    )
     .refine(isAtLeast18, "É necessário ter no mínimo 18 anos."),
   registration: z
     .string()

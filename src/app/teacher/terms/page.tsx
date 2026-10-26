@@ -1,3 +1,5 @@
 import { TermsScreen } from "@/components/screens/Terms";
 
-export default function Page() { return <TermsScreen role="professor" />; }
+export default function Page() {
+  return <TermsScreen role="professor" />;
+}

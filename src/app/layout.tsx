@@ -16,7 +16,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="pt-BR">
-      <body><QueryProvider><AuthGate>{children}</AuthGate></QueryProvider><FeedbackModalHost /></body>
+      <body>
+        <QueryProvider>
+          <AuthGate>{children}</AuthGate>
+        </QueryProvider>
+        <FeedbackModalHost />
+      </body>
     </html>
   );
 }

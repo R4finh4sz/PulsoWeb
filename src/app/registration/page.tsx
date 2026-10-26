@@ -1,2 +1,4 @@
 import { Registration } from "@/components/screens/Registration";
-export default function RegistrationPage() { return <Registration />; }
+export default function RegistrationPage() {
+  return <Registration />;
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import logo from "@/assets/images/LogoImageWhite.png";
+import { DemoAccess } from "@/components/screens/Login/DemoAccess";
 import { DashboardIcon, type IconName } from "@/components/ui/DashboardIcon";
 import { useLogout } from "@/integrations/auth/hooks";
 import { homeRoutes, roleLabels, type SessionUser } from "@/interfaces/auth";
@@ -8,6 +9,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSyncExternalStore, type ReactNode } from "react";
+import { TeacherShell } from "../TeacherShell";
 
 type Props = {
   user: SessionUser;
@@ -53,6 +55,12 @@ export function DashboardShell({
           },
         ]
       : [...navigation];
+  if (user.role === "aluno")
+    sidebarNavigation.push({
+      label: "Quizzes",
+      href: "/student/quizzes",
+      icon: "book",
+    });
   if (user.role === "admin" || user.role === "coordenador")
     sidebarNavigation.push({
       label: "Solicitações de cadastro",
@@ -79,6 +87,19 @@ export function DashboardShell({
       pathname === href || (href !== home && pathname.startsWith(href + "/"))
     );
   };
+
+  if (user.role === "professor" || user.role === "coordenador")
+    return (
+      <TeacherShell user={user}>
+        <div className="space-y-7">
+          <div>
+            <h1 className="text-3xl font-semibold text-slate-900">{title}</h1>
+            <p className="mt-2 text-sm text-slate-500">{description}</p>
+          </div>
+          {children}
+        </div>
+      </TeacherShell>
+    );
 
   return (
     <div className="min-h-screen bg-[#f5f8fa] lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
@@ -120,7 +141,7 @@ export function DashboardShell({
       <div className="min-w-0">
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-(--line) bg-white px-6 py-4 lg:px-10">
           <div className="flex items-center gap-2 text-xs text-(--muted)">
-            <span className="h-2 w-2" />
+            <DemoAccess />
           </div>
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e8f5f8] text-xs font-semibold text-(--blue)">
@@ -131,8 +152,10 @@ export function DashboardShell({
                 .join("")}
             </div>
             <div>
-              <p className="text-xs font-semibold">{user.name}</p>
-              <p className="text-[10px] text-(--muted)">
+              <p className="text-xs font-semibold">
+                {user.name.trim().split(/\s+/)[0]}
+              </p>
+              <p className="text-xs leading-5 text-(--muted)">
                 {roleLabels[user.role]}
               </p>
             </div>
@@ -156,12 +179,8 @@ export function DashboardShell({
           className="mx-auto max-w-[1440px] space-y-7 px-5 py-8 sm:px-8 lg:px-10"
         >
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              {title}
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-(--muted)">
-              {description}
-            </p>
+            <h1 className="page-title">{title}</h1>
+            <p className="page-description mt-3">{description}</p>
           </div>
           {logout.error && (
             <p role="alert" className="text-sm text-red-700">

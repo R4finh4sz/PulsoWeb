@@ -7,8 +7,7 @@ import { FeedbackModal } from "@/components/ui/FeedbackModal";
 import Input from "@/components/ui/Input";
 import { authApi } from "@/integrations/auth/api";
 import { useMutation } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { BackLink } from "@/components/ui/BackLink";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type SubmitEvent } from "react";
 
@@ -273,13 +272,9 @@ export function ForgotPassword() {
               {error}
             </p>
           )}
-          <Link
-            href="/"
-            className="mx-auto mt-8 flex w-fit items-center gap-2 text-xs text-(--blue) hover:underline"
-          >
-            <ArrowLeft aria-hidden="true" className="h-4 w-4" />
-            Voltar ao login
-          </Link>
+          <div className="mt-8 text-center">
+            <BackLink />
+          </div>
         </div>
       </section>
       {showSentModal && (
@@ -300,13 +295,11 @@ export function ForgotPassword() {
           title={resetFeedback.title}
           message={resetFeedback.message}
           actionLabel={
-            resetFeedback.type === "success"
-              ? "Voltar ao login"
-              : "Tentar novamente"
+            resetFeedback.type === "success" ? "Voltar" : "Tentar novamente"
           }
           onClose={() => {
             if (resetFeedback.type === "success") {
-              router.replace("/");
+              router.back();
               return;
             }
             setResetFeedback(null);

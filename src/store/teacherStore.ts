@@ -16,10 +16,16 @@ type TeacherState = {
 export const useTeacherStore = create<TeacherState>()(
   persist(
     (set) => ({
-      teachers: mockUsers.filter((person) => person.role === "professor").map((person) => ({ ...person, role: "professor", registration: "" })),
-      addTeacher: (user, form) => set((state) => ({
-        teachers: [...state.teachers, createTeacher(user, form, state.teachers)],
-      })),
+      teachers: mockUsers
+        .filter((person) => person.role === "professor")
+        .map((person) => ({ ...person, role: "professor", registration: "" })),
+      addTeacher: (user, form) =>
+        set((state) => ({
+          teachers: [
+            ...state.teachers,
+            createTeacher(user, form, state.teachers),
+          ],
+        })),
     }),
     {
       name: "pulso-demo-teachers",
@@ -28,4 +34,3 @@ export const useTeacherStore = create<TeacherState>()(
     },
   ),
 );
-

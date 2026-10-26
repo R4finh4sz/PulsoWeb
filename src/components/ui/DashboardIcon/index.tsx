@@ -11,7 +11,16 @@
   type LucideIcon,
 } from "lucide-react";
 
-export type IconName = "home" | "school" | "users" | "book" | "chart" | "arrow" | "logout" | "check" | "help";
+export type IconName =
+  | "home"
+  | "school"
+  | "users"
+  | "book"
+  | "chart"
+  | "arrow"
+  | "logout"
+  | "check"
+  | "help";
 
 const icons: Record<IconName, LucideIcon> = {
   home: House,
@@ -25,7 +34,13 @@ const icons: Record<IconName, LucideIcon> = {
   help: CircleHelp,
 };
 
-export function DashboardIcon({ name, className = "h-5 w-5" }: { name: IconName; className?: string }) {
+export function DashboardIcon({
+  name,
+  className = "h-5 w-5",
+}: {
+  name: IconName;
+  className?: string;
+}) {
   const Icon = icons[name];
   return <Icon className={className} strokeWidth={1.7} aria-hidden="true" />;
 }

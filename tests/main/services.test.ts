@@ -8,11 +8,11 @@ import { schools, classrooms, mockUsers } from '@/mocks/platform';
 import { admin, coordinator, teacher, schoolForm, teacherForm, coordinatorForm, classroomForm, studentForm } from '../helpers';
 
 describe('permissões e cadastros', () => {
-  test('escolas normalizam CNPJ, geram iniciais e impedem duplicidade', () => {
+  test('escolas geram iniciais e validam permissao', () => {
     const school = createSchool(admin, schoolForm, schools);
-    expect(school).toMatchObject({ cnpj: '11222333000181', initials: 'ET', coordinatorId: null });
+    expect(school).toMatchObject({ initials: 'ET', coordinatorId: null });
     expect(() => createSchool(teacher, schoolForm, [])).toThrow(/administrador/);
-    expect(() => createSchool(admin, schoolForm, [school])).toThrow(/CNPJ/);
+    expect(createSchool(admin, schoolForm, [school])).not.toHaveProperty('cnpj');
     expect(() => createSchool(admin, { ...schoolForm, name: '' }, [])).toThrow();
   });
   test('professores normalizam dados e rejeitam matrícula ou email repetidos', () => {

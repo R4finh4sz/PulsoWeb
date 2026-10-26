@@ -16,10 +16,21 @@ type CoordinatorState = {
 export const useCoordinatorStore = create<CoordinatorState>()(
   persist(
     (set) => ({
-      coordinators: mockUsers.filter((person) => person.role === "coordenador").map((person) => ({ ...person, role: "coordenador", birthDate: "", registration: "" })),
-      addCoordinator: (user, form) => set((state) => ({
-        coordinators: [...state.coordinators, createCoordinator(user, form, state.coordinators)],
-      })),
+      coordinators: mockUsers
+        .filter((person) => person.role === "coordenador")
+        .map((person) => ({
+          ...person,
+          role: "coordenador",
+          birthDate: "",
+          registration: "",
+        })),
+      addCoordinator: (user, form) =>
+        set((state) => ({
+          coordinators: [
+            ...state.coordinators,
+            createCoordinator(user, form, state.coordinators),
+          ],
+        })),
     }),
     {
       name: "pulso-demo-coordinators",
@@ -28,4 +39,3 @@ export const useCoordinatorStore = create<CoordinatorState>()(
     },
   ),
 );
-

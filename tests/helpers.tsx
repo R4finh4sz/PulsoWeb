@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import type { LoginResponse } from '@/integrations/auth/state';
 
-export const router = { push: jest.fn(), replace: jest.fn(), refresh: jest.fn() };
+export const router = { push: jest.fn(), replace: jest.fn(), refresh: jest.fn(), back: jest.fn() };
 const clients: QueryClient[] = [];
 afterEach(() => { for (const client of clients.splice(0)) client.clear(); });
 export function queryWrapper() {
@@ -21,7 +21,7 @@ export const session: LoginResponse = {
 export const admin = { id: 'admin-1', name: 'Admin Teste', email: 'admin@pulso.com', role: 'admin' as const };
 export const coordinator = { id: 'coordinator-1', name: 'Coord Teste', email: 'coordenador@pulso.com', role: 'coordenador' as const };
 export const teacher = { id: 'teacher-1', name: 'Prof Teste', email: 'professor@pulso.com', role: 'professor' as const };
-export const schoolForm = { name: 'Escola Teste', cnpj: '11.222.333/0001-81', cep: '01001-000', street: 'Praça da Sé', neighborhood: 'Sé', city: 'São Paulo', state: 'SP' };
+export const schoolForm = { name: 'Escola Teste', cep: '01001-000', street: 'Praça da Sé', neighborhood: 'Sé', city: 'São Paulo', state: 'SP' };
 export const classroomForm = { year: '3', identifier: 'C', schoolId: 'school-1', teacherIds: ['teacher-1'], period: 'Manhã' as const };
 export const teacherForm = { name: 'Maria Silva', email: 'maria@example.com', registration: 't-1' };
 export const coordinatorForm = { name: 'Maria Silva', birthDate: '1990-01-01', registration: 'c-1' };

@@ -3,13 +3,22 @@
 import { useRef, useState, type SyntheticEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { SessionUser } from "@/interfaces/auth";
-import { CoordinatorSchema, type CoordinatorForm } from "@/validation/Coordinator.validation";
+import {
+  CoordinatorSchema,
+  type CoordinatorForm,
+} from "@/validation/Coordinator.validation";
 import { useCoordinatorStore } from "@/store/coordinatorStore";
 
 export function useCreateCoordinator(user: SessionUser) {
   const router = useRouter();
-  const [values, setValues] = useState<CoordinatorForm>({ name: "", birthDate: "", registration: "" });
-  const [errors, setErrors] = useState<Partial<Record<keyof CoordinatorForm, string>>>({});
+  const [values, setValues] = useState<CoordinatorForm>({
+    name: "",
+    birthDate: "",
+    registration: "",
+  });
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof CoordinatorForm, string>>
+  >({});
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const submitted = useRef(false);
@@ -27,9 +36,12 @@ export function useCreateCoordinator(user: SessionUser) {
     const parsed = CoordinatorSchema.safeParse(values);
     if (!parsed.success) {
       const nextErrors: Partial<Record<keyof CoordinatorForm, string>> = {};
-      for (const issue of parsed.error.issues) nextErrors[issue.path[0] as keyof CoordinatorForm] ??= issue.message;
+      for (const issue of parsed.error.issues)
+        nextErrors[issue.path[0] as keyof CoordinatorForm] ??= issue.message;
       setErrors(nextErrors);
-      event.currentTarget.querySelector<HTMLElement>(`[name="${Object.keys(nextErrors)[0]}"]`)?.focus();
+      event.currentTarget
+        .querySelector<HTMLElement>(`[name="${Object.keys(nextErrors)[0]}"]`)
+        ?.focus();
       return;
     }
     setErrors({});
@@ -41,9 +53,12 @@ export function useCreateCoordinator(user: SessionUser) {
     } catch (cause) {
       submitted.current = false;
       setSaving(false);
-      setError(cause instanceof Error ? cause.message : "Não foi possível criar o coordenador.");
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Não foi possível criar o coordenador.",
+      );
     }
   }
   return { values, errors, error, saving, setField, handleSubmit };
 }
-
