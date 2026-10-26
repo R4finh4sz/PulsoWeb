@@ -3,6 +3,7 @@ import type { User } from "../types";
 import type { LoginResponse } from "./state";
 export type Terms = { title: string; version: string; content: string };
 export const authApi = {
+  activeSchool: (schoolId: number) => apiRequest<void>("/me/active-school", { method: "PATCH", body: { schoolId } }),
   me: async (signal?: AbortSignal) => {
     try { return await apiRequest<User>("/me", { signal }); }
     catch (error) { if (error instanceof ApiError && error.status === 401) return null; throw error; }
