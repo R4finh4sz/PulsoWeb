@@ -3,14 +3,8 @@ import { useAuthState } from "@/integrations/auth/state";
 export class ApiError extends Error {
   constructor(public status: number, message: string, public errors: string[] = []) { super(message); this.name = "ApiError"; }
 }
-type Options = Omit<RequestInit, "body"> & { body?: unknown; responseType?: "blob" };
-const publicAuthPaths = new Set([
-  "/auth/login",
-  "/auth/password-reset/request",
-  "/auth/password-reset/verify",
-  "/auth/password-reset/reset",
-]);
-async function send<T>(path: string, options: RequestInit, responseType?: "blob"): Promise<T> {
+type Options = Omit<RequestInit, "body"> & { body?: unknown; responseType?: "json" | "blob" };
+async function send<T>(path: string, options: RequestInit, responseType: "json" | "blob" = "json"): Promise<T> {
   const response = await fetch(API_BASE_URL + path, { ...options, credentials: "omit", cache: "no-store" });
   if (!response.ok) {
     const problem = await response.json().catch(() => null);
@@ -19,8 +13,7 @@ async function send<T>(path: string, options: RequestInit, responseType?: "blob"
       Array.isArray(problem?.errors) ? problem.errors : []);
   }
   if (response.status === 204) return undefined as T;
-  if (responseType === "blob") return await response.blob() as T;
-  return response.json() as Promise<T>;
+  return (responseType === "blob" ? response.blob() : response.json()) as Promise<T>;
 }
 export async function apiRequest<T>(path: string, { body, responseType, ...options }: Options = {}): Promise<T> {
   const method = (options.method || "GET").toUpperCase();
@@ -33,7 +26,7 @@ export async function apiRequest<T>(path: string, { body, responseType, ...optio
   const isPublicAuthPath = publicAuthPaths.has(path);
   if (isPublicAuthPath) headers.delete("Authorization");
   try {
-    const result = await send<T>(path, { ...options, method, headers, body: multipart ? body : body === undefined ? undefined : JSON.stringify(body) }, responseType);
+    const result = await send<T>(path, { ...options, method, headers, body: body === undefined ? undefined : multipart ? body : JSON.stringify(body) }, responseType);
     if (session !== useAuthState.getState().session && session?.accessToken !== useAuthState.getState().session?.accessToken) {
       throw new DOMException("Sessão alterada durante a solicitação.", "AbortError");
     }
