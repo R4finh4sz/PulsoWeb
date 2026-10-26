@@ -4,7 +4,6 @@ export type School = {
   teacherIds?: number[];
   id: number;
   nome: string;
-  cnpj: string;
   logradouro: string;
   bairro: string;
   cidade: string;

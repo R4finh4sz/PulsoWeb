@@ -66,7 +66,7 @@ function CoordinatorInvitationForm() {
           </Button>
           {mutation.isSuccess && (
             <p role="status" className="text-sm text-(--blue)">
-              Convite enviado por e-mail.
+              {mutation.data?.delivery === "INTERNAL" ? "Convite enviado nas notifica??es do professor." : "Convite enviado por e-mail com link de cadastro."}
             </p>
           )}
         </div>

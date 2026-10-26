@@ -56,7 +56,6 @@ function PageContent({ id }: { id: string; }) {
               <dl className="grid gap-5 text-sm sm:grid-cols-2">
                 {[
                   ["Nome", school.nome],
-                  ["CNPJ", school.cnpj],
                   ["Logradouro", school.logradouro],
                   ["Bairro", school.bairro],
                   ["Cidade", school.cidade],

@@ -11,7 +11,6 @@ import { useAuthState } from "@/integrations/auth/state";
 import { useClassroom } from "@/integrations/classrooms/hooks";
 import { quizzesApi } from "@/integrations/quizzes/api";
 import { subjectsApi } from "@/integrations/subjects/api";
-import { getDemoUser, mockAccessEnabled } from "@/mocks/access";
 import { canAccessSubject } from "@/utils/subjectAccess";
 import type { CreateQuiz } from "@/validation/Quiz.validation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -29,11 +28,12 @@ export function Content({
   subjectId: number;
   teacherId: number;
 }) {
+  const [themeName, setThemeName] = useState("");
   const [creating, setCreating] = useState(false);
   const [expandedQuiz, setExpandedQuiz] = useState<number | null>(null);
   const [success, setSuccess] = useState(false);
   const token = useAuthState((state) => state.session?.accessToken);
-  const demo = mockAccessEnabled && !!getDemoUser(token);
+  const authenticated = !!token;
   const client = useQueryClient();
   const room = useClassroom(classroomId);
   const subjects = useQuery({
@@ -46,13 +46,20 @@ export function Content({
   const quizzes = useQuery({
     queryKey,
     queryFn: ({ signal }) => quizzesApi.list(classroomId, subjectId, signal),
-    enabled: demo && allowed,
+    enabled: authenticated && allowed,
     refetchInterval: 30000,
   });
   const themes = useQuery({
     queryKey: ["quiz-themes", classroomId, subjectId],
     queryFn: ({ signal }) => quizzesApi.themes(classroomId, subjectId, signal),
-    enabled: demo && allowed,
+    enabled: authenticated && allowed,
+  });
+  const createTheme = useMutation({
+    mutationFn: () => quizzesApi.createTheme(classroomId, subjectId, themeName.trim()),
+    onSuccess: async () => {
+      setThemeName("");
+      await client.invalidateQueries({ queryKey: ["quiz-themes", classroomId, subjectId] });
+    },
   });
   const create = useMutation({
     mutationFn: (body: CreateQuiz) =>
@@ -64,6 +71,8 @@ export function Content({
       );
       setCreating(false);
       setSuccess(true);
+      await client.invalidateQueries({ queryKey: ["teacher-activities"] });
+      await client.invalidateQueries({ queryKey });
     },
   });
   if (subjects.isPending || room.isPending)
@@ -115,14 +124,18 @@ export function Content({
         </div>
       </div>
       <SubjectSyllabus subject={subject} />
-      {!demo ? (
+      {!authenticated ? (
         <p className="rounded-xl border border-(--line) bg-white p-6 text-sm text-(--muted)">
           A criação de quizzes está disponível no acesso de demonstração. A
           integração com o backend ainda será conectada.
         </p>
       ) : (
         <>
-          <ErrorMessage error={quizzes.error || themes.error} />
+          <form className="flex flex-wrap items-end gap-3" onSubmit={(event) => { event.preventDefault(); if (themeName.trim() && !createTheme.isPending) createTheme.mutate(); }}>
+            <label>Novo tema<input required minLength={1} maxLength={40} value={themeName} onChange={(event) => setThemeName(event.target.value)} className="ml-3 rounded-lg border p-3" /></label>
+            <button className={actionClass} disabled={!themeName.trim() || createTheme.isPending}>Criar tema</button>
+          </form>
+          <ErrorMessage error={createTheme.error || quizzes.error || themes.error} />
           {(quizzes.isError || themes.isError) && (
             <button
               className={actionClass}

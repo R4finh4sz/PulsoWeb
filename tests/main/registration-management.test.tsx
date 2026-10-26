@@ -53,7 +53,7 @@ const request = {
 const school = {
   id: 1,
   nome: "Escola São Paulo",
-  cnpj: "11222333000181",
+
   cidade: "São Paulo",
   bairro: "Centro",
   logradouro: "Rua Teste",
@@ -128,7 +128,7 @@ beforeEach(() => {
   jest.mocked(registrationApi.photo).mockResolvedValue(new Blob(["photo"]));
   jest.mocked(registrationApi.review).mockResolvedValue(request);
   jest.mocked(schoolsApi.list).mockResolvedValue([school]);
-  jest.mocked(registrationApi.invite).mockResolvedValue({});
+  jest.mocked(registrationApi.invite).mockResolvedValue({ delivery: "EMAIL" });
 });
 test("solicitações exibem foto, aprovam/recusam e paginam", async () => {
   render(<RegistrationRequests role="admin" />, {
@@ -218,7 +218,7 @@ test.each(["teachers", "coordinators"] as const)(
     });
     if (resource === "coordinators") {
       fireEvent.click(screen.getByRole("button", { name: "Escola" }));
-      fireEvent.change(screen.getByPlaceholderText("Nome, CNPJ ou CEP"), {
+      fireEvent.change(screen.getByPlaceholderText("Nome ou CEP"), {
         target: { value: "São" },
       });
       fireEvent.click(
@@ -227,7 +227,7 @@ test.each(["teachers", "coordinators"] as const)(
     }
     fireEvent.submit(container.querySelector("form")!);
     expect(
-      await screen.findByText("Convite enviado por e-mail."),
+      await screen.findByText("Convite enviado por e-mail com link de cadastro."),
     ).toBeVisible();
     expect(registrationApi.invite).toHaveBeenCalledWith(
       resource,
@@ -246,20 +246,17 @@ test("convite filtra CNPJ, nome e endereço do CEP e fecha menu externo", async 
   });
   await screen.findByLabelText("E-mail");
   fireEvent.click(screen.getByRole("button", { name: "Escola" }));
-  const search = screen.getByPlaceholderText("Nome, CNPJ ou CEP");
+  const search = screen.getByPlaceholderText("Nome ou CEP");
   fireEvent.change(search, { target: { value: "Ausente" } });
   await screen.findByText("Nenhuma escola encontrada.");
-  fireEvent.change(search, { target: { value: "11222" } });
-  expect(
-    screen.getByRole("button", { name: /Escola São Paulo/ }),
-  ).toBeVisible();
+
   fireEvent.change(search, { target: { value: "01001000" } });
   await waitFor(() =>
     expect(findAddressByCep).toHaveBeenCalledWith("01001000"),
   );
   await screen.findByRole("button", { name: /Escola São Paulo/ });
   fireEvent.pointerDown(document.body);
-  expect(screen.queryByPlaceholderText("Nome, CNPJ ou CEP")).toBeNull();
+  expect(screen.queryByPlaceholderText("Nome ou CEP")).toBeNull();
 });
 test("erro ao convidar mantém email para tentar novamente", async () => {
   jest

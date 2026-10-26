@@ -1,3 +1,5 @@
+import type { AccountDeletion } from "@/integrations/profile/deletions";
+import type { Registration } from "@/integrations/registration/api";
 import type { School, SchoolInvitation } from "@/integrations/schools/api";
 import {
   MAX_SUBJECTS,
@@ -7,16 +9,14 @@ import type { Classroom, Subject, User } from "@/integrations/types";
 import { canAccessSubject } from "@/utils/subjectAccess";
 import { CreateSubjectSchema } from "@/validation/Subject.validation";
 import { z } from "zod";
-import type { Registration } from "@/integrations/registration/api";
-import type { AccountDeletion } from "@/integrations/profile/deletions";
 import { demoUsers, getDemoUser } from "./access";
 import { demoSchoolInvitations, demoSubjectInvitations } from "./notifications";
 import { mockPassword } from "./platform";
 import {
+  mockDeleteClassroomQuizzes,
   mockQuizStudents,
   mockSubjectQuizzes,
   mockTeacherQuizzes,
-  mockDeleteClassroomQuizzes,
 } from "./quizzes";
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
@@ -87,15 +87,18 @@ const studentNames = [
   "Mariana",
 ];
 users.push(
-  ...Array.from({ length: 39 }, (_, index): User => ({
-    id: 100 + index,
-    fullName: `${studentNames[index % studentNames.length]} ${["Santos", "Oliveira", "Souza"][Math.floor(index / studentNames.length)]}`,
-    email: `aluno${index + 2}@exemplo.com`,
-    ra: String(index + 2).padStart(5, "0"),
-    role: "STUDENT",
-    classroomId: 1,
-    schoolId: 1,
-  })),
+  ...Array.from(
+    { length: 39 },
+    (_, index): User => ({
+      id: 100 + index,
+      fullName: `${studentNames[index % studentNames.length]} ${["Santos", "Oliveira", "Souza"][Math.floor(index / studentNames.length)]}`,
+      email: `aluno${index + 2}@exemplo.com`,
+      ra: String(index + 2).padStart(5, "0"),
+      role: "STUDENT",
+      classroomId: 1,
+      schoolId: 1,
+    }),
+  ),
 );
 const rooms: Classroom[] = [
   {
@@ -158,15 +161,18 @@ for (const [classroomId, count] of [
     teacherIds: [3],
   });
   users.push(
-    ...Array.from({ length: count }, (_, index): User => ({
-      id: 1000 + classroomId * 100 + index,
-      fullName: `${studentNames[(index + classroomId) % studentNames.length]} ${["Almeida", "Costa", "Pereira"][Math.floor(index / studentNames.length)]}`,
-      email: `turma${classroomId}.aluno${index + 1}@exemplo.com`,
-      ra: `${classroomId}${String(index + 1).padStart(4, "0")}`,
-      role: "STUDENT",
-      classroomId,
-      schoolId: room.schoolId,
-    })),
+    ...Array.from(
+      { length: count },
+      (_, index): User => ({
+        id: 1000 + classroomId * 100 + index,
+        fullName: `${studentNames[(index + classroomId) % studentNames.length]} ${["Almeida", "Costa", "Pereira"][Math.floor(index / studentNames.length)]}`,
+        email: `turma${classroomId}.aluno${index + 1}@exemplo.com`,
+        ra: `${classroomId}${String(index + 1).padStart(4, "0")}`,
+        role: "STUDENT",
+        classroomId,
+        schoolId: room.schoolId,
+      }),
+    ),
   );
 }
 const subjectInvitations: SubjectInvitation[] = clone(demoSubjectInvitations);
@@ -175,7 +181,6 @@ const schools: School[] = [
   {
     id: 1,
     nome: "Escola Demonstração",
-    cnpj: "11222333000181",
     logradouro: "Rua das Flores, 100",
     bairro: "Centro",
     cidade: "São Paulo",
@@ -439,6 +444,19 @@ export function mockRequest(
       },
       students: mockQuizStudents(quiz, users),
     });
+  }
+  if (path === "/teacher/classrooms" && method === "GET") {
+    if (current.role !== "TEACHER")
+      throw new Error("Acesso exclusivo de professores.");
+    return clone(
+      rooms
+        .filter((room) => room.teacherIds.includes(current.id))
+        .map((room) => ({
+          ...room,
+          schoolName:
+            schools.find((school) => school.id === room.schoolId)?.nome ?? null,
+        })),
+    );
   }
   if (path === "/teacher/activities" && method === "GET")
     return clone(

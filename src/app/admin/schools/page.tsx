@@ -18,13 +18,9 @@ export default function AdminSchoolsPage() {
   const query = useSchools();
   const [search, setSearch] = useState("");
   const term = search.trim().toLocaleLowerCase("pt-BR");
-  const cnpjTerm = term.replace(/\D/g, "");
   const schools = query.data?.filter(
     (school) =>
-      school.nome.toLocaleLowerCase("pt-BR").includes(term) ||
-      school.cnpj?.toLocaleLowerCase("pt-BR").includes(term) ||
-      (cnpjTerm.length > 0 &&
-        school.cnpj?.replace(/\D/g, "").includes(cnpjTerm)),
+      school.nome.toLocaleLowerCase("pt-BR").includes(term),
   );
   return (
     <Protected role="admin">
@@ -63,8 +59,8 @@ export default function AdminSchoolsPage() {
                   />
                   <input
                     type="search"
-                    aria-label="Buscar escolas por nome ou CNPJ"
-                    placeholder="Buscar por nome ou CNPJ"
+                    aria-label="Buscar escolas por nome"
+                    placeholder="Buscar por nome"
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                     className="min-w-0 w-full bg-transparent text-sm text-[var(--ink)] outline-none placeholder:text-(--muted)"
@@ -112,7 +108,6 @@ export default function AdminSchoolsPage() {
                         </h3>
                         <p className="text-xs text-(--muted)">
                           {school.cidade || "Cidade não informada"} · CNPJ{" "}
-                          {school.cnpj || "Não informado"}
                         </p>
                       </div>
                       <span

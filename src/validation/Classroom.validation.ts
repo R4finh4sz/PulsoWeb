@@ -19,3 +19,8 @@ export const ClassroomSchema = z.object({
 });
 
 export type ClassroomForm = z.infer<typeof ClassroomSchema>;
+
+export const ClassroomSelectionSchema = ClassroomSchema.pick({ year: true, identifier: true, period: true });
+export const classroomYears = ["1", "2", "3"];
+export const classroomLetters = Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index));
+export const classroomPeriods = ["Manhã", "Tarde", "Noite"];

@@ -2,6 +2,8 @@ import { apiRequest } from "@/api/client";
 import type { Classroom, CreateClassroom, User } from "../types";
 const path = (id: number) => "/classrooms/" + id;
 export const classroomsApi = {
+  teacherList: (signal?: AbortSignal) =>
+    apiRequest<Classroom[]>("/teacher/classrooms", { signal }),
   remove: (id: number) => apiRequest<void>(path(id), { method: "DELETE" }),
   list: (signal?: AbortSignal) =>
     apiRequest<Classroom[]>("/classrooms", { signal }),

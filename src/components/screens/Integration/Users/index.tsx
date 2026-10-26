@@ -6,7 +6,6 @@ import { usersApi } from "@/integrations/users/api";
 import { useUsers } from "@/integrations/users/hooks";
 import type { SessionUser } from "@/interfaces/auth";
 import { useFeedbackStore } from "@/store/feedbackStore";
-import { formatCnpj } from "@/utils/cnpj";
 import { getInitials, normalizeAddress } from "@/utils/text";
 import {
   findAddressByCep,
@@ -38,7 +37,7 @@ export function UserForm({
 }) {
   const showFeedback = useFeedbackStore((state) => state.showFeedback);
   const schools = useSchools(resource === "coordinators");
-  const [schoolCnpj, setSchoolCnpj] = useState("");
+  const [schoolSearch, setSchoolSearch] = useState("");
   const [schoolCep, setSchoolCep] = useState("");
   const [schoolAddress, setSchoolAddress] = useState<ViaCepAddress | null>(
     null,
@@ -53,8 +52,11 @@ export function UserForm({
       : usersApi.create(resource, body),
   );
   const filteredSchools = schools.data?.filter((school) => {
-    const cnpj = schoolCnpj.replace(/\D/g, "");
-    if (cnpj && !school.cnpj.replace(/\D/g, "").includes(cnpj)) return false;
+    if (
+      schoolSearch &&
+      !normalizeAddress(school.nome).includes(normalizeAddress(schoolSearch))
+    )
+      return false;
     if (!schoolAddress) return true;
     return [
       [schoolAddress.logradouro, school.logradouro],
@@ -161,17 +163,16 @@ export function UserForm({
       {resource === "coordinators" && (
         <div className="space-y-3">
           <label className="block text-sm">
-            Buscar escola por CNPJ
+            Buscar escola por nome
             <input
-              name="schoolCnpj"
-              value={schoolCnpj}
+              name="schoolSearch"
+              value={schoolSearch}
               onChange={(event) => {
-                setSchoolCnpj(formatCnpj(event.target.value));
+                setSchoolSearch(event.target.value);
                 setSelectedSchoolId("");
               }}
-              inputMode="numeric"
-              maxLength={18}
-              placeholder="00.000.000/0000-00"
+              maxLength={150}
+              placeholder="Nome da escola"
               className={fieldClass}
             />
           </label>
@@ -216,7 +217,7 @@ export function UserForm({
                 Carregando escolas…
               </span>
             )}
-            {(schoolAddress || schoolCnpj) && !filteredSchools?.length && (
+            {(schoolAddress || schoolSearch) && !filteredSchools?.length && (
               <span className="mt-1 block text-xs text-(--muted)">
                 Nenhuma escola encontrada para a busca.
               </span>

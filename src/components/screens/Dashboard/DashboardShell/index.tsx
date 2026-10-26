@@ -55,6 +55,12 @@ export function DashboardShell({
         },
       ]
       : [...navigation];
+  if (user.role === "aluno")
+    sidebarNavigation.push({
+      label: "Quizzes",
+      href: "/student/quizzes",
+      icon: "book",
+    });
   if (user.role === "admin" || user.role === "coordenador")
     sidebarNavigation.push({
       label: "Solicitações de cadastro",
@@ -146,7 +152,9 @@ export function DashboardShell({
                 .join("")}
             </div>
             <div>
-              <p className="text-xs font-semibold">{user.name}</p>
+              <p className="text-xs font-semibold">
+                {user.name.trim().split(/\s+/)[0]}
+              </p>
               <p className="text-xs leading-5 text-(--muted)">
                 {roleLabels[user.role]}
               </p>

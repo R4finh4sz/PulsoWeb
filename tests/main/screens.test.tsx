@@ -42,7 +42,7 @@ jest.mock('@/integrations/schools/api', () => ({ schoolsApi: { list: jest.fn() }
 jest.mock('@/integrations/classrooms/api', () => ({ classroomsApi: { list: jest.fn(), get: jest.fn(), create: jest.fn(), update: jest.fn(), students: jest.fn(), teachers: jest.fn(), enroll: jest.fn(), unenroll: jest.fn(), assign: jest.fn(), unassign: jest.fn() } }));
 jest.mock('@/integrations/subjects/api', () => ({ subjectsApi: { list: jest.fn(), create: jest.fn() } }));
 jest.mock('@/utils/viacep', () => ({ ...jest.requireActual('@/utils/viacep'), findAddressByCep: jest.fn() }));
-const school = { id: 1, nome: 'Escola Horizonte', cnpj: '11.222.333/0001-81', cidade: 'São Paulo', logradouro: 'Rua Teste', bairro: 'Centro', coordinator: { id: 2, fullName: 'Maria Costa', email: 'm@b.com' } };
+const school = { id: 1, nome: 'Escola Horizonte', cidade: 'São Paulo', logradouro: 'Rua Teste', bairro: 'Centro', coordinator: { id: 2, fullName: 'Maria Costa', email: 'm@b.com' } };
 const person = { id: 3, fullName: 'Ana Silva', email: 'a@b.com', ra: '123', role: 'STUDENT' as const, classroomId: null, schoolId: 1 };
 const room = { id: 1, name: '3º ano', identifier: 'A', teacherIds: [4] };
 function identity(role: 'ADMIN' | 'TEACHER' | 'STUDENT' | 'PEDAGOGICAL_COORDINATOR' = 'ADMIN') {
@@ -74,14 +74,14 @@ beforeEach(() => {
   jest.mocked(authApi.updateTerms).mockResolvedValue({ title: 'Novo', version: '2', content: 'Texto' });
   jest.mocked(authApi.logout).mockResolvedValue(); useFeedbackStore.getState().closeFeedback();
 });
-test('escolas filtram nome e CNPJ, mostram vínculo e link de detalhes', async () => {
+test('escolas filtram nome, mostram vínculo e link de detalhes', async () => {
   show(<SchoolsPage />); expect(await screen.findByText('Escola Horizonte')).toBeVisible();
   expect(screen.getByText('Maria Costa')).toBeVisible();
   const search = screen.getByRole('searchbox');
-  for (const value of ['horizonte', '11222333', '11.222']) { fireEvent.change(search, { target: { value } }); expect(screen.getByText('Escola Horizonte')).toBeVisible(); }
+  for (const value of ['horizonte', 'Escola', 'Horizonte']) { fireEvent.change(search, { target: { value } }); expect(screen.getByText('Escola Horizonte')).toBeVisible(); }
   fireEvent.change(search, { target: { value: 'ausente' } }); expect(screen.getByText(/Nenhuma escola encontrada/)).toBeVisible();
 });
-test.each([{ data: [] }, { data: [{ ...school, cidade: '', cnpj: '', coordinator: null }] }])('escolas tratam ausência de cadastros/dados: %s', async ({ data }) => {
+test.each([{ data: [] }, { data: [{ ...school, cidade: '', coordinator: null }] }])('escolas tratam ausência de cadastros/dados: %s', async ({ data }) => {
   jest.mocked(schoolsApi.list).mockResolvedValue(data); show(<SchoolsPage />);
   expect(await screen.findByText(data.length ? 'Coordenação não informada' : 'Nenhum cadastro encontrado.')).toBeVisible();
 });
@@ -106,7 +106,7 @@ test('dashboard mostra métricas e logout', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Sair' })); await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/'));
 });
 test('criação de escola exibe formulário e navegação', async () => {
-  show(<CreateSchool />); expect(await screen.findByLabelText('CNPJ')).toBeVisible(); expect(screen.getByRole('button', { name: 'Voltar' })).toBeVisible();
+  show(<CreateSchool />); expect(await screen.findByLabelText('Nome')).toBeVisible(); expect(screen.getByRole('button', { name: 'Voltar' })).toBeVisible();
 });
 test.each(['students', 'teachers', 'coordinators'] as const)('cria usuário %s com dados corretos', async resource => {
   const done = jest.fn(); const { container } = show(<UserForm resource={resource} onDone={done} />);
@@ -116,13 +116,13 @@ test.each(['students', 'teachers', 'coordinators'] as const)('cria usuário %s c
   await waitFor(() => expect(done).toHaveBeenCalled());
   expect(usersApi.create).toHaveBeenCalledWith(resource, { fullName: 'Ana Silva', email: 'a@b.com', ra: '123', schoolId: resource === 'coordinators' ? 1 : undefined });
 });
-test('coordenador exige escola e permite filtrar por CNPJ e CEP', async () => {
+test('coordenador exige escola e permite filtrar por nome e CEP', async () => {
   jest.mocked(findAddressByCep).mockResolvedValue({ logradouro: 'Rua Teste', bairro: 'Centro', localidade: 'São Paulo' });
   const { container } = show(<UserForm resource="coordinators" />);
   fireEvent.submit(container.querySelector('form')!); expect(useFeedbackStore.getState().feedback?.type).toBe('error');
   await screen.findByRole('option', { name: 'Escola Horizonte' });
-  fireEvent.change(screen.getByLabelText('Buscar escola por CNPJ'), { target: { value: '999' } }); expect(screen.getByText('Nenhuma escola encontrada para a busca.')).toBeVisible();
-  fireEvent.change(screen.getByLabelText('Buscar escola por CNPJ'), { target: { value: '11222' } });
+  fireEvent.change(screen.getByLabelText('Buscar escola por nome'), { target: { value: '999' } }); expect(screen.getByText('Nenhuma escola encontrada para a busca.')).toBeVisible();
+  fireEvent.change(screen.getByLabelText('Buscar escola por nome'), { target: { value: 'Escola' } });
   fireEvent.change(screen.getByLabelText('Buscar escola por CEP'), { target: { value: '01001000' } }); await waitFor(() => expect(findAddressByCep).toHaveBeenCalled());
   await waitFor(() => expect(screen.getByRole('option', { name: 'Escola Horizonte' })).toBeVisible());
 });

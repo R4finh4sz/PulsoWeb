@@ -6,18 +6,14 @@ import {
   ErrorMessage,
   Protected,
 } from "@/components/screens/Integration/shared";
-import { useMe } from "@/integrations/auth/hooks";
 import { useSchools } from "@/integrations/schools/hooks";
 import { use } from "react";
 
-function PageContent({ id }: { id: number; }) {
+export function PageContent({ id }: { id: number; }) {
   const schools = useSchools();
-  const me = useMe();
   const school = schools.data?.find(
     (school) =>
-      school.id === id &&
-      (school.teacherIds?.includes(me.data?.id ?? -1) ||
-        school.id === me.data?.schoolId),
+      school.id === id,
   );
   return (
     <Protected role="professor">

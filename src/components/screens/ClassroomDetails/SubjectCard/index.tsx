@@ -109,6 +109,7 @@ export function SubjectCard({
               <MoreHorizontal size={22} aria-hidden="true" />
             </summary>
             <div className="absolute right-0 top-full mt-1 w-52 rounded-xl border border-(--line) bg-white p-1.5 shadow-lg">
+<button type="button" onClick={() => { if (menu.current) menu.current.open = false; setShowThemes(true); }} className="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm text-(--ink) hover:bg-cyan-50"><BookOpen size={17} aria-hidden="true" />Temas</button>
               {owner && (
                 <button
                   type="button"

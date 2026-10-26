@@ -6,6 +6,7 @@ import {
   Workspace
 } from "@/components/screens/Integration/shared";
 import { UsersHome } from "@/components/screens/Integration/Users";
+import Link from "next/link";
 import type { UserRole } from "@/interfaces/auth";
 
 function PageContent({ role }: { role: UserRole; }) {
@@ -14,7 +15,8 @@ function PageContent({ role }: { role: UserRole; }) {
     <Protected role={role}>
       {(user) => (
         <Workspace user={user} title="Visão geral">
-          <ClassroomList user={user} />
+          <Link href="/student/quizzes">Quizzes da turma</Link>
+<ClassroomList user={user} />
           <UsersHome user={user} />
         </Workspace>
       )}

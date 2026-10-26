@@ -2,7 +2,7 @@
 
 import Button from "@/components/ui/Button";
 import { DashboardPanel } from "@/components/ui/DashboardPanel";
-import Input from "@/components/ui/Input";
+import { classroomYears, classroomLetters } from "@/validation/Classroom.validation";
 import MultiSelect from "@/components/ui/MultiSelect";
 import Select from "@/components/ui/Select";
 import { useCreateClassroom } from "@/hooks/useCreateClassroom";
@@ -50,26 +50,23 @@ export function ClassroomForm({ user }: { user: SessionUser; }) {
               ))}
             </Select>
             <div className="grid gap-5 sm:grid-cols-2">
-              <Input
+              <Select
                 id="year"
                 name="year"
                 label="Ano"
-                placeholder="Ex.: 3"
-                inputMode="numeric"
-                maxLength={1}
                 required
                 value={values.year}
                 onChange={(event) => setField("year", event.target.value)}
                 error={errors.year}
                 aria-describedby="year-help"
-              />
-              <Input
+              >
+                <option value="">Selecione o ano</option>
+                {classroomYears.map((year) => <option key={year} value={year}>{year}º ano</option>)}
+              </Select>
+              <Select
                 id="identifier"
                 name="identifier"
-                label="Identificador"
-                placeholder="Ex.: B"
-                maxLength={1}
-                autoCapitalize="characters"
+                label="Turma"
                 required
                 value={values.identifier}
                 onChange={(event) =>
@@ -77,7 +74,10 @@ export function ClassroomForm({ user }: { user: SessionUser; }) {
                 }
                 error={errors.identifier}
                 aria-describedby="identifier-help"
-              />
+              >
+                <option value="">Selecione a turma</option>
+                {classroomLetters.map((letter) => <option key={letter} value={letter}>{letter}</option>)}
+              </Select>
             </div>
             <div className="grid gap-2 text-xs text-(--muted) sm:grid-cols-2">
               <p id="year-help">Um número de 1 ao 3.</p>

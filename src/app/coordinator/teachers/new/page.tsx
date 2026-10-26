@@ -30,7 +30,7 @@ function TeacherInvitationForm() {
           <Input id="email" name="email" label="E-mail" type="email" autoComplete="email" required maxLength={254} />
 
           <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? "Enviando…" : "Enviar convite"}</Button>
-          {mutation.isSuccess && <p role="status" className="text-sm text-(--blue)">Convite enviado por e-mail.</p>}
+          {mutation.isSuccess && <p role="status" className="text-sm text-(--blue)">{mutation.data?.delivery === "INTERNAL" ? "Convite enviado nas notifica??es do professor." : "Convite enviado por e-mail com link de cadastro."}</p>}
         </div>
       </DashboardPanel>
     </form>

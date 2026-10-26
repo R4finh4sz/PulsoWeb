@@ -1,10 +1,13 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import { classroomsApi } from "./api";
-export function useClassrooms(enabled = true) {
+export function useClassrooms(enabled = true, allSchools = false) {
   return useQuery({
-    queryKey: ["classrooms"],
-    queryFn: ({ signal }) => classroomsApi.list(signal),
+    queryKey: allSchools ? ["classrooms", "all-schools"] : ["classrooms"],
+    queryFn: ({ signal }) =>
+      allSchools
+        ? classroomsApi.teacherList(signal)
+        : classroomsApi.list(signal),
     enabled,
   });
 }

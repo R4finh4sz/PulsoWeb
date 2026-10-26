@@ -22,14 +22,10 @@ export function InvitationSchoolSelector({ schools, loading, error, value, onCha
   const schoolMenu = useRef<HTMLDivElement>(null);
   const filteredSchools = schools?.filter((school) => {
     const search = normalizeAddress(schoolSearch);
-    const digits = schoolSearch.replace(/\D/g, "");
     const matchesName = Boolean(
       search && normalizeAddress(school.nome).includes(search),
     );
-    const matchesCnpj = Boolean(
-      digits && school.cnpj.replace(/\D/g, "").includes(digits),
-    );
-    if (search && !schoolAddress && !matchesName && !matchesCnpj) return false;
+    if (search && !schoolAddress && !matchesName) return false;
     if (!schoolAddress) return true;
     return [
       [schoolAddress.logradouro, school.logradouro],
@@ -105,7 +101,7 @@ export function InvitationSchoolSelector({ schools, loading, error, value, onCha
               autoFocus
               value={schoolSearch}
               onChange={searchSchoolByCep}
-              placeholder="Nome, CNPJ ou CEP"
+              placeholder="Nome ou CEP"
               className="min-w-0 flex-1 text-sm outline-none"
             />
           </label>
@@ -122,7 +118,6 @@ export function InvitationSchoolSelector({ schools, loading, error, value, onCha
               >
                 {school.nome}
                 <span className="mt-1 block text-xs text-(--muted)">
-                  {school.cnpj || "CNPJ não informado"} ·{" "}
                   {school.cidade}
                 </span>
               </button>
