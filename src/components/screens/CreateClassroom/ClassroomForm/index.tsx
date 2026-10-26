@@ -11,7 +11,7 @@ import { useTeacherStore } from "@/store/teacherStore";
 import { BookOpen } from "lucide-react";
 import Link from "next/link";
 
-export function ClassroomForm({ user }: { user: SessionUser }) {
+export function ClassroomForm({ user }: { user: SessionUser; }) {
   const { values, errors, saving, schools, setField, handleSubmit } =
     useCreateClassroom(user);
   const allTeachers = useTeacherStore((state) => state.teachers);

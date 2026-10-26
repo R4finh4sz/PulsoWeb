@@ -1,8 +1,10 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { Login } from '@/components/screens/Login';
-import { ForgotPassword } from '@/components/screens/ForgotPassword';
-import { TwoFactorScreen } from '@/components/screens/Login/TwoFactorScreen';
+import ForgotPassword from "@/app/forgot-password/page";
+import Login from "@/app/page";
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+
+
 import { AuthGate } from '@/components/screens/Login/AuthGate';
+import { TwoFactorScreen } from '@/components/screens/Login/TwoFactorScreen';
 import { authApi } from '@/integrations/auth/api';
 import { useAuthState } from '@/integrations/auth/state';
 import { queryWrapper, router, session } from '../helpers';
@@ -38,25 +40,26 @@ async function recovery() {
   return view;
 }
 test('recuperação verifica código, compara confirmação e redefine senha', async () => {
-  jest.mocked(authApi.requestPasswordReset).mockResolvedValue(); jest.mocked(authApi.verifyPasswordReset).mockResolvedValue(); jest.mocked(authApi.resetPassword).mockResolvedValue();
+  jest.mocked(authApi.requestPasswordReset).mockResolvedValue(); jest.mocked(authApi.verifyPasswordReset).mockResolvedValue({ resetToken: 'reset-token' }); jest.mocked(authApi.resetPassword).mockResolvedValue();
   const { container } = await recovery(); fireEvent.submit(container.querySelector('form')!);
   await screen.findByLabelText('Nova senha');
   fireEvent.change(screen.getByLabelText('Nova senha'), { target: { value: 'Password1' } });
   fireEvent.change(screen.getByLabelText('Repita a nova senha'), { target: { value: 'Other123' } });
-  fireEvent.submit(container.querySelector('form')!); expect(screen.getByRole('alert')).toHaveTextContent('iguais');
+  fireEvent.submit(container.querySelector('form')!); expect(screen.getByRole('dialog')).toHaveTextContent('iguais');
+  fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
   fireEvent.change(screen.getByLabelText('Repita a nova senha'), { target: { value: 'Password1' } });
-  fireEvent.submit(container.querySelector('form')!); await screen.findByLabelText('E-mail');
-  expect(authApi.resetPassword).toHaveBeenCalledWith('a@b.com', '123456', 'Password1');
+  fireEvent.submit(container.querySelector('form')!); expect(await screen.findByRole('dialog')).toHaveTextContent('Senha alterada com sucesso');
+  expect(authApi.resetPassword).toHaveBeenCalledWith('a@b.com', 'reset-token', 'Password1', 'Password1');
 });
 test.each([new Error('Código inválido'), 'failure'])('recuperação mostra falha no código e senha: %s', async failure => {
-  jest.mocked(authApi.requestPasswordReset).mockRejectedValue(new Error('email absent'));
-  jest.mocked(authApi.verifyPasswordReset).mockRejectedValueOnce(failure).mockResolvedValueOnce();
+  jest.mocked(authApi.requestPasswordReset).mockResolvedValue();
+  jest.mocked(authApi.verifyPasswordReset).mockRejectedValueOnce(failure).mockResolvedValueOnce({ resetToken: 'reset-token' });
   jest.mocked(authApi.resetPassword).mockRejectedValue(failure);
   const { container } = await recovery(); fireEvent.submit(container.querySelector('form')!); await screen.findByRole('alert');
   fireEvent.change(screen.getByLabelText('Dígito 1 de 6'), { target: { value: '654321' } });
   fireEvent.submit(container.querySelector('form')!); await screen.findByLabelText('Nova senha');
   for (const label of ['Nova senha', 'Repita a nova senha']) fireEvent.change(screen.getByLabelText(label), { target: { value: 'Password1' } });
-  fireEvent.submit(container.querySelector('form')!); expect(await screen.findByRole('alert')).toBeVisible();
+  fireEvent.submit(container.querySelector('form')!); expect(await screen.findByRole('dialog')).toHaveTextContent('Não foi possível alterar a senha');
 });
 test('2FA distribui autofill, navega entre dígitos e verifica', async () => {
   jest.mocked(authApi.verify).mockResolvedValue();
@@ -84,7 +87,7 @@ test('2FA bloqueia código expirado e respeita espera do reenvio', () => {
   render(<TwoFactorScreen session={{ ...session, codeExpiresAt: '2000-01-01', resendAvailableAt: '2099-01-01' }} />, { wrapper: queryWrapper().wrapper });
   expect(screen.getByRole('status')).toHaveTextContent('expirado'); expect(screen.getByRole('button', { name: /Reenviar em/ })).toBeDisabled();
 });
-test.each(['/', '/registro', '/convite/abc', '/esqueci-senha', '/forgot-password'])('gate libera rota pública %s', path => {
+test.each(['/', '/registration', '/invite/abc', '/forgot-password'])('gate libera rota pública %s', path => {
   pathname = path; render(<AuthGate><p>Conteúdo protegido</p></AuthGate>, { wrapper: queryWrapper().wrapper });
   expect(screen.getByText('Conteúdo protegido')).toBeVisible(); expect(router.replace).not.toHaveBeenCalled();
 });
@@ -128,3 +131,4 @@ test('gate trata erro de perfil e redireciona para papel correto', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('Perfil offline'); fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
   await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/admin'));
 });
+

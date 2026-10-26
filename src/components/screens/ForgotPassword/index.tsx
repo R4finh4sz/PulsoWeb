@@ -1,13 +1,12 @@
 "use client";
 
 import { LoginHeader } from "@/components/screens/Login/LoginHeader";
-import { LoginIntro } from "@/components/screens/Login/LoginIntro";
+import { BackLink } from "@/components/ui/BackLink";
 import Button from "@/components/ui/Button";
 import { FeedbackModal } from "@/components/ui/FeedbackModal";
 import Input from "@/components/ui/Input";
 import { authApi } from "@/integrations/auth/api";
 import { useMutation } from "@tanstack/react-query";
-import { BackLink } from "@/components/ui/BackLink";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type SubmitEvent } from "react";
 
@@ -18,7 +17,7 @@ type ResetFeedback = {
   message: string;
 };
 
-export function ForgotPassword() {
+export function PasswordRecovery() {
   const router = useRouter();
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
@@ -152,8 +151,7 @@ export function ForgotPassword() {
   };
 
   return (
-    <main className="min-h-screen lg:grid lg:grid-cols-[minmax(360px,0.9fr)_1.1fr]">
-      <LoginIntro />
+    <>
       <section
         aria-labelledby="forgot-password-title"
         className="flex min-h-screen items-center justify-center px-6 py-14 sm:px-12 lg:px-20"
@@ -306,6 +304,6 @@ export function ForgotPassword() {
           }}
         />
       )}
-    </main>
+    </>
   );
 }

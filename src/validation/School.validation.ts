@@ -1,5 +1,6 @@
 import { isValidCnpj, normalizeCnpj } from "@/utils/cnpj";
 import { z } from "zod";
+import { normalizeCep } from "../utils/viacep";
 
 export { isValidCnpj, normalizeCnpj } from "@/utils/cnpj";
 
@@ -32,10 +33,6 @@ export const states = [
   "SE",
   "TO",
 ] as const;
-
-export function normalizeCep(value: string) {
-  return value.replace(/\D/g, "");
-}
 
 export const SchoolSchema = z.object({
   name: z

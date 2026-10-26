@@ -1,10 +1,10 @@
 import { ClassroomSchema } from '@/validation/Classroom.validation';
 import { CoordinatorSchema, isValidBirthDate, isAtLeast18 } from '@/validation/Coordinator.validation';
-import { SchoolSchema, normalizeCep } from '@/validation/School.validation';
+import { SchoolSchema } from '@/validation/School.validation';
 import { StudentSchema } from '@/validation/Student.validation';
 import { TeacherSchema } from '@/validation/Teacher.validation';
 import { formatCnpj, normalizeCnpj, isValidCnpj } from '@/utils/cnpj';
-import { formatCep, findAddressByCep } from '@/utils/viacep';
+import { formatCep, findAddressByCep, normalizeCep } from '@/utils/viacep';
 import { classroomForm, coordinatorForm, schoolForm, studentForm, teacherForm } from '../helpers';
 
 test.each([

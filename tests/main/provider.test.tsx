@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react';
-import { useQueryClient } from '@tanstack/react-query';
 import { QueryProvider } from '@/api/QueryProvider';
 import { ApiError } from '@/api/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { render, screen } from '@testing-library/react';
 
 test('provider mantém cliente estável e limita novas tentativas de consulta', () => {
   const clients: ReturnType<typeof useQueryClient>[] = [];

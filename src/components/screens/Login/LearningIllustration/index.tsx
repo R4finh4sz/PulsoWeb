@@ -1,5 +1,5 @@
-import Image from "next/image";
 import loginImage from "@/assets/images/LoginImage.png";
+import Image from "next/image";
 
 export function LearningIllustration() {
   return (

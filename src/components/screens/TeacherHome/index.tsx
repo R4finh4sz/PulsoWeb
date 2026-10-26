@@ -1,18 +1,16 @@
 "use client";
 
-import { TeacherShell } from "@/components/screens/Dashboard/TeacherShell";
-import { EmptyState } from "@/components/ui/EmptyState";
 import {
-  ErrorMessage,
-  Protected,
+  ErrorMessage
 } from "@/components/screens/Integration/shared";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { useMe } from "@/integrations/auth/hooks";
-import { useSchools } from "@/integrations/schools/hooks";
 import { useClassrooms } from "@/integrations/classrooms/hooks";
+import { useSchools } from "@/integrations/schools/hooks";
 import { MapPin, School, Users } from "lucide-react";
 import Link from "next/link";
 
-function SchoolChoices() {
+export function SchoolChoices() {
   const schools = useSchools();
   const me = useMe();
   const classrooms = useClassrooms();
@@ -92,17 +90,5 @@ function SchoolChoices() {
         })}
       </div>
     </>
-  );
-}
-
-export function TeacherHome() {
-  return (
-    <Protected role="professor">
-      {(user) => (
-        <TeacherShell user={user}>
-          <SchoolChoices />
-        </TeacherShell>
-      )}
-    </Protected>
   );
 }

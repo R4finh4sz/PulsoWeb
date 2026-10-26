@@ -2,21 +2,18 @@
 
 import {
   ErrorMessage,
-  Protected,
-  Workspace,
   actionClass,
-  fieldClass,
+  fieldClass
 } from "@/components/screens/Integration/shared";
 import Input from "@/components/ui/Input";
 import { authApi, type Terms } from "@/integrations/auth/api";
 import { type UserRole } from "@/interfaces/auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { BackLink } from "@/components/ui/BackLink";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
-function TermsEditor({ current }: { current: Terms | null }) {
+function TermsEditor({ current }: { current: Terms | null; }) {
   const [title, setTitle] = useState(current?.title ?? "Termos de uso");
   const [content, setContent] = useState(current?.content ?? "");
   const [validation, setValidation] = useState<string | null>(null);
@@ -102,7 +99,7 @@ function TermsEditor({ current }: { current: Terms | null }) {
   );
 }
 
-function TermsContent({ role, edit }: { role: UserRole; edit: boolean }) {
+export function TermsContent({ role, edit }: { role: UserRole; edit: boolean; }) {
   const terms = useQuery({
     queryKey: ["terms"],
     queryFn: ({ signal }) => authApi.terms(signal),
@@ -163,24 +160,5 @@ function TermsContent({ role, edit }: { role: UserRole; edit: boolean }) {
         </div>
       )}
     </section>
-  );
-}
-
-export function TermsScreen({
-  role,
-  edit = false,
-}: {
-  role: UserRole;
-  edit?: boolean;
-}) {
-  return (
-    <Protected role={role}>
-      {(user) => (
-        <Workspace user={user} title="Termos de uso">
-          <BackLink />
-          <TermsContent role={role} edit={edit} />
-        </Workspace>
-      )}
-    </Protected>
   );
 }

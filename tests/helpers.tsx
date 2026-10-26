@@ -1,6 +1,6 @@
+import type { LoginResponse } from '@/integrations/auth/state';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import type { LoginResponse } from '@/integrations/auth/state';
 
 export const router = { push: jest.fn(), replace: jest.fn(), refresh: jest.fn(), back: jest.fn() };
 const clients: QueryClient[] = [];
@@ -8,7 +8,7 @@ afterEach(() => { for (const client of clients.splice(0)) client.clear(); });
 export function queryWrapper() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } } });
   clients.push(client);
-  function Wrapper({ children }: { children: ReactNode }) {
+  function Wrapper({ children }: { children: ReactNode; }) {
     return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
   }
   return { client, wrapper: Wrapper };

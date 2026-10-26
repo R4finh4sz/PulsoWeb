@@ -1,10 +1,9 @@
 "use client";
+import { normalizeText } from "@/utils/text";
 
-import { TeacherShell } from "@/components/screens/Dashboard/TeacherShell";
 import {
   ErrorMessage,
-  Protected,
-  actionClass,
+  actionClass
 } from "@/components/screens/Integration/shared";
 import { BackLink } from "@/components/ui/BackLink";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -15,7 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ClipboardList, Search, Users } from "lucide-react";
 import { useState } from "react";
 
-function Results({ quizId }: { quizId: number }) {
+export function Results({ quizId }: { quizId: number; }) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [filter, setFilter] = useState("ALL");
@@ -46,16 +45,11 @@ function Results({ quizId }: { quizId: number }) {
       </div>
     );
   const { quiz, students } = query.data;
-  const normalize = (value: string) =>
-    value
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLocaleLowerCase("pt-BR");
   const filtered = students
     .filter(
       (student) =>
-        normalize(`${student.name} ${student.ra}`).includes(
-          normalize(search.trim()),
+        normalizeText(`${student.name} ${student.ra}`).includes(
+          normalizeText(search.trim()),
         ) &&
         (filter === "ALL" ||
           (filter === "SUBMITTED" ? !!student.score : !student.score)),
@@ -245,21 +239,5 @@ function Results({ quizId }: { quizId: number }) {
         )}
       </section>
     </div>
-  );
-}
-
-export function QuizResultsScreen({ quizId }: { quizId: number }) {
-  return (
-    <Protected role="professor">
-      {(user) => (
-        <TeacherShell user={user}>
-          {Number.isSafeInteger(quizId) && quizId > 0 ? (
-            <Results quizId={quizId} />
-          ) : (
-            <p role="alert">Quiz inválido.</p>
-          )}
-        </TeacherShell>
-      )}
-    </Protected>
   );
 }

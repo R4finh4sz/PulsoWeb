@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { CoordinatorClassroom } from "@/components/screens/ClassroomDetails/CoordinatorClassroom";
 import { classroomsApi } from "@/integrations/classrooms/api";
 import { subjectsApi } from "@/integrations/subjects/api";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { queryWrapper, router } from "../helpers";
 jest.mock("next/navigation", () => ({ useRouter: () => router }));
 

@@ -1,7 +1,6 @@
 "use client";
 
 import logo from "@/assets/images/LogoImageWhite.png";
-import { TeacherShell } from "../TeacherShell";
 import { DemoAccess } from "@/components/screens/Login/DemoAccess";
 import { DashboardIcon, type IconName } from "@/components/ui/DashboardIcon";
 import { useLogout } from "@/integrations/auth/hooks";
@@ -10,12 +9,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSyncExternalStore, type ReactNode } from "react";
+import { TeacherShell } from "../TeacherShell";
 
 type Props = {
   user: SessionUser;
   title: string;
   description: string;
-  navigation: { label: string; href: string; icon: IconName }[];
+  navigation: { label: string; href: string; icon: IconName; }[];
   children: ReactNode;
 };
 
@@ -43,17 +43,17 @@ export function DashboardShell({
   const sidebarNavigation =
     user.role === "coordenador"
       ? [
-          ...navigation.filter(
-            (item) =>
-              item.label !== "Professores" &&
-              item.href !== "/coordinator/students/new",
-          ),
-          {
-            label: "Professores",
-            href: "/coordinator/teachers",
-            icon: "school" as const,
-          },
-        ]
+        ...navigation.filter(
+          (item) =>
+            item.label !== "Professores" &&
+            item.href !== "/coordinator/students/new",
+        ),
+        {
+          label: "Professores",
+          href: "/coordinator/teachers",
+          icon: "school" as const,
+        },
+      ]
       : [...navigation];
   if (user.role === "admin" || user.role === "coordenador")
     sidebarNavigation.push({

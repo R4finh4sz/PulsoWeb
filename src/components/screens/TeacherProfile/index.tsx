@@ -1,11 +1,9 @@
 "use client";
 
-import { TeacherShell } from "@/components/screens/Dashboard/TeacherShell";
 import {
   ErrorMessage,
-  Protected,
   actionClass,
-  fieldClass,
+  fieldClass
 } from "@/components/screens/Integration/shared";
 import { BackLink } from "@/components/ui/BackLink";
 import { FeedbackModalContent } from "@/components/ui/FeedbackModal";
@@ -18,8 +16,8 @@ import { homeRoutes } from "@/interfaces/auth";
 import { getDemoUser, mockAccessEnabled } from "@/mocks/access";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowRight,
   BadgeCheck,
-  ChevronRight,
   Download,
   FileText,
   GraduationCap,
@@ -31,7 +29,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
-function Profile({ user }: { user: SessionUser }) {
+export function Profile({ user }: { user: SessionUser; }) {
   const profileLabel =
     user.role === "coordenador" ? "Dados do coordenador" : "Dados do professor";
   const token = useAuthState((state) => state.session?.accessToken);
@@ -143,10 +141,10 @@ function Profile({ user }: { user: SessionUser }) {
                         <dd className="mt-1 space-y-1 text-sm">
                           {profile.data.schools.length
                             ? profile.data.schools.map((school) => (
-                                <p key={school.id} className="break-words">
-                                  {school.nome}
-                                </p>
-                              ))
+                              <p key={school.id} className="break-words">
+                                {school.nome}
+                              </p>
+                            ))
                             : "Nenhuma escola vinculada"}
                         </dd>
                       </div>
@@ -180,7 +178,7 @@ function Profile({ user }: { user: SessionUser }) {
           >
             <LockKeyhole size={21} aria-hidden="true" />
             Alterar senha
-            <ChevronRight size={18} className="ml-auto" aria-hidden="true" />
+            <ArrowRight size={18} className="ml-auto" aria-hidden="true" />
           </button>
           <button
             type="button"
@@ -190,12 +188,12 @@ function Profile({ user }: { user: SessionUser }) {
           >
             <Download size={21} aria-hidden="true" />
             {download.isPending ? "Exportando…" : "Exportação de dados"}
-            <ChevronRight size={18} className="ml-auto" aria-hidden="true" />
+            <ArrowRight size={18} className="ml-auto" aria-hidden="true" />
           </button>
           <Link href={`${homeRoutes[user.role]}/terms`} className={optionClass}>
             <FileText size={21} aria-hidden="true" />
             Termos de uso
-            <ChevronRight size={18} className="ml-auto" aria-hidden="true" />
+            <ArrowRight size={18} className="ml-auto" aria-hidden="true" />
           </Link>
           <button
             type="button"
@@ -207,7 +205,7 @@ function Profile({ user }: { user: SessionUser }) {
             {profile.data?.deletionRequested
               ? "Exclusão solicitada"
               : "Solicitar exclusão de conta"}
-            <ChevronRight size={18} className="ml-auto" aria-hidden="true" />
+            <ArrowRight size={18} className="ml-auto" aria-hidden="true" />
           </button>
           <ErrorMessage error={download.error} />
         </section>
@@ -330,7 +328,7 @@ function Profile({ user }: { user: SessionUser }) {
                 <button
                   type="submit"
                   disabled={busy || !deletionPassword || !deletionReason.trim()}
-                  className="min-h-12 rounded-xl bg-red-700 px-4 py-3 text-sm font-medium text-white hover:bg-red-800 disabled:opacity-50"
+                  className="min-h-12 rounded-xl bg-[#e83e32] px-4 py-3 text-sm font-medium text-white hover:bg-[#cf3026] disabled:opacity-50"
                 >
                   {deletion.isPending ? "Solicitando…" : "Solicitar exclusão"}
                 </button>
@@ -409,21 +407,5 @@ function Profile({ user }: { user: SessionUser }) {
         )}
       </dialog>
     </div>
-  );
-}
-
-export function TeacherProfileScreen({
-  role = "professor",
-}: {
-  role?: "professor" | "coordenador";
-}) {
-  return (
-    <Protected role={role}>
-      {(user) => (
-        <TeacherShell user={user}>
-          <Profile user={user} />
-        </TeacherShell>
-      )}
-    </Protected>
   );
 }

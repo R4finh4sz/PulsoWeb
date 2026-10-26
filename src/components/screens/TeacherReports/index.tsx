@@ -1,11 +1,10 @@
 "use client";
+import { normalizeText } from "@/utils/text";
 
-import { TeacherShell } from "@/components/screens/Dashboard/TeacherShell";
 import {
   ErrorMessage,
-  Protected,
   actionClass,
-  fieldClass,
+  fieldClass
 } from "@/components/screens/Integration/shared";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useAuthState } from "@/integrations/auth/state";
@@ -22,13 +21,8 @@ const number = (value: number | null, suffix = "") =>
   value === null
     ? "—"
     : `${value.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}${suffix}`;
-const normalize = (value: string) =>
-  value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("pt-BR");
 
-function Completion({ value }: { value: number | null }) {
+function Completion({ value }: { value: number | null; }) {
   return (
     <div className="flex min-w-32 items-center gap-3">
       <div
@@ -45,7 +39,7 @@ function Completion({ value }: { value: number | null }) {
   );
 }
 
-function Reports({
+export function Reports({
   classroomId,
   initialStatus,
 }: {
@@ -88,13 +82,13 @@ function Reports({
     classroomId !== undefined
       ? report.id === classroomId
       : (!school || report.school === school) &&
-        (!classroom || String(report.id) === classroom),
+      (!classroom || String(report.id) === classroom),
   );
   const metrics = reportMetrics(visible.flatMap((report) => report.students));
   const filteredStudents = (selected?.students ?? []).filter(
     (student) =>
-      normalize(`${student.name} ${student.ra}`).includes(
-        normalize(search.trim()),
+      normalizeText(`${student.name} ${student.ra}`).includes(
+        normalizeText(search.trim()),
       ) &&
       (!attentionOnly || student.overdue > 0),
   );
@@ -443,23 +437,5 @@ function Reports({
         </>
       )}
     </div>
-  );
-}
-
-export function TeacherReports({
-  classroomId,
-  initialStatus = "ALL",
-}: {
-  classroomId?: number;
-  initialStatus?: "ALL" | "CLOSED";
-}) {
-  return (
-    <Protected role="professor">
-      {(user) => (
-        <TeacherShell user={user}>
-          <Reports classroomId={classroomId} initialStatus={initialStatus} />
-        </TeacherShell>
-      )}
-    </Protected>
   );
 }

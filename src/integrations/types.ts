@@ -35,6 +35,8 @@ export type Classroom = {
 };
 export type CreateClassroom = Pick<Classroom, "name" | "identifier">;
 export type Subject = {
+  syllabus?: string;
+  topics?: import("@/validation/Subject.validation").SubjectTopic[];
   teacherIds?: number[];
   id: number;
   name: string;

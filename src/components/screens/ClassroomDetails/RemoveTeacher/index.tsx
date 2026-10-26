@@ -42,7 +42,7 @@ export function RemoveTeacher({
           setError("");
           dialog.current?.showModal();
         }}
-        className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-red-600 text-white transition hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
+        className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#e83e32] text-white transition hover:bg-[#cf3026] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
       >
         <X aria-hidden="true" className="h-4 w-4" />
       </button>
@@ -77,7 +77,7 @@ export function RemoveTeacher({
           <button
             type="button"
             onClick={confirm}
-            className="rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
+            className="rounded-lg bg-[#e83e32] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#cf3026] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
           >
             Sim
           </button>

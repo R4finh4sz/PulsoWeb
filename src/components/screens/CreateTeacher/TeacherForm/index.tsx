@@ -8,7 +8,7 @@ import type { SessionUser } from "@/interfaces/auth";
 import { UserRound } from "lucide-react";
 import Link from "next/link";
 
-export function TeacherForm({ user }: { user: SessionUser }) {
+export function TeacherForm({ user }: { user: SessionUser; }) {
   const { values, errors, error, saving, setField, handleSubmit } =
     useCreateTeacher(user);
   return (

@@ -1,7 +1,8 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { Registration } from '@/components/screens/Registration';
+
+import { RegistrationForm as Registration } from '@/components/screens/Registration';
 import { authApi } from '@/integrations/auth/api';
 import { registrationApi } from '@/integrations/registration/api';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { queryWrapper, router } from '../helpers';
 jest.mock('next/navigation', () => ({ useRouter: () => router, usePathname: () => '/' }));
 jest.mock('@/integrations/auth/api', () => ({ authApi: { terms: jest.fn() } }));
@@ -76,3 +77,4 @@ test('convite verifica email e reenvia código', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Reenviar código' })); await waitFor(() => expect(digits[0]).toHaveValue(''));
   fireEvent.change(digits[3], { target: { value: '654321' } }); fireEvent.submit(container.querySelector('form')!); expect(await screen.findByLabelText('Nome completo')).toBeVisible();
 });
+

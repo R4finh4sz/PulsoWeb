@@ -1,5 +1,6 @@
 import { apiRequest } from "@/api/client";
 import type { CreateQuiz } from "@/validation/Quiz.validation";
+import { ThemeNameSchema } from "@/validation/Theme.validation";
 
 export type Quiz = CreateQuiz & {
   id: number;
@@ -32,6 +33,12 @@ const path = (classroomId: number, subjectId: number) =>
 
 // Contrato demonstrativo; conectar aos endpoints definitivos quando disponíveis.
 export const quizzesApi = {
+  createTheme: (classroomId: number, subjectId: number, name: string) =>
+    apiRequest<string | { name: string }>(path(classroomId, subjectId) + "/themes", {
+      method: "POST", body: { name: ThemeNameSchema.parse(name) },
+    }),
+  removeTheme: (classroomId: number, subjectId: number, name: string) =>
+    apiRequest<void>(path(classroomId, subjectId) + "/themes?" + new URLSearchParams({ name }), { method: "DELETE" }),
   results: (quizId: number, signal?: AbortSignal) =>
     apiRequest<QuizResults>(`/teacher/activities/${quizId}/results`, {
       signal,

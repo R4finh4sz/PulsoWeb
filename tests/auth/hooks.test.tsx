@@ -1,11 +1,11 @@
-import { renderHook, act, waitFor } from '@testing-library/react';
-import { useMe, useLogin, useLogout } from '@/integrations/auth/hooks';
-import { authApi } from '@/integrations/auth/api';
-import { useAuthState } from '@/integrations/auth/state';
-import { useSession } from '@/hooks/useSession';
 import { useLoginForm } from '@/hooks/useLoginForm';
-import { queryWrapper, router, session } from '../helpers';
+import { useSession } from '@/hooks/useSession';
+import { authApi } from '@/integrations/auth/api';
+import { useLogin, useLogout, useMe } from '@/integrations/auth/hooks';
+import { useAuthState } from '@/integrations/auth/state';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type { SyntheticEvent } from 'react';
+import { queryWrapper, router, session } from '../helpers';
 jest.mock('next/navigation', () => ({ useRouter: () => router }));
 jest.mock('@/integrations/auth/api', () => ({ authApi: { me: jest.fn(), login: jest.fn(), logout: jest.fn() } }));
 const me = { id: 1, fullName: 'Ana', email: 'a@b.com', role: 'ADMIN' } as Awaited<ReturnType<typeof authApi.me>>;
@@ -24,7 +24,7 @@ test.each([false, true])('logout limpa sessão e cache mesmo quando falha: %s', 
   useAuthState.getState().setSession(session);
   if (fail) jest.mocked(authApi.logout).mockRejectedValue(new Error('offline')); else jest.mocked(authApi.logout).mockResolvedValue();
   const { result } = renderHook(useLogout, { wrapper });
-  await act(async () => { await result.current.mutateAsync().catch(() => {}); });
+  await act(async () => { await result.current.mutateAsync().catch(() => { }); });
   expect(useAuthState.getState().session).toBeNull(); expect(client.getQueryData(['old'])).toBeUndefined(); expect(client.getQueryData(['session'])).toBeNull();
 });
 test('consulta sessão encaminha signal', async () => {

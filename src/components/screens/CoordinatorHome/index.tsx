@@ -1,12 +1,10 @@
 "use client";
+import { normalizeText } from "@/utils/text";
 
 import {
   ErrorMessage,
-  Protected,
-  Workspace,
-  actionClass,
+  actionClass
 } from "@/components/screens/Integration/shared";
-import { UserList } from "@/components/screens/Integration/Users";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useMe } from "@/integrations/auth/hooks";
 import { useClassrooms } from "@/integrations/classrooms/hooks";
@@ -14,22 +12,17 @@ import { BookOpen, Plus, Search, Users } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
-function CoordinatorWork() {
+export function CoordinatorWork() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("ALL");
   const rooms = useClassrooms();
   const session = useMe();
   const schoolId = session.data?.schoolId;
-  const normalize = (value: string) =>
-    value
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLocaleLowerCase("pt-BR");
   const classrooms = rooms.data?.filter(
     (room) =>
       (!schoolId || !room.schoolId || room.schoolId === schoolId) &&
-      normalize(`${room.name} ${room.identifier}`).includes(
-        normalize(search.trim()),
+      normalizeText(`${room.name} ${room.identifier}`).includes(
+        normalizeText(search.trim()),
       ) &&
       (filter === "ALL" || room.teacherIds.length === 0),
   );
@@ -133,42 +126,5 @@ function CoordinatorWork() {
         )}
       </section>
     </div>
-  );
-}
-
-export function CoordinatorHome() {
-  return (
-    <Protected role="coordenador">
-      {(user) => (
-        <Workspace
-          user={user}
-          title="Coordenação escolar"
-          description="Organize as turmas, acompanhe os cadastros e mantenha sua equipe conectada."
-        >
-          <CoordinatorWork />
-        </Workspace>
-      )}
-    </Protected>
-  );
-}
-
-export function CoordinatorStudents() {
-  return (
-    <Protected role="coordenador">
-      {(user) => (
-        <Workspace
-          user={user}
-          title="Alunos"
-          description="Consulte os cadastros e organize os vínculos dos alunos com as turmas."
-        >
-          <div className="mb-6 flex justify-end">
-            <Link href="/coordinator/students/new" className={actionClass}>
-              Cadastrar aluno
-            </Link>
-          </div>
-          <UserList resource="students" canEdit={false} />
-        </Workspace>
-      )}
-    </Protected>
   );
 }

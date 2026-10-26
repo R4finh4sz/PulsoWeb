@@ -1,10 +1,8 @@
 "use client";
 
-import { TeacherShell } from "@/components/screens/Dashboard/TeacherShell";
 import {
   ErrorMessage,
-  Protected,
-  actionClass,
+  actionClass
 } from "@/components/screens/Integration/shared";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useAuthState } from "@/integrations/auth/state";
@@ -21,7 +19,7 @@ const dateFormat = new Intl.DateTimeFormat("pt-BR", {
   timeZone: "America/Sao_Paulo",
 });
 
-function Activities() {
+export function Activities() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("ALL");
   const token = useAuthState((state) => state.session?.accessToken);
@@ -147,17 +145,5 @@ function Activities() {
         </>
       )}
     </div>
-  );
-}
-
-export function TeacherActivities() {
-  return (
-    <Protected role="professor">
-      {(user) => (
-        <TeacherShell user={user}>
-          <Activities />
-        </TeacherShell>
-      )}
-    </Protected>
   );
 }

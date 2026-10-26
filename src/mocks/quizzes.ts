@@ -1,3 +1,4 @@
+import { normalizeText } from "@/utils/text";
 import type { Quiz, StudentQuizResult } from "@/integrations/quizzes/api";
 import type { Subject, User } from "@/integrations/types";
 import { scoreQuiz } from "@/utils/quizResults";
@@ -167,10 +168,7 @@ export function mockQuizStudents(
     });
 }
 export function demoThemes(name: string): string[] {
-  const normalized = name
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("pt-BR");
+  const normalized = normalizeText(name);
   if (normalized.includes("matematica"))
     return [
       "Operações básicas",
@@ -219,7 +217,8 @@ export function mockSubjectQuizzes(
 ) {
   if (current.role !== "TEACHER" || !canAccessSubject(subject, current.id))
     throw new Error("Você não tem acesso aos quizzes desta matéria.");
-  if (action === "themes" && method === "GET") return demoThemes(subject.name);
+  const themes = subject.topics?.map((topic) => topic.title) ?? demoThemes(subject.name);
+  if (action === "themes" && method === "GET") return themes;
   if (action !== "quizzes") throw new Error("Ação de quiz não disponível.");
   if (method === "GET")
     return JSON.parse(
@@ -246,7 +245,6 @@ export function mockSubjectQuizzes(
     throw new Error(
       "Preencha exatamente 10 questões, cada uma com pergunta, quatro alternativas diferentes, tema e resposta correta.",
     );
-  const themes = demoThemes(subject.name);
   if (
     parsed.data.questions.some((question) => !themes.includes(question.theme))
   )
