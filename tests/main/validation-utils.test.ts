@@ -3,7 +3,6 @@ import { CoordinatorSchema, isValidBirthDate, isAtLeast18 } from '@/validation/C
 import { SchoolSchema } from '@/validation/School.validation';
 import { StudentSchema } from '@/validation/Student.validation';
 import { TeacherSchema } from '@/validation/Teacher.validation';
-import { formatCnpj, normalizeCnpj, isValidCnpj } from '@/utils/cnpj';
 import { formatCep, findAddressByCep, normalizeCep } from '@/utils/viacep';
 import { classroomForm, coordinatorForm, schoolForm, studentForm, teacherForm } from '../helpers';
 
@@ -29,15 +28,10 @@ test('datas válidas e limite de 18 anos consideram o aniversário', () => {
   expect(isAtLeast18('2008-11-01')).toBe(false);
   expect(isAtLeast18('2008-09-01')).toBe(true);
 });
-test('formata CEP e CNPJ e confere os dígitos verificadores', () => {
-  expect(formatCnpj('11222333000181999')).toBe('11.222.333/0001-81');
-  expect(normalizeCnpj(' 11.222.333/0001-81 ')).toBe('11222333000181');
+test('formata e normaliza CEP', () => {
   expect(normalizeCep('01001-000')).toBe('01001000');
   expect(formatCep('0100100099')).toBe('01001-000');
   expect(formatCep('abc12')).toBe('12');
-  expect(isValidCnpj('11.222.333/0001-81')).toBe(true);
-  expect(isValidCnpj('00.000.000/0001-91')).toBe(true);
-  for (const cnpj of ['', '11111111111111', '11222333000182', 'invalid']) expect(isValidCnpj(cnpj)).toBe(false);
 });
 test('ViaCEP limpa os campos, aceita campos ausentes e propaga erros', async () => {
   const fetchMock = jest.fn(); global.fetch = fetchMock;

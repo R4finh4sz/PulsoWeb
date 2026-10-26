@@ -84,7 +84,6 @@ test('escola consulta CEP, trava endereço encontrado e salva payload', async ()
   jest.mocked(findAddressByCep).mockResolvedValue({ logradouro: 'Praça da Sé', bairro: 'Sé', localidade: 'São Paulo', uf: 'SP' });
   jest.mocked(schoolsApi.create).mockResolvedValue({ id: 1 } as Awaited<ReturnType<typeof schoolsApi.create>>);
   const { container } = render(<SchoolForm />);
-  expect(screen.queryByLabelText('CNPJ')).not.toBeInTheDocument();
   fireEvent.submit(container.querySelector('form')!); expect(screen.getAllByRole('alert').length).toBeGreaterThan(0);
   expect(screen.getByLabelText('Logradouro')).toBeDisabled();
   fill({ name: 'Escola Teste', cep: '01001000' }, container);

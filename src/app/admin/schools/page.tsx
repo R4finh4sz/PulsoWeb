@@ -107,7 +107,7 @@ export default function AdminSchoolsPage() {
                           {school.nome}
                         </h3>
                         <p className="text-xs text-(--muted)">
-                          {school.cidade || "Cidade não informada"} · CNPJ{" "}
+                          {school.cidade || "Cidade não informada"}
                         </p>
                       </div>
                       <span

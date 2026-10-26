@@ -237,7 +237,7 @@ test.each(["teachers", "coordinators"] as const)(
     );
   },
 );
-test("convite filtra CNPJ, nome e endereço do CEP e fecha menu externo", async () => {
+test("convite filtra nome e endereço do CEP e fecha menu externo", async () => {
   jest
     .mocked(findAddressByCep)
     .mockResolvedValue({ logradouro: "Rua Teste", localidade: "São Paulo" });
