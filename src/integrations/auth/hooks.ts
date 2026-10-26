@@ -59,3 +59,21 @@ export function useActiveSchool() {
     },
   });
 }
+
+export function useActiveSchool() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (schoolId: number) => {
+      await client.cancelQueries();
+      await authApi.activeSchool(schoolId);
+      const user = await authApi.me();
+      if (!user) throw new Error("Sua sessão expirou. Entre novamente.");
+      const session = useAuthState.getState().session;
+      if (session) useAuthState.getState().setSession({ ...session, user: { ...session.user, schoolIds: user.schoolIds, activeSchoolId: user.activeSchoolId, schoolId: user.schoolId ?? null } });
+      client.setQueryData(["session"], user);
+      client.removeQueries({ predicate: (query) => query.queryKey[0] !== "session" && query.queryKey[0] !== "schools" });
+      await client.invalidateQueries({ predicate: (query) => query.queryKey[0] !== "session" });
+      return user;
+    },
+  });
+}
