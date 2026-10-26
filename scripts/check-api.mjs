@@ -9,7 +9,7 @@ function loadClient(fetch, initial = { accessToken: "teacher-token" }) {
   const source = fs.readFileSync("src/api/client.ts", "utf8");
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
   const exports = {};
-  vm.runInNewContext(compiled, { exports, require: path => path.includes("state") ? { useAuthState: state } : { API_BASE_URL: "/api" }, fetch, Headers, URLSearchParams, DOMException });
+  vm.runInNewContext(compiled, { exports, require: path => path.includes("state") ? { useAuthState: state } : { API_BASE_URL: "/api" }, fetch, Headers, FormData, URLSearchParams, DOMException });
   return { ...exports, state };
 }
 test("GET sends current Bearer token, omits old cookies and disables caching", async () => {
