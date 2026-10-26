@@ -1,21 +1,21 @@
 "use client";
 
-import { useRef, useState, type SyntheticEvent } from "react";
-import { SchoolSchema, type SchoolForm } from "@/validation/School.validation";
 import { schoolsApi } from "@/integrations/schools/api";
 import { useFeedbackStore } from "@/store/feedbackStore";
+import { SchoolSchema, type SchoolForm } from "@/validation/School.validation";
+import { useCallback, useRef, useState, type SyntheticEvent } from "react";
 
 export function useCreateSchool() {
-  const [values, setValues] = useState<SchoolForm>({ name: "", cnpj: "", street: "", neighborhood: "", state: "", city: "" });
+  const [values, setValues] = useState<SchoolForm>({ name: "", cnpj: "", cep: "", street: "", neighborhood: "", state: "", city: "" });
   const [errors, setErrors] = useState<Partial<Record<keyof SchoolForm, string>>>({});
   const [saving, setSaving] = useState(false);
   const submitted = useRef(false);
   const showFeedback = useFeedbackStore((state) => state.showFeedback);
 
-  function setField(field: keyof SchoolForm, value: string) {
+  const setField = useCallback((field: keyof SchoolForm, value: string) => {
     setValues((previous) => ({ ...previous, [field]: value }));
     setErrors((previous) => ({ ...previous, [field]: undefined }));
-  }
+  }, []);
 
   async function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();

@@ -48,7 +48,7 @@ export function useCreateClassroom(user: SessionUser) {
     setSaving(true);
     try {
       await mutation.mutateAsync(parsed.data);
-      router.push("/coordenador/turmas");
+      router.push("/coordinator/classrooms");
     } catch {
       submitted.current = false;
       setSaving(false);

@@ -1,7 +1,9 @@
+import Link from "next/link";
+
 export function LoginAction() {
   return (
-    <button type="button" className="mt-2 block ml-auto text-xs font-normal text-[var(--blue)] hover:underline">
+    <Link href="/forgot-password" className="mt-2 block ml-auto w-fit text-xs font-normal text-(--blue)">
       Esqueci minha senha
-    </button>
+    </Link>
   );
 }

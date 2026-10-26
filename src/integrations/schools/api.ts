@@ -7,6 +7,9 @@ export type School = {
   logradouro: string;
   bairro: string;
   cidade: string;
+  cep?: string | null;
+  uf?: string | null;
+  coordinator?: { id: number; fullName: string; email: string } | null;
 };
 
 export type CreateSchool = Omit<School, "id">;

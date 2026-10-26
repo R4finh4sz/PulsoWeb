@@ -1,14 +1,14 @@
 "use client";
 
-import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { Timer } from "lucide-react";
-import logo from "@/assets/images/LogoImage.png";
 import illustration from "@/assets/images/LoginImage.png";
+import logo from "@/assets/images/LogoImage.png";
+import Button from "@/components/ui/Button";
 import { authApi } from "@/integrations/auth/api";
 import { useAuthState, type LoginResponse } from "@/integrations/auth/state";
-import Button from "@/components/ui/Button";
+import { useMutation } from "@tanstack/react-query";
+import { Timer } from "lucide-react";
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 
 export function TwoFactorScreen({ session }: { session: LoginResponse }) {
   const [digits, setDigits] = useState<string[]>(Array(6).fill(""));

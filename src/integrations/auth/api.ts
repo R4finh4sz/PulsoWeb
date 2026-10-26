@@ -1,7 +1,8 @@
-import { apiRequest, ApiError } from "@/api/client";
+import { ApiError, apiRequest } from "@/api/client";
 import type { User } from "../types";
 import type { LoginResponse } from "./state";
 export type Terms = { title: string; version: string; content: string };
+export type PasswordResetVerification = { resetToken: string };
 export const authApi = {
   activeSchool: (schoolId: number) => apiRequest<void>("/me/active-school", { method: "PATCH", body: { schoolId } }),
   me: async (signal?: AbortSignal) => {
@@ -9,6 +10,9 @@ export const authApi = {
     catch (error) { if (error instanceof ApiError && error.status === 401) return null; throw error; }
   },
   login: (body: { email: string; password: string }) => apiRequest<LoginResponse>("/auth/login", { method: "POST", body }),
+  requestPasswordReset: (email: string) => apiRequest<void>("/auth/password-reset/request", { method: "POST", body: { email } }),
+  verifyPasswordReset: (email: string, code: string) => apiRequest<PasswordResetVerification>("/auth/password-reset/verify", { method: "POST", body: { email, code } }),
+  resetPassword: (email: string, resetToken: string, newPassword: string, confirmPassword: string) => apiRequest<void>("/auth/password-reset/reset", { method: "POST", body: { email, resetToken, newPassword, confirmPassword } }),
   verify: (code: string) => apiRequest<void>("/auth/2fa/verify", { method: "POST", body: { code } }),
   resend: () => apiRequest<Pick<LoginResponse, "twoFactorRequired" | "codeExpiresAt" | "resendAvailableAt">>("/auth/2fa/resend", { method: "POST" }),
   terms: async (signal?: AbortSignal) => {
