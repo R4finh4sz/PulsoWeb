@@ -84,21 +84,22 @@ test('escola consulta CEP, trava endereço encontrado e salva payload', async ()
   jest.mocked(findAddressByCep).mockResolvedValue({ logradouro: 'Praça da Sé', bairro: 'Sé', localidade: 'São Paulo', uf: 'SP' });
   jest.mocked(schoolsApi.create).mockResolvedValue({ id: 1 } as Awaited<ReturnType<typeof schoolsApi.create>>);
   const { container } = render(<SchoolForm />);
+  expect(screen.queryByLabelText('CNPJ')).not.toBeInTheDocument();
   fireEvent.submit(container.querySelector('form')!); expect(screen.getAllByRole('alert').length).toBeGreaterThan(0);
   expect(screen.getByLabelText('Logradouro')).toBeDisabled();
-  fill({ name: 'Escola Teste', cnpj: '11222333000181', cep: '01001000' }, container);
+  fill({ name: 'Escola Teste', cep: '01001000' }, container);
   await waitFor(() => expect(screen.getByLabelText('Cidade')).toHaveValue('São Paulo'));
   expect(screen.getByLabelText('Cidade')).toBeDisabled();
   fireEvent.submit(container.querySelector('form')!);
   await waitFor(() => expect(useFeedbackStore.getState().feedback?.type).toBe('success'));
-  expect(schoolsApi.create).toHaveBeenCalledWith({ nome: 'Escola Teste', cnpj: '11222333000181', logradouro: 'Praça da Sé', bairro: 'Sé', cidade: 'São Paulo' });
+  expect(schoolsApi.create).toHaveBeenCalledWith({ nome: 'Escola Teste', logradouro: 'Praça da Sé', bairro: 'Sé', cidade: 'São Paulo' });
 });
 test.each([null, new Error('CEP indisponível'), {}])('CEP ausente ou incompleto habilita edição manual: %s', async address => {
   if (address instanceof Error) jest.mocked(findAddressByCep).mockRejectedValue(address);
   else jest.mocked(findAddressByCep).mockResolvedValue(address);
   jest.mocked(schoolsApi.create).mockRejectedValue(new Error('Servidor indisponível'));
   const { container } = render(<SchoolForm />);
-  fill({ name: 'Escola Teste', cnpj: '11222333000181', cep: '01001000' }, container);
+  fill({ name: 'Escola Teste', cep: '01001000' }, container);
   await waitFor(() => expect(screen.getByLabelText('Logradouro')).toBeEnabled());
   fill({ street: 'Rua Teste', neighborhood: 'Centro', state: 'SP', city: 'São Paulo' }, container);
   fireEvent.submit(container.querySelector('form')!);

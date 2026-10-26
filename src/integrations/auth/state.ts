@@ -13,6 +13,8 @@ export type LoginResponse = {
   user: {
     role: Role;
     classroomId: number | null;
+    schoolIds?: number[];
+    activeSchoolId?: number | null;
     schoolId: number | null;
     firstLogin: boolean;
     termsAccepted: boolean;

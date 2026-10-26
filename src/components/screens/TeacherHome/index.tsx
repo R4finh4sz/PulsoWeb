@@ -6,7 +6,6 @@ import {
   ErrorMessage,
   Protected,
 } from "@/components/screens/Integration/shared";
-import { useMe } from "@/integrations/auth/hooks";
 import { useSchools } from "@/integrations/schools/hooks";
 import { useClassrooms } from "@/integrations/classrooms/hooks";
 import { MapPin, School, Users } from "lucide-react";
@@ -14,13 +13,8 @@ import Link from "next/link";
 
 function SchoolChoices() {
   const schools = useSchools();
-  const me = useMe();
-  const classrooms = useClassrooms();
-  const linked = schools.data?.filter(
-    (school) =>
-      school.teacherIds?.includes(me.data?.id ?? -1) ||
-      school.id === me.data?.schoolId,
-  );
+  const classrooms = useClassrooms(true, true);
+  const linked = schools.data;
   return (
     <>
       <div className="mb-10">
@@ -64,7 +58,7 @@ function SchoolChoices() {
             <Link
               key={school.id}
               href={`/teacher/schools/${school.id}`}
-              className="choice-card group"
+              className="choice-card group text-left"
             >
               <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#e8f7fa] text-[#0789a5] transition group-hover:bg-[#d9f1f6]">
                 <School aria-hidden="true" size={29} strokeWidth={1.7} />

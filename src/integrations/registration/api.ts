@@ -61,7 +61,7 @@ export const registrationApi = {
   invite: (
     resource: "teachers" | "coordinators",
     body: { email: string; schoolId?: number },
-  ) => apiRequest("/invitations/" + resource, { method: "POST", body }),
+  ) => apiRequest<{ delivery: "INTERNAL" | "EMAIL" }>("/invitations/" + resource, { method: "POST", body: resource === "teachers" ? { email: body.email } : body }),
   invitation: (token: string, signal?: AbortSignal) =>
     apiRequest<Invitation>("/invitations/" + encodeURIComponent(token), {
       signal,
@@ -88,7 +88,13 @@ export const registrationApi = {
   ) =>
     apiRequest("/invitations/" + encodeURIComponent(token) + "/complete", {
       method: "POST",
-      body,
+      body: {
+        name: body.name,
+        matricula: body.ra.trim(),
+        password: body.password,
+        termsAccepted: body.termsAccepted,
+        termsVersion: body.termsVersion,
+      },
     }),
   list: (status: RegistrationStatus, page: number, signal?: AbortSignal) =>
     apiRequest<{ content: Registration[]; totalPages: number }>(

@@ -1,11 +1,7 @@
 import type { SessionUser } from "../interfaces/auth";
-import { mockUsers } from "../mocks/platform";
 import type { School } from "../interfaces/school";
-import {
-  normalizeCnpj,
-  SchoolSchema,
-  type SchoolForm,
-} from "../validation/School.validation";
+import { mockUsers } from "../mocks/platform";
+import { SchoolSchema, type SchoolForm } from "../validation/School.validation";
 
 export function createSchool(
   user: SessionUser,
@@ -17,13 +13,7 @@ export function createSchool(
     throw new Error("Somente o administrador pode criar escolas.");
   const data = SchoolSchema.parse(input);
   void coordinators;
-  if (
-    schools.some(
-      (school) => school.cnpj && normalizeCnpj(school.cnpj) === data.cnpj,
-    )
-  ) {
-    throw new Error("Já existe uma escola cadastrada com este CNPJ.");
-  }
+  void schools;
   return {
     ...data,
     coordinatorId: null,

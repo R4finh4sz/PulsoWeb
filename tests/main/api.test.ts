@@ -28,11 +28,11 @@ test.each([
   [() => subjectsApi.create(1, 'Matemática'), '/classrooms/1/subjects', 'POST', { name: 'Matemática' }],
   [() => usersApi.create('students', { fullName: 'Ana', ra: '1', email: 'a@b.com' }), '/students', 'POST', { fullName: 'Ana', ra: '1', email: 'a@b.com' }],
   [() => usersApi.update('teachers', 2, { fullName: 'Ana' }), '/teachers/2', 'PATCH', { fullName: 'Ana' }],
-  [() => schoolsApi.create({ nome: 'Escola', cnpj: '1', cidade: 'SP', logradouro: 'Rua', bairro: 'Sé' }), '/schools', 'POST', { nome: 'Escola', cnpj: '1', cidade: 'SP', logradouro: 'Rua', bairro: 'Sé' }],
+  [() => schoolsApi.create({ nome: 'Escola', cidade: 'SP', logradouro: 'Rua', bairro: 'Sé' }), '/schools', 'POST', { nome: 'Escola', cidade: 'SP', logradouro: 'Rua', bairro: 'Sé' }],
   [() => registrationApi.invite('teachers', { email: 'a@b.com' }), '/invitations/teachers', 'POST', { email: 'a@b.com' }],
   [() => registrationApi.verify('a/b', '123456'), '/invitations/a%2Fb/verify', 'POST', { code: '123456' }],
   [() => registrationApi.resend('a/b'), '/invitations/a%2Fb/resend', 'POST', undefined],
-  [() => registrationApi.complete('a/b', { name: 'Ana', ra: '1', password: 'x', termsAccepted: true, termsVersion: '1' }), '/invitations/a%2Fb/complete', 'POST', { name: 'Ana', ra: '1', password: 'x', termsAccepted: true, termsVersion: '1' }],
+  [() => registrationApi.complete('a/b', { name: 'Ana', ra: '1000', password: 'x', termsAccepted: true, termsVersion: '1' }), '/invitations/a%2Fb/complete', 'POST', { name: 'Ana', matricula: '1000', password: 'x', termsAccepted: true, termsVersion: '1' }],
   [() => registrationApi.review(2, 'REJECTED', 'Motivo'), '/registration-requests/2', 'PATCH', { status: 'REJECTED', reason: 'Motivo' }],
 ] as const)('envia método, caminho e payload corretos: %s', async (call, path, method, body) => {
   await call(); expect(request).toHaveBeenCalledWith(path, body === undefined ? { method } : { method, body });

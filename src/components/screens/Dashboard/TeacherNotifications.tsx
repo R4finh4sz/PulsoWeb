@@ -4,9 +4,9 @@ import { ErrorMessage } from "@/components/screens/Integration/shared";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FeedbackModalContent } from "@/components/ui/FeedbackModal";
 import { useAuthState } from "@/integrations/auth/state";
+import { notificationsApi } from "@/integrations/notifications/api";
 import { schoolsApi } from "@/integrations/schools/api";
 import { subjectsApi } from "@/integrations/subjects/api";
-import { getDemoUser, mockAccessEnabled } from "@/mocks/access";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, School, UserPlus, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
@@ -26,21 +26,23 @@ export function TeacherNotifications({
   const id = useId();
   const token = useAuthState((state) => state.session?.accessToken);
   const client = useQueryClient();
-  const demo = mockAccessEnabled && getDemoUser(token)?.role === "TEACHER";
+  const authenticated = !!token;
   const query = useQuery({
     queryKey: ["subject-invitations", userId],
     queryFn: ({ signal }) => subjectsApi.invitations(signal),
-    enabled: demo,
+    enabled: authenticated,
     refetchInterval: 30000,
   });
   const schoolQuery = useQuery({
     queryKey: ["school-invitations", userId],
     queryFn: ({ signal }) => schoolsApi.invitations(signal),
-    enabled: demo,
+    enabled: authenticated,
     refetchInterval: 30000,
   });
+  const notifications = useQuery({ queryKey: ["notifications", userId], queryFn: ({ signal }) => notificationsApi.list(signal), enabled: authenticated, refetchInterval: 30000 });
+  const read = useMutation({ mutationFn: notificationsApi.read, onSuccess: () => client.invalidateQueries({ queryKey: ["notifications"] }) });
   const pendingInvitations = [
-    ...(demo ? (query.data ?? []) : []).map((invite) => ({
+    ...(authenticated ? (query.data ?? []) : []).map((invite) => ({
       ...invite,
       kind: "subject" as const,
       key: "subject:" + invite.id,
@@ -51,7 +53,7 @@ export function TeacherNotifications({
         invite.subjectName +
         ".",
     })),
-    ...(demo ? (schoolQuery.data ?? []) : []).map((invite) => ({
+    ...(authenticated ? (schoolQuery.data ?? []) : []).map((invite) => ({
       ...invite,
       kind: "school" as const,
       key: "school:" + invite.id,
@@ -97,6 +99,8 @@ export function TeacherNotifications({
           ["subjects"],
           ["classrooms"],
           ["schools"],
+          ["session"],
+          ["notifications"],
         ].map((queryKey) => client.invalidateQueries({ queryKey })),
       );
     },
@@ -109,7 +113,7 @@ export function TeacherNotifications({
         status: value,
       });
   }
-  const unread = pendingInvitations.length;
+  const unread = (notifications.data ?? []).filter((item) => !item.read && !item.readAt).length || pendingInvitations.length;
   useEffect(() => {
     if (!open) return;
     function outside(event: MouseEvent) {
@@ -168,10 +172,12 @@ export function TeacherNotifications({
               <X size={18} aria-hidden="true" />
             </button>
           </div>
+          <ErrorMessage error={notifications.error || read.error} />
+          <ul>{notifications.data?.map((item) => <li key={`${item.type}:${item.id}`} className="border-b p-4"><button type="button" disabled={read.isPending || item.read || !!item.readAt} onClick={() => read.mutate(item.readUrl)} className="text-left"><span className="block font-medium">{item.title ?? (item.type.toUpperCase().includes("SCHOOL") ? "Notificação de escola" : "Notificação de matéria")}</span><span className="text-sm">{item.message}</span><span className="block text-xs">{item.read || item.readAt ? "Lida" : "Marcar como lida"}</span></button></li>)}</ul>
           {(query.error || schoolQuery.error) && (
             <ErrorMessage error={query.error || schoolQuery.error} />
           )}
-          {(query.isPending || schoolQuery.isPending) && demo ? (
+          {(query.isPending || schoolQuery.isPending) && authenticated ? (
             <p role="status" className="p-5 text-sm">
               Carregando convites…
             </p>

@@ -128,7 +128,7 @@ export function TeacherShell({
                   className="max-w-40 truncate text-sm font-medium text-white"
                   title={user.name}
                 >
-                  {user.name}
+                  {user.name.trim().split(/\s+/)[0]}
                 </p>
                 <p className="text-xs leading-5 text-[#bcd5dd]">
                   {roleLabels[user.role]}

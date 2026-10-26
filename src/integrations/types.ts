@@ -3,9 +3,12 @@ export type User = {
   id: number;
   fullName: string;
   ra: string;
+  matricula?: string | null;
   email: string;
   role: Role;
   classroomId: number | null;
+  schoolIds?: number[];
+  activeSchoolId?: number | null;
   schoolId?: number | null;
 };
 export type CreateUser = Pick<User, "fullName" | "ra" | "email"> & {
@@ -19,6 +22,7 @@ export type UserPage = {
   totalPages: number;
 };
 export type UserFilters = {
+  schoolId?: number;
   q?: string;
   page?: number;
   size?: number;
@@ -27,6 +31,7 @@ export type UserFilters = {
 };
 export type UserResource = "students" | "teachers" | "coordinators";
 export type Classroom = {
+  schoolName?: string | null;
   id: number;
   name: string;
   identifier: string;

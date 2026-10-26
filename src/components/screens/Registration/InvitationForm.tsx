@@ -67,14 +67,10 @@ function InvitationForm({
       .trim() || "";
   const filteredSchools = schools.data?.filter((school) => {
     const search = normalize(schoolSearch);
-    const digits = schoolSearch.replace(/\D/g, "");
     const matchesName = Boolean(
       search && normalize(school.nome).includes(search),
     );
-    const matchesCnpj = Boolean(
-      digits && school.cnpj.replace(/\D/g, "").includes(digits),
-    );
-    if (search && !schoolAddress && !matchesName && !matchesCnpj) return false;
+    if (search && !schoolAddress && !matchesName) return false;
     if (!schoolAddress) return true;
     return [
       [schoolAddress.logradouro, school.logradouro],
@@ -184,7 +180,7 @@ function InvitationForm({
                       autoFocus
                       value={schoolSearch}
                       onChange={searchSchoolByCep}
-                      placeholder="Nome, CNPJ ou CEP"
+                      placeholder="Nome ou CEP"
                       className="min-w-0 flex-1 text-sm outline-none"
                     />
                   </label>
@@ -201,7 +197,6 @@ function InvitationForm({
                       >
                         {school.nome}
                         <span className="mt-1 block text-xs text-(--muted)">
-                          {school.cnpj || "CNPJ não informado"} ·{" "}
                           {school.cidade}
                         </span>
                       </button>
@@ -233,7 +228,9 @@ function InvitationForm({
           </Button>
           {mutation.isSuccess && (
             <p role="status" className="text-sm text-(--blue)">
-              Convite enviado por e-mail.
+              {mutation.data?.delivery === "INTERNAL"
+                ? "Convite enviado nas notificações do professor."
+                : "Convite enviado por e-mail com link de cadastro."}
             </p>
           )}
         </div>

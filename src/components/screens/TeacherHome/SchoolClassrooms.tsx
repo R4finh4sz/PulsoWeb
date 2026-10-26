@@ -7,17 +7,10 @@ import {
   ErrorMessage,
 } from "@/components/screens/Integration/shared";
 import { useSchools } from "@/integrations/schools/hooks";
-import { useMe } from "@/integrations/auth/hooks";
 
 export function SchoolClassrooms({ id }: { id: number }) {
   const schools = useSchools();
-  const me = useMe();
-  const school = schools.data?.find(
-    (school) =>
-      school.id === id &&
-      (school.teacherIds?.includes(me.data?.id ?? -1) ||
-        school.id === me.data?.schoolId),
-  );
+  const school = schools.data?.find((school) => school.id === id);
   return (
     <Protected role="professor">
       {(user) => (

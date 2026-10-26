@@ -12,7 +12,7 @@ jest.mock('@/integrations/registration/api', () => ({ registrationApi: { list: j
 jest.mock('@/integrations/schools/api', () => ({ schoolsApi: { list: jest.fn() } }));
 jest.mock('@/utils/viacep', () => ({ ...jest.requireActual('@/utils/viacep'), findAddressByCep: jest.fn() }));
 const request = { id: 1, name: 'Ana Silva', email: 'a@b.com', ra: '123', birthDate: '2000-01-01', role: 'STUDENT' as const, schoolName: 'Escola', status: 'PENDING' as const, reviewReason: 'Parecer', hasPhoto: true };
-const school = { id: 1, nome: 'Escola São Paulo', cnpj: '11222333000181', cidade: 'São Paulo', bairro: 'Centro', logradouro: 'Rua Teste' };
+const school = { id: 1, nome: 'Escola São Paulo', cidade: 'São Paulo', bairro: 'Centro', logradouro: 'Rua Teste' };
 test('coordenação separa professores e alunos, busca e aprova sem transferências', async () => {
   jest.mocked(authApi.me).mockResolvedValue({ id: 2, role: 'PEDAGOGICAL_COORDINATOR', fullName: 'Coord', email: 'c@b.com' } as Awaited<ReturnType<typeof authApi.me>>);
   jest.mocked(registrationApi.list).mockResolvedValue({ content: [
@@ -33,7 +33,7 @@ beforeEach(() => {
   jest.mocked(authApi.me).mockResolvedValue({ id: 1, role: 'ADMIN', fullName: 'Admin', email: 'admin@b.com' } as Awaited<ReturnType<typeof authApi.me>>);
   jest.mocked(registrationApi.list).mockResolvedValue({ content: [request], totalPages: 2 });
   jest.mocked(registrationApi.photo).mockResolvedValue(new Blob(['photo'])); jest.mocked(registrationApi.review).mockResolvedValue(request);
-  jest.mocked(schoolsApi.list).mockResolvedValue([school]); jest.mocked(registrationApi.invite).mockResolvedValue({});
+  jest.mocked(schoolsApi.list).mockResolvedValue([school]); jest.mocked(registrationApi.invite).mockResolvedValue({ delivery: "EMAIL" });
 });
 test('solicitações exibem foto, aprovam/recusam e paginam', async () => {
   render(<RegistrationRequests role="admin" />, { wrapper: queryWrapper().wrapper }); await screen.findByText('Ana Silva');
@@ -60,20 +60,20 @@ test.each(['teachers', 'coordinators'] as const)('convite para %s envia email e 
   fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'a@b.com' } });
   if (resource === 'coordinators') {
     fireEvent.click(screen.getByRole('button', { name: 'Escola' }));
-    fireEvent.change(screen.getByPlaceholderText('Nome, CNPJ ou CEP'), { target: { value: 'São' } });
+    fireEvent.change(screen.getByPlaceholderText('Nome ou CEP'), { target: { value: 'São' } });
     fireEvent.click(await screen.findByRole('button', { name: /Escola São Paulo/ }));
   }
-  fireEvent.submit(container.querySelector('form')!); expect(await screen.findByText('Convite enviado por e-mail.')).toBeVisible();
+  fireEvent.submit(container.querySelector('form')!); expect(await screen.findByText('Convite enviado por e-mail com link de cadastro.')).toBeVisible();
   expect(registrationApi.invite).toHaveBeenCalledWith(resource, resource === 'coordinators' ? { email: 'a@b.com', schoolId: 1 } : { email: 'a@b.com' });
 });
-test('convite filtra CNPJ, nome e endereço do CEP e fecha menu externo', async () => {
+test('convite filtra nome e endereço do CEP e fecha menu externo', async () => {
   jest.mocked(findAddressByCep).mockResolvedValue({ logradouro: 'Rua Teste', localidade: 'São Paulo' });
   render(<InvitationPage resource="coordinators" />, { wrapper: queryWrapper().wrapper }); await screen.findByLabelText('E-mail');
-  fireEvent.click(screen.getByRole('button', { name: 'Escola' })); const search = screen.getByPlaceholderText('Nome, CNPJ ou CEP');
+  fireEvent.click(screen.getByRole('button', { name: 'Escola' })); const search = screen.getByPlaceholderText('Nome ou CEP');
   fireEvent.change(search, { target: { value: 'Ausente' } }); await screen.findByText('Nenhuma escola encontrada.');
-  fireEvent.change(search, { target: { value: '11222' } }); expect(screen.getByRole('button', { name: /Escola São Paulo/ })).toBeVisible();
+  fireEvent.change(search, { target: { value: 'Escola' } }); expect(screen.getByRole('button', { name: /Escola São Paulo/ })).toBeVisible();
   fireEvent.change(search, { target: { value: '01001000' } }); await waitFor(() => expect(findAddressByCep).toHaveBeenCalledWith('01001000'));
-  await screen.findByRole('button', { name: /Escola São Paulo/ }); fireEvent.pointerDown(document.body); expect(screen.queryByPlaceholderText('Nome, CNPJ ou CEP')).toBeNull();
+  await screen.findByRole('button', { name: /Escola São Paulo/ }); fireEvent.pointerDown(document.body); expect(screen.queryByPlaceholderText('Nome ou CEP')).toBeNull();
 });
 test('erro ao convidar mantém email para tentar novamente', async () => {
   jest.mocked(authApi.me).mockResolvedValue({ id: 1, role: 'PEDAGOGICAL_COORDINATOR', fullName: 'Coord', email: 'c@b.com' } as Awaited<ReturnType<typeof authApi.me>>);

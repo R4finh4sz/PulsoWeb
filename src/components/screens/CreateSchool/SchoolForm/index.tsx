@@ -5,7 +5,6 @@ import { DashboardPanel } from "@/components/ui/DashboardPanel";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import { useCreateSchool } from "@/hooks/useCreateSchool";
-import { formatCnpj } from "@/utils/cnpj";
 import { findAddressByCep, formatCep } from "@/utils/viacep";
 import { states } from "@/validation/School.validation";
 import { School } from "lucide-react";
@@ -100,21 +99,6 @@ export function SchoolForm() {
               value={values.name}
               onChange={(event) => setField("name", event.target.value)}
               error={errors.name}
-            />
-            <Input
-              id="cnpj"
-              name="cnpj"
-              label="CNPJ"
-              placeholder="00.000.000/0000-00"
-              autoCapitalize="characters"
-              spellCheck={false}
-              required
-              maxLength={18}
-              value={values.cnpj}
-              onChange={(event) =>
-                setField("cnpj", formatCnpj(event.target.value))
-              }
-              error={errors.cnpj}
             />
           </div>
         </DashboardPanel>
@@ -243,9 +227,6 @@ export function SchoolForm() {
         <h2 className="mt-4 wrap-break-word text-xl font-semibold">
           {values.name || "Nome da escola"}
         </h2>
-        <p className="mt-2 text-sm text-(--muted)">
-          {values.cnpj || "CNPJ a informar"}
-        </p>
         <div className="mt-5 space-y-3 border-t border-(--line) pt-5 text-sm text-(--muted)">
           <p className="wrap-break-word">
             {values.street || "Logradouro a informar"}

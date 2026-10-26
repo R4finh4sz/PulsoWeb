@@ -1,7 +1,5 @@
-import { isValidCnpj, normalizeCnpj } from "@/utils/cnpj";
 import { z } from "zod";
 
-export { isValidCnpj, normalizeCnpj } from "@/utils/cnpj";
 
 export const states = [
   "AC",
@@ -43,10 +41,6 @@ export const SchoolSchema = z.object({
     .trim()
     .min(2, "Informe o nome da escola.")
     .max(150, "Use até 150 caracteres."),
-  cnpj: z
-    .string()
-    .transform(normalizeCnpj)
-    .refine(isValidCnpj, "Informe um CNPJ válido."),
   cep: z
     .string()
     .transform(normalizeCep)

@@ -8,7 +8,6 @@ import { useCallback, useRef, useState, type SyntheticEvent } from "react";
 export function useCreateSchool() {
   const [values, setValues] = useState<SchoolForm>({
     name: "",
-    cnpj: "",
     cep: "",
     street: "",
     neighborhood: "",
@@ -47,7 +46,6 @@ export function useCreateSchool() {
     try {
       await schoolsApi.create({
         nome: parsed.data.name,
-        cnpj: parsed.data.cnpj,
         logradouro: parsed.data.street,
         bairro: parsed.data.neighborhood,
         cidade: parsed.data.city,
