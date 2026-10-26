@@ -1,7 +1,6 @@
 "use client";
 
 import logo from "@/assets/images/LogoImageWhite.png";
-import { TeacherShell } from "../TeacherShell";
 import { DemoAccess } from "@/components/screens/Login/DemoAccess";
 import { DashboardIcon, type IconName } from "@/components/ui/DashboardIcon";
 import { useLogout } from "@/integrations/auth/hooks";
@@ -10,6 +9,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSyncExternalStore, type ReactNode } from "react";
+import { TeacherShell } from "../TeacherShell";
 
 type Props = {
   user: SessionUser;
@@ -55,6 +55,12 @@ export function DashboardShell({
           },
         ]
       : [...navigation];
+  if (user.role === "aluno")
+    sidebarNavigation.push({
+      label: "Quizzes",
+      href: "/student/quizzes",
+      icon: "book",
+    });
   if (user.role === "admin" || user.role === "coordenador")
     sidebarNavigation.push({
       label: "Solicitações de cadastro",
@@ -146,7 +152,9 @@ export function DashboardShell({
                 .join("")}
             </div>
             <div>
-              <p className="text-xs font-semibold">{user.name}</p>
+              <p className="text-xs font-semibold">
+                {user.name.trim().split(/\s+/)[0]}
+              </p>
               <p className="text-xs leading-5 text-(--muted)">
                 {roleLabels[user.role]}
               </p>

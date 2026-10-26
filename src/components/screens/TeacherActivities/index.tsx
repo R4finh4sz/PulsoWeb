@@ -9,7 +9,6 @@ import {
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useAuthState } from "@/integrations/auth/state";
 import { quizzesApi } from "@/integrations/quizzes/api";
-import { getDemoUser, mockAccessEnabled } from "@/mocks/access";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarClock, ClipboardList, Search } from "lucide-react";
 import Link from "next/link";
@@ -25,11 +24,11 @@ function Activities() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("ALL");
   const token = useAuthState((state) => state.session?.accessToken);
-  const demo = mockAccessEnabled && !!getDemoUser(token);
+  const authenticated = !!token;
   const query = useQuery({
     queryKey: ["teacher-activities", token],
     queryFn: ({ signal }) => quizzesApi.activities(signal),
-    enabled: demo,
+    enabled: authenticated,
     refetchInterval: 30000,
   });
   const activities = query.data
@@ -49,7 +48,7 @@ function Activities() {
           Acompanhe os quizzes que você criou e os prazos de encerramento.
         </p>
       </div>
-      {!demo ? (
+      {!authenticated ? (
         <EmptyState
           icon={ClipboardList}
           title="Atividades indisponíveis neste ambiente."

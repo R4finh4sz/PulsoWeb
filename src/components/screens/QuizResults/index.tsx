@@ -10,7 +10,6 @@ import { BackLink } from "@/components/ui/BackLink";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useAuthState } from "@/integrations/auth/state";
 import { quizzesApi } from "@/integrations/quizzes/api";
-import { getDemoUser, mockAccessEnabled } from "@/mocks/access";
 import { useQuery } from "@tanstack/react-query";
 import { ClipboardList, Search, Users } from "lucide-react";
 import { useState } from "react";
@@ -20,14 +19,14 @@ function Results({ quizId }: { quizId: number }) {
   const [page, setPage] = useState(0);
   const [filter, setFilter] = useState("ALL");
   const token = useAuthState((state) => state.session?.accessToken);
-  const demo = mockAccessEnabled && !!getDemoUser(token);
+  const authenticated = !!token;
   const query = useQuery({
     queryKey: ["quiz-results", quizId, token],
     queryFn: ({ signal }) => quizzesApi.results(quizId, signal),
-    enabled: demo,
+    enabled: authenticated,
     refetchInterval: 30000,
   });
-  if (!demo)
+  if (!authenticated)
     return (
       <EmptyState
         icon={ClipboardList}

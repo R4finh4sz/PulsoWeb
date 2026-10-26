@@ -1,6 +1,7 @@
 "use client";
 
 import { canAccessSubject } from "@/utils/subjectAccess";
+import { SubjectThemes } from "./SubjectThemes";
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -8,8 +9,8 @@ import { BookOpen, LockKeyhole, MoreHorizontal, UserPlus } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import type { Subject } from "@/integrations/types";
 import { subjectsApi } from "@/integrations/subjects/api";
+import { useMe } from "@/integrations/auth/hooks";
 import { useAuthState } from "@/integrations/auth/state";
-import { getDemoUser, mockAccessEnabled } from "@/mocks/access";
 import {
   actionClass,
   ErrorMessage,
@@ -27,9 +28,11 @@ export function SubjectCard({
   const trigger = useRef<HTMLElement | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const [email, setEmail] = useState("");
+  const [showThemes, setShowThemes] = useState(false);
   const token = useAuthState((state) => state.session?.accessToken);
-  const demo = mockAccessEnabled && !!getDemoUser(token);
-  const teacherId = viewerId ?? getDemoUser(token)?.id ?? NaN;
+  const authenticated = !!token;
+  const me = useMe();
+  const teacherId = viewerId ?? me.data?.id ?? NaN;
   const locked = !canAccessSubject(subject, teacherId);
   const owner = subject.teacherId === teacherId;
   const invitation = useMutation({
@@ -95,7 +98,6 @@ export function SubjectCard({
           >
             <BookOpen size={24} strokeWidth={1.7} />
           </span>
-          {owner && (
             <details ref={menu} className="relative z-10">
               <summary
                 ref={(node) => {
@@ -107,6 +109,13 @@ export function SubjectCard({
                 <MoreHorizontal size={22} aria-hidden="true" />
               </summary>
               <div className="absolute right-0 top-full mt-1 w-52 rounded-xl border border-(--line) bg-white p-1.5 shadow-lg">
+                <button type="button" onClick={() => {
+                  if (menu.current) menu.current.open = false;
+                  setShowThemes(true);
+                }} className="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm text-(--ink) hover:bg-cyan-50">
+                  <BookOpen size={17} aria-hidden="true" />Temas
+                </button>
+                {owner && (
                 <button
                   type="button"
                   onClick={() => {
@@ -120,9 +129,9 @@ export function SubjectCard({
                   <UserPlus size={17} aria-hidden="true" />
                   Adicionar professor
                 </button>
+                )}
               </div>
             </details>
-          )}
         </div>
         <Link
           href={`/teacher/classrooms/${subject.classroomId}/subjects/${subject.id}`}
@@ -136,6 +145,7 @@ export function SubjectCard({
           </p>
         </Link>
       </div>
+      {showThemes && <SubjectThemes subject={subject} onClose={() => { setShowThemes(false); trigger.current?.focus(); }} />}
       <dialog
         ref={dialog}
         aria-labelledby={`subject-invite-${subject.id}`}
@@ -174,7 +184,7 @@ export function SubjectCard({
             className="mt-6 space-y-5 text-left"
             onSubmit={(event) => {
               event.preventDefault();
-              if (!invitation.isPending && demo) invitation.mutate();
+              if (!invitation.isPending && authenticated) invitation.mutate();
             }}
           >
             <label className="block text-sm font-medium">
@@ -191,7 +201,7 @@ export function SubjectCard({
                 placeholder="professor@escola.com"
               />
             </label>
-            {!demo && (
+            {!authenticated && (
               <p className="text-sm text-(--muted)">
                 Convites para matérias ainda não estão disponíveis neste
                 ambiente.
@@ -209,7 +219,7 @@ export function SubjectCard({
               </button>
               <button
                 type="submit"
-                disabled={invitation.isPending || !demo}
+                disabled={invitation.isPending || !authenticated}
                 className={actionClass}
               >
                 {invitation.isPending ? "Convidando…" : "Convidar professor"}

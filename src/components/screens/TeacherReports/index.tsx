@@ -10,7 +10,6 @@ import {
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useAuthState } from "@/integrations/auth/state";
 import { quizzesApi } from "@/integrations/quizzes/api";
-import { getDemoUser, mockAccessEnabled } from "@/mocks/access";
 import { buildClassroomReports, reportMetrics } from "@/utils/teacherReports";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ChartColumn, Search } from "lucide-react";
@@ -53,7 +52,7 @@ function Reports({
   initialStatus: "ALL" | "CLOSED";
 }) {
   const token = useAuthState((state) => state.session?.accessToken);
-  const demo = mockAccessEnabled && !!getDemoUser(token);
+  const authenticated = !!token;
   const [school, setSchool] = useState("");
   const [classroom, setClassroom] = useState("");
   const [status, setStatus] = useState<string>(initialStatus);
@@ -69,7 +68,7 @@ function Reports({
       );
       return { results, asOf: Date.now() };
     },
-    enabled: demo,
+    enabled: authenticated,
   });
 
   const asOf = query.data?.asOf ?? 0;
@@ -128,7 +127,7 @@ function Reports({
           </p>
         </div>
       </div>
-      {!demo ? (
+      {!authenticated ? (
         <EmptyState
           icon={ChartColumn}
           title="Relatório indisponível neste ambiente."
