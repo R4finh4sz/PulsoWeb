@@ -138,8 +138,7 @@ export function StudentList({
               <ArrowLeft size={18} />
             </button>
             <span className="text-xs tabular-nums text-(--muted)">
-              {start + 1}–{Math.min(start + size, filtered.length)} de{" "}
-              {filtered.length}
+              Página {current + 1} de {pages}
             </span>
             <button
               type="button"
