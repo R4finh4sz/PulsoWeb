@@ -2,7 +2,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useFeedbackStore } from "@/store/feedbackStore";
 // Refresh affected server state even when a multi-step action only partially succeeds.
-export function useApiMutation<T, V>(mutationFn: (variables: V) => Promise<T>) {
+export function useApiMutation<T, V>(mutationFn: (variables: V) => Promise<T>, onSuccessClose?: () => void) {
   const client = useQueryClient();
   const showFeedback = useFeedbackStore((state) => state.showFeedback);
   return useMutation({
@@ -19,6 +19,7 @@ export function useApiMutation<T, V>(mutationFn: (variables: V) => Promise<T>) {
       showFeedback({
         type: "success",
         message: "Operação concluída com sucesso.",
+        onClose: onSuccessClose,
       }),
     onError: (error) =>
       showFeedback({

@@ -9,6 +9,7 @@ import {
 import type { Classroom } from "@/integrations/types";
 import type { UserRole } from "@/interfaces/auth";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 function PageContent({
@@ -17,6 +18,7 @@ function PageContent({
   role?: UserRole;
 }) {
   const [created, setCreated] = useState<Classroom | null>(null);
+  const router = useRouter();
   return (
     <Protected role={role}>
       {(user) => (
@@ -29,7 +31,7 @@ function PageContent({
               Turma criada. Vincular alunos e professores
             </Link>
           ) : (
-            <ClassroomForm onCreated={setCreated} />
+            <ClassroomForm onCreated={setCreated} onSuccessClose={() => router.back()} />
           )}
         </Workspace>
       )}

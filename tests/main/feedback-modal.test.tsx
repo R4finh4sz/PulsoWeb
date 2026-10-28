@@ -1,6 +1,20 @@
 import Button from "@/components/ui/Button";
 import { FeedbackModalContent } from "@/components/ui/FeedbackModal";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { FeedbackModalHost } from "@/components/ui/FeedbackModalHost";
+import { useFeedbackStore } from "@/store/feedbackStore";
+
+test("executa a navegação somente ao fechar a modal de sucesso", () => {
+  const back = jest.fn();
+  useFeedbackStore.getState().showFeedback({ type: "success", message: "Turma criada.", onClose: back });
+  render(<FeedbackModalHost />);
+  expect(back).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Fechar" }));
+  expect(back).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  useFeedbackStore.getState().closeFeedback();
+  expect(back).toHaveBeenCalledTimes(1);
+});
 
 test("destaca a ação de descartar em vermelho e mantém continuar editando neutro", () => {
   render(<FeedbackModalContent
