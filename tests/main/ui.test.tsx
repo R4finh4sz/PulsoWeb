@@ -1,13 +1,12 @@
-import { useState } from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
 import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
-import Select from '@/components/ui/Select';
-import MultiSelect from '@/components/ui/MultiSelect';
 import { FeedbackModal } from '@/components/ui/FeedbackModal';
 import { FeedbackModalHost } from '@/components/ui/FeedbackModalHost';
+import Input from '@/components/ui/Input';
+import MultiSelect from '@/components/ui/MultiSelect';
+import Select from '@/components/ui/Select';
 import { useFeedbackStore } from '@/store/feedbackStore';
-import { act } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
 
 test('botão usa tipo button e repassa eventos e atributos', () => {
   const click = jest.fn(); const { rerender } = render(<Button onClick={click}>Salvar</Button>);

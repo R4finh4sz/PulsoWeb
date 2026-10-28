@@ -10,7 +10,7 @@ import { useSchoolStore } from "@/store/schoolStore";
 import { UserRound } from "lucide-react";
 import Link from "next/link";
 
-export function StudentForm({ user }: { user: SessionUser }) {
+export function StudentForm({ user }: { user: SessionUser; }) {
   const { values, errors, error, saving, rooms, setField, handleSubmit } =
     useCreateStudent(user);
   const schools = useSchoolStore((state) => state.schools);

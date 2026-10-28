@@ -5,6 +5,7 @@ import { schoolsApi } from '@/integrations/schools/api';
 import { usersApi } from '@/integrations/users/api';
 import { subjectsApi } from '@/integrations/subjects/api';
 import { registrationApi } from '@/integrations/registration/api';
+jest.mock('@/mocks/api', () => ({ mockRequest: jest.fn() }));
 jest.mock('@/api/client', () => ({ ...jest.requireActual('@/api/client'), apiRequest: jest.fn() }));
 const request = jest.mocked(apiRequest);
 beforeEach(() => request.mockResolvedValue({ id: 1 }));
@@ -12,7 +13,7 @@ test.each([
   [() => authApi.login({ email: 'a@b.com', password: 'x' }), '/auth/login', 'POST', { email: 'a@b.com', password: 'x' }],
   [() => authApi.requestPasswordReset('a@b.com'), '/auth/password-reset/request', 'POST', { email: 'a@b.com' }],
   [() => authApi.verifyPasswordReset('a@b.com', '123456'), '/auth/password-reset/verify', 'POST', { email: 'a@b.com', code: '123456' }],
-  [() => authApi.resetPassword('a@b.com', '123456', 'new'), '/auth/password-reset/confirm', 'POST', { email: 'a@b.com', code: '123456', password: 'new' }],
+  [() => authApi.resetPassword('a@b.com', 'reset-token', 'new', 'new'), '/auth/password-reset/reset', 'POST', { email: 'a@b.com', resetToken: 'reset-token', newPassword: 'new', confirmPassword: 'new' }],
   [() => authApi.verify('123456'), '/auth/2fa/verify', 'POST', { code: '123456' }],
   [() => authApi.resend(), '/auth/2fa/resend', 'POST', undefined],
   [() => authApi.createTerms({ title: 'T', content: 'C' }), '/terms', 'POST', { title: 'T', content: 'C' }],

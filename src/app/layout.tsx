@@ -1,12 +1,12 @@
-import type { Metadata } from "next";
+import { QueryProvider } from "@/api/QueryProvider";
+import { AuthGate } from "@/components/screens/Login/AuthGate";
+import { FeedbackModalHost } from "@/components/ui/FeedbackModalHost";
 import "@fontsource/poppins/latin-400.css";
 import "@fontsource/poppins/latin-500.css";
 import "@fontsource/poppins/latin-600.css";
 import "@fontsource/poppins/latin-700.css";
+import type { Metadata } from "next";
 import "./globals.css";
-import { QueryProvider } from "@/api/QueryProvider";
-import { AuthGate } from "@/components/screens/Login/AuthGate";
-import { FeedbackModalHost } from "@/components/ui/FeedbackModalHost";
 
 export const metadata: Metadata = {
   title: "Pulso Escolar | Acesso",

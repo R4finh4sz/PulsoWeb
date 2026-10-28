@@ -34,6 +34,13 @@ Tenha Node.js e Yarn instalados.
 
 Reinicie o frontend após alterar as variáveis de ambiente.
 
+## Organização do código
+
+- `src/app/**/page.tsx`: composição e lógica específicas de cada página, incluindo proteção de acesso e navegação.
+- `src/components/screens/Nome/index.tsx`: partes grandes ou compartilhadas das telas, sem criar um componente de página apenas para repassá-lo à rota.
+- `src/components/ui/Nome/index.tsx`: elementos visuais reutilizáveis, como campos, botões e modais.
+- `src/utils`: transformações e funções auxiliares; `src/validation`: schemas e regras de validação.
+
 ## Comandos
 
 | Comando | Descrição |

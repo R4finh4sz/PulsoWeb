@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react';
 import { AuthGate } from '@/components/screens/Login/AuthGate';
 import { useAuthState } from '@/integrations/auth/state';
+import { render, screen } from '@testing-library/react';
 import { queryWrapper, router, session } from '../helpers';
 jest.mock('next/navigation', () => ({ usePathname: () => '/student', useRouter: () => router }));
 

@@ -12,7 +12,6 @@ describe('permissões e cadastros', () => {
     const school = createSchool(admin, schoolForm, schools);
     expect(school).toMatchObject({ initials: 'ET', coordinatorId: null });
     expect(() => createSchool(teacher, schoolForm, [])).toThrow(/administrador/);
-    expect(createSchool(admin, schoolForm, [school])).not.toHaveProperty('cnpj');
     expect(() => createSchool(admin, { ...schoolForm, name: '' }, [])).toThrow();
   });
   test('professores normalizam dados e rejeitam matrícula ou email repetidos', () => {

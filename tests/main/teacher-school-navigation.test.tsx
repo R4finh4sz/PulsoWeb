@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { TeacherHome } from "@/components/screens/TeacherHome";
-import { SchoolClassrooms } from "@/components/screens/TeacherHome/SchoolClassrooms";
+import { SchoolChoices as TeacherHome } from "@/components/screens/TeacherHome";
+import { PageContent as SchoolClassrooms } from "@/app/teacher/schools/[id]/page";
 
 jest.mock("@/components/screens/Dashboard/TeacherShell", () => ({ TeacherShell: ({ children }: { children: ReactNode }) => <main>{children}</main> }));
 jest.mock("@/components/screens/Integration/shared", () => ({

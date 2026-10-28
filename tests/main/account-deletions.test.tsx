@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { AccountDeletions } from "@/components/screens/Registration/AccountDeletions";
 import { accountDeletionsApi } from "@/integrations/profile/deletions";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { queryWrapper } from "../helpers";
 
 jest.mock("@/integrations/profile/deletions", () => ({ accountDeletionsApi: { list: jest.fn(), review: jest.fn() } }));

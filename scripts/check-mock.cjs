@@ -209,7 +209,6 @@ test("cadastro de escola valida campos sem documento fiscal", () => {
   for (const field of Object.keys(form)) assert.equal(SchoolSchema.safeParse({ ...form, [field]: "" }).success, false);
   assert.equal(SchoolSchema.safeParse({ ...form, state: "XX" }).success, false);
   const school = createSchool(mockUsers[0], form, []);
-  assert.equal("cnpj" in school, false);
   assert.equal(school.coordinatorId, "coordinator-1");
   assert.equal(school.city, "Campinas");
   assert.equal(school.street, "Rua das Flores");

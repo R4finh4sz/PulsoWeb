@@ -1,8 +1,11 @@
+import CoordinatorProfileRoute from "@/app/coordinator/profile/page";
+import TeacherProfileRoute from "@/app/teacher/profile/page";
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { TeacherProfileScreen } from '@/components/screens/TeacherProfile';
-import { profileApi } from '@/integrations/profile/api';
+import { routeFixture } from "../route-fixture";
+
 import { authApi } from '@/integrations/auth/api';
 import { useAuthState } from '@/integrations/auth/state';
+import { profileApi } from '@/integrations/profile/api';
 import { createDemoSession, demoUsers } from '@/mocks/access';
 import { queryWrapper, router } from '../helpers';
 
@@ -10,10 +13,10 @@ jest.mock('@/mocks/access', () => ({ ...jest.requireActual('@/mocks/access'), mo
 jest.mock('next/navigation', () => ({ useRouter: () => router }));
 jest.mock('@/integrations/auth/api', () => ({ authApi: { logout: jest.fn() } }));
 jest.mock('@/integrations/profile/api', () => ({ profileApi: { get: jest.fn(), changePassword: jest.fn(), requestDeletion: jest.fn(), export: jest.fn() } }));
-jest.mock('@/components/screens/Dashboard/TeacherShell', () => ({ TeacherShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
+jest.mock('@/components/screens/Dashboard/TeacherShell', () => ({ TeacherShell: ({ children }: { children: React.ReactNode; }) => <div>{children}</div> }));
 jest.mock('@/components/screens/Integration/shared', () => ({
   ...jest.requireActual('@/components/screens/Integration/shared'),
-  Protected: ({ children }: { children: (user: { id: string; name: string; email: string; role: 'professor' }) => React.ReactNode }) => children({ id: '3', name: 'Paulo Professor', email: 'professor@pulso.com', role: 'professor' }),
+  Protected: ({ children }: { children: (user: { id: string; name: string; email: string; role: 'professor'; }) => React.ReactNode; }) => children({ id: '3', name: 'Paulo Professor', email: 'professor@pulso.com', role: 'professor' }),
 }));
 
 beforeEach(() => {
@@ -135,3 +138,5 @@ test('falha ao trocar senha preserva a sessão e não chama logout', async () =>
   expect(authApi.logout).not.toHaveBeenCalled();
   expect(router.replace).not.toHaveBeenCalled();
 });
+
+const TeacherProfileScreen = routeFixture<{ role?: "professor" | "coordenador"; }>((props) => (props.role === "coordenador" ? <CoordinatorProfileRoute /> : <TeacherProfileRoute />));

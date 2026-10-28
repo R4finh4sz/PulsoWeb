@@ -1,8 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { TeacherNotifications } from '@/components/screens/Dashboard/TeacherNotifications';
-import { subjectsApi, type SubjectInvitation } from '@/integrations/subjects/api';
-import { queryWrapper } from '../helpers';
 import { schoolsApi, type SchoolInvitation } from '@/integrations/schools/api';
+import { subjectsApi, type SubjectInvitation } from '@/integrations/subjects/api';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { queryWrapper } from '../helpers';
 
 jest.mock('@/mocks/access', () => ({ ...jest.requireActual('@/mocks/access'), mockAccessEnabled: true, getDemoUser: () => ({ role: 'TEACHER', id: 3 }) }));
 jest.mock('@/integrations/subjects/api', () => ({ subjectsApi: { invitations: jest.fn(), respond: jest.fn() } }));

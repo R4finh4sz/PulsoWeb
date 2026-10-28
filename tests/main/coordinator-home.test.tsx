@@ -1,5 +1,6 @@
+import CoordinatorHome from "@/app/coordinator/page";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { CoordinatorHome } from "@/components/screens/CoordinatorHome";
+
 import { CoordinatorNotifications } from "@/components/screens/Dashboard/CoordinatorNotifications";
 import { authApi } from "@/integrations/auth/api";
 import { classroomsApi } from "@/integrations/classrooms/api";
@@ -59,3 +60,4 @@ test("falha nas notificações permite tentar novamente", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
   expect(await screen.findByText("Nenhuma solicitação aguardando análise.")).toBeVisible();
 });
+

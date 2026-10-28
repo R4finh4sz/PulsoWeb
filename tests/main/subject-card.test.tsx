@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { SubjectCard } from '@/components/screens/ClassroomDetails/SubjectCard';
-import { queryWrapper } from '../helpers';
 import { subjectsApi } from '@/integrations/subjects/api';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { queryWrapper } from '../helpers';
 jest.mock('@/mocks/access', () => ({ ...jest.requireActual('@/mocks/access'), mockAccessEnabled: true, getDemoUser: () => ({ id: 3 }) }));
 jest.mock('@/integrations/subjects/api', () => ({ subjectsApi: { invite: jest.fn() } }));
 

@@ -1,4 +1,20 @@
-import { TeacherHome } from "@/components/screens/TeacherHome";
+"use client";
+
+import { TeacherShell } from "@/components/screens/Dashboard/TeacherShell";
+import {
+  Protected
+} from "@/components/screens/Integration/shared";
+import { SchoolChoices } from "@/components/screens/TeacherHome";
+
 export default function Page() {
-  return <TeacherHome />;
+  return (
+    <Protected role="professor">
+      {(user) => (
+        <TeacherShell user={user}>
+          <SchoolChoices />
+        </TeacherShell>
+      )}
+    </Protected>
+  );
 }
+

@@ -5,7 +5,7 @@ import { DashboardPanel } from "@/components/ui/DashboardPanel";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import { useCreateSchool } from "@/hooks/useCreateSchool";
-import { findAddressByCep, formatCep } from "@/utils/viacep";
+import { findAddressByCep, formatCep, normalizeCep } from "@/utils/viacep";
 import { states } from "@/validation/School.validation";
 import { School } from "lucide-react";
 import Link from "next/link";
@@ -27,7 +27,7 @@ export function SchoolForm() {
   const [lockedFields, setLockedFields] = useState<
     Record<AddressField, boolean>
   >({ street: false, neighborhood: false, state: false, city: false });
-  const cepDigits = values.cep.replace(/\D/g, "");
+  const cepDigits = normalizeCep(values.cep);
   const addressBlocked = cepStatus !== "manual" && cepStatus !== "found";
 
   useEffect(() => {
@@ -120,7 +120,7 @@ export function SchoolForm() {
               value={values.cep}
               onChange={(event) => {
                 const formattedCep = formatCep(event.target.value);
-                const complete = formattedCep.replace(/\D/g, "").length === 8;
+                const complete = normalizeCep(formattedCep).length === 8;
                 setLockedFields({
                   street: true,
                   neighborhood: true,

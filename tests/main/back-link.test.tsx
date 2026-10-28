@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
 import { BackLink } from '@/components/ui/BackLink';
+import { fireEvent, render, screen } from '@testing-library/react';
 
 const back = jest.fn();
 jest.mock('next/navigation', () => ({ useRouter: () => ({ back }) }));

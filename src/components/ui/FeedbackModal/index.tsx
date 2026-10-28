@@ -14,7 +14,7 @@ type FeedbackModalProps = {
   message: ReactNode;
   onClose: () => void;
   actionLabel?: string;
-  secondaryAction?: { label: string; onClick: () => void };
+  secondaryAction?: { label: string; onClick: () => void; destructive?: boolean };
   autoFocusAction?: boolean;
   icon?: LucideIcon;
   error?: ReactNode;
@@ -73,7 +73,7 @@ export function FeedbackModalContent({
           disabled={disabled}
           autoFocus={autoFocusAction}
           onClick={onClose}
-          className={`min-h-16 min-w-0 w-full rounded-xl px-3 py-3 ${secondaryAction ? "text-sm sm:text-base" : "text-xl"} font-semibold text-white ${invitation ? "bg-[var(--blue-dark)]" : success ? "bg-[#5d8c3e]" : "bg-[#e83e32]"}`}
+          className={`min-h-16 min-w-0 w-full rounded-xl px-3 py-3 ${secondaryAction ? "text-sm sm:text-base" : "text-xl"} font-semibold ${(secondaryAction?.destructive && type === "error") ? "border border-(--line) text-[#55565b] hover:bg-slate-50" : `text-white ${success ? "bg-[#5d8c3e]" : "bg-[var(--blue-dark)]"}`}`}
         >
           {actionLabel ?? (success ? "Fechar" : "Tentar novamente")}
         </button>
@@ -82,7 +82,7 @@ export function FeedbackModalContent({
             type="button"
             disabled={disabled}
             onClick={secondaryAction.onClick}
-            className="min-h-16 min-w-0 w-full rounded-xl border border-(--line) px-3 py-3 text-sm font-semibold text-[#55565b] hover:bg-slate-50 sm:text-base"
+            className={`min-h-16 min-w-0 w-full rounded-xl px-3 py-3 text-sm font-semibold sm:text-base ${secondaryAction.destructive ? "bg-[#e83e32] text-white hover:bg-[#cf3026]" : "border border-(--line) text-[#55565b] hover:bg-slate-50"}`}
           >
             {secondaryAction.label}
           </button>

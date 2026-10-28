@@ -15,7 +15,7 @@ type Props = {
   user: SessionUser;
   title: string;
   description: string;
-  navigation: { label: string; href: string; icon: IconName }[];
+  navigation: { label: string; href: string; icon: IconName; }[];
   children: ReactNode;
 };
 
@@ -43,17 +43,17 @@ export function DashboardShell({
   const sidebarNavigation =
     user.role === "coordenador"
       ? [
-          ...navigation.filter(
-            (item) =>
-              item.label !== "Professores" &&
-              item.href !== "/coordinator/students/new",
-          ),
-          {
-            label: "Professores",
-            href: "/coordinator/teachers",
-            icon: "school" as const,
-          },
-        ]
+        ...navigation.filter(
+          (item) =>
+            item.label !== "Professores" &&
+            item.href !== "/coordinator/students/new",
+        ),
+        {
+          label: "Professores",
+          href: "/coordinator/teachers",
+          icon: "school" as const,
+        },
+      ]
       : [...navigation];
   if (user.role === "aluno")
     sidebarNavigation.push({

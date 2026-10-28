@@ -1,10 +1,9 @@
 "use client";
 
-import { TeacherShell } from "@/components/screens/Dashboard/TeacherShell";
+import { SubjectSyllabus } from "@/components/screens/ClassroomDetails/SubjectSyllabus";
 import {
   ErrorMessage,
-  Protected,
-  actionClass,
+  actionClass
 } from "@/components/screens/Integration/shared";
 import { BackLink } from "@/components/ui/BackLink";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -12,15 +11,15 @@ import { useAuthState } from "@/integrations/auth/state";
 import { useClassroom } from "@/integrations/classrooms/hooks";
 import { quizzesApi } from "@/integrations/quizzes/api";
 import { subjectsApi } from "@/integrations/subjects/api";
+import { canAccessSubject } from "@/utils/subjectAccess";
 import type { CreateQuiz } from "@/validation/Quiz.validation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, LockKeyhole, MoreHorizontal, Plus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { QuizForm } from "./QuizForm";
-import { canAccessSubject } from "@/utils/subjectAccess";
 
-function Content({
+export function Content({
   classroomId,
   subjectId,
   teacherId,
@@ -124,6 +123,7 @@ function Content({
           </p>
         </div>
       </div>
+      <SubjectSyllabus subject={subject} />
       {!authenticated ? (
         <p className="rounded-xl border border-(--line) bg-white p-6 text-sm text-(--muted)">
           A criação de quizzes está disponível no acesso de demonstração. A
@@ -297,10 +297,10 @@ function Content({
                                         {"ABCD"[optionIndex]}. {option}
                                         {question.correctOption ===
                                           optionIndex && (
-                                          <span className="ml-2 font-medium text-emerald-800">
-                                            (correta)
-                                          </span>
-                                        )}
+                                            <span className="ml-2 font-medium text-emerald-800">
+                                              (correta)
+                                            </span>
+                                          )}
                                       </li>
                                     ),
                                   )}
@@ -318,35 +318,5 @@ function Content({
         </>
       )}
     </div>
-  );
-}
-
-export function SubjectQuizzes({
-  classroomId,
-  subjectId,
-}: {
-  classroomId: number;
-  subjectId: number;
-}) {
-  return (
-    <Protected role="professor">
-      {(user) => (
-        <TeacherShell user={user}>
-          {Number.isSafeInteger(classroomId) &&
-          classroomId > 0 &&
-          Number.isSafeInteger(subjectId) &&
-          subjectId > 0 ? (
-            <Content
-              key={`${classroomId}:${subjectId}`}
-              classroomId={classroomId}
-              subjectId={subjectId}
-              teacherId={Number(user.id)}
-            />
-          ) : (
-            <p role="alert">Matéria inválida.</p>
-          )}
-        </TeacherShell>
-      )}
-    </Protected>
   );
 }

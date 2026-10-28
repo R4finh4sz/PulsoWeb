@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
 import { StudentList } from '@/components/screens/ClassroomDetails/StudentList';
 import type { User } from '@/integrations/types';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 
 const students: User[] = Array.from({ length: 40 }, (_, index) => ({
   id: index + 1, fullName: `Aluno ${String(index + 1).padStart(2, '0')}`, email: `aluno${index + 1}@exemplo.com`,

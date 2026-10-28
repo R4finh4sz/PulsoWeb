@@ -1,21 +1,39 @@
-import { render, screen, fireEvent, waitFor, cleanup, within } from '@testing-library/react';
-import { SchoolsPage } from '@/components/screens/Integration/Schools';
-import { SchoolDetails } from '@/components/screens/SchoolDetails';
-import { AdminDashboard } from '@/components/screens/AdminDashboard';
-import { UserForm, UserList, TeachersPage, CoordinatorsPage, UsersHome } from '@/components/screens/Integration/Users';
-import { HomePage, ClassroomsPage, ClassroomDetailsPage, NewClassroomPage } from '@/components/screens/Integration/Classrooms';
-import { TermsScreen } from '@/components/screens/Terms';
-import { CreateSchool } from '@/components/screens/CreateSchool';
-import { ErrorMessage, Protected } from '@/components/screens/Integration/shared';
+import AdminRoomRoute from "@/app/admin/classrooms/[id]/page";
+import AdminNewRoomRoute from "@/app/admin/classrooms/new/page";
+import CoordinatorsPage from "@/app/admin/coordinators/page";
+import AdminDashboard from "@/app/admin/page";
+import SchoolRoute from "@/app/admin/schools/[id]/page";
+import CreateSchool from "@/app/admin/schools/new/page";
+import SchoolsPage from "@/app/admin/schools/page";
+import EditTermsRoute from "@/app/admin/terms/edit/page";
+import AdminTermsRoute from "@/app/admin/terms/page";
+import CoordinatorRoomRoute from "@/app/coordinator/classrooms/[id]/page";
+import CoordinatorNewRoomRoute from "@/app/coordinator/classrooms/new/page";
+import TeachersPage from "@/app/coordinator/teachers/page";
+import CoordinatorTermsRoute from "@/app/coordinator/terms/page";
+import StudentRoomRoute from "@/app/student/classrooms/[id]/page";
+import StudentTermsRoute from "@/app/student/terms/page";
+import TeacherRoomRoute from "@/app/teacher/classrooms/[id]/page";
+import TeacherTermsRoute from "@/app/teacher/terms/page";
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { routeFixture, routeParams } from "../route-fixture";
+
+
+
+import { ClassroomList } from '@/components/screens/Integration/Classrooms';
+import { UserForm, UserList, UsersHome } from '@/components/screens/Integration/Users';
+
+
 import { ApiError } from '@/api/client';
+import { ErrorMessage, Protected } from '@/components/screens/Integration/shared';
 import { authApi } from '@/integrations/auth/api';
-import { usersApi } from '@/integrations/users/api';
-import { schoolsApi } from '@/integrations/schools/api';
 import { classroomsApi } from '@/integrations/classrooms/api';
+import { schoolsApi } from '@/integrations/schools/api';
 import { subjectsApi } from '@/integrations/subjects/api';
-import { findAddressByCep } from '@/utils/viacep';
+import { usersApi } from '@/integrations/users/api';
 import { useFeedbackStore } from '@/store/feedbackStore';
-import { admin, coordinator, teacher, queryWrapper, router } from '../helpers';
+import { findAddressByCep } from '@/utils/viacep';
+import { admin, coordinator, queryWrapper, router, teacher } from '../helpers';
 let pathname = '/admin';
 jest.mock('next/navigation', () => ({ useRouter: () => router, usePathname: () => pathname }));
 jest.mock('@/integrations/auth/api', () => ({ authApi: { me: jest.fn(), logout: jest.fn(), terms: jest.fn(), createTerms: jest.fn(), updateTerms: jest.fn() } }));
@@ -88,7 +106,7 @@ test('dashboard mostra métricas e logout', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Sair' })); await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/'));
 });
 test('criação de escola exibe formulário e navegação', async () => {
-  show(<CreateSchool />); expect(await screen.findByLabelText('Nome')).toBeVisible(); expect(screen.getByRole('link', { name: 'Voltar para escolas' })).toHaveAttribute('href', '/admin/escolas');
+  show(<CreateSchool />); expect(await screen.findByLabelText('Nome')).toBeVisible(); expect(screen.getByRole('button', { name: 'Voltar' })).toBeVisible();
 });
 test.each(['students', 'teachers', 'coordinators'] as const)('cria usuário %s com dados corretos', async resource => {
   const done = jest.fn(); const { container } = show(<UserForm resource={resource} onDone={done} />);
@@ -140,13 +158,13 @@ test('páginas de pessoas respeitam papel', async () => {
   show(<UsersHome user={admin} />); expect(await screen.findByRole('heading', { name: 'Coordenadores' })).toBeVisible(); cleanup();
   show(<UsersHome user={coordinator} />); expect(await screen.findByRole('heading', { name: 'Alunos' })).toBeVisible();
 });
-test.each(['admin', 'coordenador', 'professor', 'aluno'] as const)('página inicial mostra turmas para %s', async role => {
+test.each(['admin', 'coordenador', 'professor', 'aluno'] as const)('listagem mostra turmas para %s', async role => {
   identity(({ admin: 'ADMIN', coordenador: 'PEDAGOGICAL_COORDINATOR', professor: 'TEACHER', aluno: 'STUDENT' } as const)[role]);
-  show(<HomePage role={role} />); expect(await screen.findByText('3º ano · A')).toBeVisible();
+  show(<ClassroomList user={{ ...admin, role }} />); expect(await screen.findByText(role === 'professor' ? '3º ano' : '3º ano · A')).toBeVisible();
 });
 test('listagem vazia e erro de turmas', async () => {
-  jest.mocked(classroomsApi.list).mockResolvedValue([]); show(<ClassroomsPage role="admin" />); await screen.findByText('Nenhuma turma disponível.'); cleanup();
-  jest.mocked(classroomsApi.list).mockRejectedValue(new Error('Turmas offline')); show(<ClassroomsPage role="admin" />); expect(await screen.findByRole('alert')).toHaveTextContent('Turmas offline');
+  jest.mocked(classroomsApi.list).mockResolvedValue([]); show(<ClassroomList user={admin} />); await screen.findByText('Nenhuma turma disponível.'); cleanup();
+  jest.mocked(classroomsApi.list).mockRejectedValue(new Error('Turmas offline')); show(<ClassroomList user={admin} />); expect(await screen.findByRole('alert')).toHaveTextContent('Turmas offline');
 });
 test('edição da turma mantém identificador do backend somente para leitura e não o envia', async () => {
   identity('PEDAGOGICAL_COORDINATOR');
@@ -162,7 +180,7 @@ test('edição da turma mantém identificador do backend somente para leitura e 
 test('criação de turma salva e oferece vínculo', async () => {
   identity('PEDAGOGICAL_COORDINATOR'); const { container } = show(<NewClassroomPage />);
   await screen.findByLabelText('Nome da turma'); formValues(container, { name: ' 3º ano ', identifier: 'A' }); fireEvent.submit(container.querySelector('form')!);
-  expect(await screen.findByRole('link', { name: 'Turma criada. Vincular alunos e professores' })).toHaveAttribute('href', '/coordenador/turmas/1');
+  expect(await screen.findByRole('link', { name: 'Turma criada. Vincular alunos e professores' })).toHaveAttribute('href', '/coordinator/classrooms/1');
   expect(classroomsApi.create).toHaveBeenCalledWith({ name: '3º ano', identifier: 'A' });
 });
 test('erro na criação da turma mantém formulário', async () => {
@@ -174,9 +192,8 @@ test('detalhes inválidos e indisponíveis mostram erro', async () => {
   jest.mocked(classroomsApi.get).mockRejectedValue(new Error('Turma inexistente')); show(<ClassroomDetailsPage id="1" role="admin" />); expect(await screen.findByRole('alert')).toHaveTextContent('Turma inexistente');
 });
 test('gestor edita turma, vincula e desvincula alunos e professores', async () => {
-  jest.spyOn(window, 'confirm').mockReturnValue(true);
   const { container } = show(<ClassroomDetailsPage id="1" role="admin" />); await screen.findByLabelText('Nome da turma');
-  fireEvent.submit(container.querySelector('form')!); await screen.findByText('Turma salva.'); expect(classroomsApi.update).toHaveBeenCalledWith(1, { name: '3º ano', identifier: 'A' });
+  fireEvent.submit(container.querySelector('form')!); await screen.findByText('Turma salva.'); expect(classroomsApi.update).toHaveBeenCalledWith(1, { name: '3º ano' });
   for (const title of ['Professores vinculados', 'Alunos vinculados']) {
     const section = screen.getByRole('heading', { name: title }).closest('section')!; const scope = within(section);
     await scope.findByRole('option', { name: /Ana Silva/ });
@@ -186,22 +203,26 @@ test('gestor edita turma, vincula e desvincula alunos e professores', async () =
     await scope.findByRole('option', { name: /Ana Silva/ });
     fireEvent.click(scope.getByRole('button', { name: 'Anterior' }));
     await scope.findByRole('option', { name: /Ana Silva/ });
-    fireEvent.change(scope.getByRole('combobox'), { target: { value: '3' } }); fireEvent.submit(section.querySelector('form')!); await scope.findByText('Vínculo salvo.');
-    fireEvent.click(scope.getByRole('button', { name: 'Desvincular' }));
+    fireEvent.change(scope.getByRole('combobox', { name: 'Selecionar pessoa' }), { target: { value: '3' } }); fireEvent.submit(section.querySelector('form')!); await scope.findByText('Vínculo salvo.');
+    fireEvent.click(scope.getByRole('button', { name: /^Desvincular/ }));
+    const confirmation = screen.getByRole('dialog', { name: 'Desvincular da turma?' });
+    expect(within(confirmation).getByRole('button', { name: 'Sim, desvincular' })).toHaveClass('bg-[#e83e32]');
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'Sim, desvincular' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Desvincular da turma?' })).toBeNull());
   }
   await waitFor(() => expect(classroomsApi.unenroll).toHaveBeenCalledWith(1, 3));
   expect(classroomsApi.unassign).toHaveBeenCalledWith(1, 3); expect(classroomsApi.assign).toHaveBeenCalledWith(1, 3); expect(classroomsApi.enroll).toHaveBeenCalledWith(1, 3);
 });
-test('professor cria disciplina e aluno vê apenas disciplinas', async () => {
-  identity('TEACHER'); const { container } = show(<ClassroomDetailsPage id="1" role="professor" />);
-  fireEvent.change(await screen.findByLabelText('Nome da disciplina'), { target: { value: ' História ' } }); fireEvent.submit(container.querySelector('form')!);
-  await waitFor(() => expect(subjectsApi.create).toHaveBeenCalledWith(1, 'História')); cleanup();
+test('professor abre a tela de criar disciplina e aluno vê apenas disciplinas', async () => {
+  identity('TEACHER'); show(<ClassroomDetailsPage id="1" role="professor" />);
+  expect(await screen.findByRole('link', { name: 'Criar nova matéria' })).toHaveAttribute('href', '/teacher/classrooms/1/subjects/new');
+  expect(screen.queryByLabelText('Nome da disciplina')).toBeNull(); cleanup();
   identity('STUDENT'); show(<ClassroomDetailsPage id="1" role="aluno" />); await screen.findByText('Matemática'); expect(screen.queryByText('Alunos vinculados')).toBeNull();
 });
 test('detalhes tratam listas vazias e falhas de mutação', async () => {
   jest.mocked(classroomsApi.students).mockResolvedValue([]); jest.mocked(classroomsApi.teachers).mockResolvedValue([]); jest.mocked(subjectsApi.list).mockResolvedValue([]);
   jest.mocked(classroomsApi.assign).mockRejectedValue(new Error('Vínculo negado'));
-  show(<ClassroomDetailsPage id="1" role="admin" />); await screen.findByText('Nenhuma disciplina cadastrada.'); expect(screen.getAllByText('Nenhum vínculo cadastrado.')).toHaveLength(2);
+  show(<ClassroomDetailsPage id="1" role="admin" />); await screen.findByText('Nenhuma disciplina cadastrada.'); expect(screen.getByText('Nenhum vínculo cadastrado.')).toBeVisible(); expect(screen.getByText('Nenhum aluno vinculado à turma.')).toBeVisible();
   const section = screen.getByRole('heading', { name: 'Professores vinculados' }).closest('section')!;
   fireEvent.change(within(section).getByRole('combobox'), { target: { value: '3' } }); fireEvent.submit(section.querySelector('form')!); expect(await screen.findByRole('alert')).toHaveTextContent('Vínculo negado');
 });
@@ -217,7 +238,7 @@ test.each([true, false])('editor publica termos novos/existentes: %s', async exi
   const { container } = show(<TermsScreen role="admin" edit />); await screen.findByLabelText('Título');
   fireEvent.change(screen.getByLabelText('Título'), { target: { value: ' ' } }); fireEvent.submit(container.querySelector('form')!); expect(screen.getByRole('alert')).toHaveTextContent('Preencha');
   fireEvent.change(screen.getByLabelText('Título'), { target: { value: ' Novo ' } }); fireEvent.change(screen.getByLabelText('Conteúdo dos termos'), { target: { value: ' Texto ' } }); fireEvent.submit(container.querySelector('form')!);
-  await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/admin/termos'));
+  await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/admin/terms'));
   expect(existing ? authApi.updateTerms : authApi.createTerms).toHaveBeenCalledWith({ title: 'Novo', content: 'Texto' });
 });
 test('termos permite tentar novamente após falha de consulta e mostra falha na publicação', async () => {
@@ -228,10 +249,15 @@ test('termos permite tentar novamente após falha de consulta e mostra falha na 
 });
 test('proteção redireciona visitante e papel incorreto, permite refetch', async () => {
   jest.mocked(authApi.me).mockResolvedValue(null); show(<Protected role="admin">{() => <p>Privado</p>}</Protected>); await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/')); cleanup();
-  identity('TEACHER'); show(<Protected role="admin">{() => <p>Privado</p>}</Protected>); await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/professor')); cleanup();
+  identity('TEACHER'); show(<Protected role="admin">{() => <p>Privado</p>}</Protected>); await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/teacher')); cleanup();
   jest.mocked(authApi.me).mockRejectedValueOnce(new Error('Perfil offline')); show(<Protected role="admin">{() => <p>Privado</p>}</Protected>); await screen.findByRole('alert'); identity(); fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' })); await screen.findByText('Privado');
 });
 test('mensagem de erro mostra detalhes da API e fallback', () => {
   const { rerender } = render(<ErrorMessage error={new ApiError(400, 'Inválido', ['Campo ausente'])} />); expect(screen.getByRole('alert')).toHaveTextContent('Campo ausente');
   rerender(<ErrorMessage error="failure" />); expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível carregar'); rerender(<ErrorMessage error={null} />); expect(screen.queryByRole('alert')).toBeNull();
 });
+
+const SchoolDetails = routeFixture<{ id: string; }>((props) => (<SchoolRoute params={routeParams({ id: props.id })} />));
+const ClassroomDetailsPage = routeFixture<{ id: string; role: import("@/interfaces/auth").UserRole; }>((props) => (props.role === "admin" ? <AdminRoomRoute params={routeParams({ id: props.id })} /> : props.role === "coordenador" ? <CoordinatorRoomRoute params={routeParams({ id: props.id })} /> : props.role === "professor" ? <TeacherRoomRoute params={routeParams({ id: props.id })} /> : <StudentRoomRoute params={routeParams({ id: props.id })} />));
+const NewClassroomPage = routeFixture<{ role?: import("@/interfaces/auth").UserRole; }>((props) => (props.role === "admin" ? <AdminNewRoomRoute /> : <CoordinatorNewRoomRoute />));
+const TermsScreen = routeFixture<{ role: import("@/interfaces/auth").UserRole; edit?: boolean; }>((props) => (props.edit ? <EditTermsRoute /> : props.role === "admin" ? <AdminTermsRoute /> : props.role === "coordenador" ? <CoordinatorTermsRoute /> : props.role === "professor" ? <TeacherTermsRoute /> : <StudentTermsRoute />));

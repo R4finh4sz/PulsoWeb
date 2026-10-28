@@ -1,11 +1,11 @@
-﻿"use client";
+"use client";
 
 import { DashboardIcon } from "@/components/ui/DashboardIcon";
 import type { Classroom } from "@/interfaces/classroom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export function ClassroomCard({ room }: { room: Classroom }) {
+export function ClassroomCard({ room }: { room: Classroom; }) {
   const pathname = usePathname();
   const base = pathname.startsWith("/teacher") ? "/teacher" : "/coordinator";
   return (

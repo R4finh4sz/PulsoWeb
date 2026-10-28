@@ -1,7 +1,9 @@
-import { render, screen, waitFor, act } from '@testing-library/react';
-import { SubjectQuizzes } from '@/components/screens/SubjectQuizzes';
-import { subjectsApi } from '@/integrations/subjects/api';
+import SubjectQuizzesRoute from "@/app/teacher/classrooms/[id]/subjects/[subjectId]/page";
+import { act, render, screen, waitFor } from '@testing-library/react';
+import { routeFixture, routeParams } from "../route-fixture";
+
 import { quizzesApi } from '@/integrations/quizzes/api';
+import { subjectsApi } from '@/integrations/subjects/api';
 import { queryWrapper, router } from '../helpers';
 
 jest.mock('next/navigation', () => ({ useRouter: () => router }));
@@ -9,10 +11,10 @@ jest.mock('@/mocks/access', () => ({ ...jest.requireActual('@/mocks/access'), mo
 jest.mock('@/integrations/subjects/api', () => ({ subjectsApi: { list: jest.fn() } }));
 jest.mock('@/integrations/quizzes/api', () => ({ quizzesApi: { list: jest.fn(), themes: jest.fn(), create: jest.fn() } }));
 jest.mock('@/integrations/classrooms/hooks', () => ({ useClassroom: () => ({ data: { id: 1, name: '6º ano A' }, isPending: false, error: null }) }));
-jest.mock('@/components/screens/Dashboard/TeacherShell', () => ({ TeacherShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
+jest.mock('@/components/screens/Dashboard/TeacherShell', () => ({ TeacherShell: ({ children }: { children: React.ReactNode; }) => <div>{children}</div> }));
 jest.mock('@/components/screens/Integration/shared', () => ({
   ...jest.requireActual('@/components/screens/Integration/shared'),
-  Protected: ({ children }: { children: (user: { id: string; name: string; email: string; role: 'professor' }) => React.ReactNode }) => children({ id: '3', name: 'Paulo Professor', email: 'professor@pulso.com', role: 'professor' }),
+  Protected: ({ children }: { children: (user: { id: string; name: string; email: string; role: 'professor'; }) => React.ReactNode; }) => children({ id: '3', name: 'Paulo Professor', email: 'professor@pulso.com', role: 'professor' }),
 }));
 
 test('URL direta não consulta quizzes bloqueados e só libera após atualizar o vínculo aceito', async () => {
@@ -30,3 +32,5 @@ test('URL direta não consulta quizzes bloqueados e só libera após atualizar o
   expect(await screen.findByRole('heading', { name: 'Ciências' })).toBeVisible();
   await waitFor(() => expect(quizzesApi.list).toHaveBeenCalledWith(1, 2, expect.any(AbortSignal)));
 });
+
+const SubjectQuizzes = routeFixture<{ classroomId: number; subjectId: number; }>((props) => (<SubjectQuizzesRoute params={routeParams({ id: String(props.classroomId), subjectId: String(props.subjectId) })} />));

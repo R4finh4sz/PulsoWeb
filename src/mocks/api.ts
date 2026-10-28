@@ -7,6 +7,7 @@ import {
 } from "@/integrations/subjects/api";
 import type { Classroom, Subject, User } from "@/integrations/types";
 import { canAccessSubject } from "@/utils/subjectAccess";
+import { CreateSubjectSchema } from "@/validation/Subject.validation";
 import { z } from "zod";
 import { demoUsers, getDemoUser } from "./access";
 import { demoSchoolInvitations, demoSubjectInvitations } from "./notifications";
@@ -129,32 +130,11 @@ const subjects: Subject[] = [
   },
   { id: 2, name: "Ciências", classroomId: 1, teacherId: 5, teacherIds: [5, 7] },
   {
-    id: 10,
-    name: "Física",
-    classroomId: 1,
-    teacherId: 3,
-    teacherIds: [3, 6, 7],
-  },
-  {
     id: 11,
     name: "Química",
     classroomId: 1,
     teacherId: 5,
     teacherIds: [5, 6, 7],
-  },
-  {
-    id: 12,
-    name: "Língua Portuguesa",
-    classroomId: 1,
-    teacherId: 5,
-    teacherIds: [5, 8],
-  },
-  {
-    id: 13,
-    name: "História",
-    classroomId: 1,
-    teacherId: 5,
-    teacherIds: [5, 8],
   },
   {
     id: 14,
@@ -757,12 +737,17 @@ export function mockRequest(
         const name = typeof data.name === "string" ? data.name.trim() : "";
         if (!name || name.length > 100)
           throw new Error("Informe um nome de matéria com até 100 caracteres.");
-        const subject = {
-          id: subjects.length + 1,
+        const content =
+          data.topics !== undefined || data.syllabus !== undefined
+            ? CreateSubjectSchema.parse(data)
+            : {};
+        const subject: Subject = {
+          id: Math.max(0, ...subjects.map((item) => item.id)) + 1,
           name,
           classroomId: room.id,
           teacherId: current.id,
           teacherIds: [current.id],
+          ...content,
         };
         subjects.push(subject);
         return { ...subject };
