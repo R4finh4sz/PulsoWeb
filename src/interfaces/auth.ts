@@ -18,5 +18,5 @@ export const homeRoutes: Record<UserRole, string> = {
   admin: "/admin",
   coordenador: "/coordinator",
   professor: "/teacher",
-  aluno: "/student",
+  aluno: "/",
 };

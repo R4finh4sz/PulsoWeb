@@ -11,8 +11,6 @@ import CoordinatorRoomRoute from "@/app/coordinator/classrooms/[id]/page";
 import CoordinatorNewRoomRoute from "@/app/coordinator/classrooms/new/page";
 import TeachersPage from "@/app/coordinator/teachers/page";
 import CoordinatorTermsRoute from "@/app/coordinator/terms/page";
-import StudentRoomRoute from "@/app/student/classrooms/[id]/page";
-import StudentTermsRoute from "@/app/student/terms/page";
 import TeacherRoomRoute from "@/app/teacher/classrooms/[id]/page";
 import TeacherTermsRoute from "@/app/teacher/terms/page";
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -158,7 +156,7 @@ test('páginas de pessoas respeitam papel', async () => {
   show(<UsersHome user={admin} />); expect(await screen.findByRole('heading', { name: 'Coordenadores' })).toBeVisible(); cleanup();
   show(<UsersHome user={coordinator} />); expect(await screen.findByRole('heading', { name: 'Alunos' })).toBeVisible();
 });
-test.each(['admin', 'coordenador', 'professor', 'aluno'] as const)('listagem mostra turmas para %s', async role => {
+test.each(['admin', 'coordenador', 'professor'] as const)('listagem mostra turmas para %s', async role => {
   identity(({ admin: 'ADMIN', coordenador: 'PEDAGOGICAL_COORDINATOR', professor: 'TEACHER', aluno: 'STUDENT' } as const)[role]);
   show(<ClassroomList user={{ ...admin, role }} />); expect(await screen.findByText(role === 'professor' ? '3º ano' : '3º ano · A')).toBeVisible();
 });
@@ -213,11 +211,10 @@ test('gestor edita turma, vincula e desvincula alunos e professores', async () =
   await waitFor(() => expect(classroomsApi.unenroll).toHaveBeenCalledWith(1, 3));
   expect(classroomsApi.unassign).toHaveBeenCalledWith(1, 3); expect(classroomsApi.assign).toHaveBeenCalledWith(1, 3); expect(classroomsApi.enroll).toHaveBeenCalledWith(1, 3);
 });
-test('professor abre a tela de criar disciplina e aluno vê apenas disciplinas', async () => {
+test('professor abre a tela de criar disciplina', async () => {
   identity('TEACHER'); show(<ClassroomDetailsPage id="1" role="professor" />);
   expect(await screen.findByRole('link', { name: 'Criar nova matéria' })).toHaveAttribute('href', '/teacher/classrooms/1/subjects/new');
   expect(screen.queryByLabelText('Nome da disciplina')).toBeNull(); cleanup();
-  identity('STUDENT'); show(<ClassroomDetailsPage id="1" role="aluno" />); await screen.findByText('Matemática'); expect(screen.queryByText('Alunos vinculados')).toBeNull();
 });
 test('detalhes tratam listas vazias e falhas de mutação', async () => {
   jest.mocked(classroomsApi.students).mockResolvedValue([]); jest.mocked(classroomsApi.teachers).mockResolvedValue([]); jest.mocked(subjectsApi.list).mockResolvedValue([]);
@@ -230,7 +227,7 @@ test.each(['admin', 'professor'] as const)('termos exibe conteúdo para %s', asy
   identity(role === 'admin' ? 'ADMIN' : 'TEACHER'); show(<TermsScreen role={role} />); expect(await screen.findByText('Texto vigente')).toBeVisible();
   expect(screen.queryByRole('link', { name: 'Editar termos' }) !== null).toBe(role === 'admin');
 });
-test.each(['admin', 'aluno'] as const)('termos ausentes para %s', async role => {
+test.each(['admin'] as const)('termos ausentes para %s', async role => {
   identity(role === 'admin' ? 'ADMIN' : 'STUDENT'); jest.mocked(authApi.terms).mockResolvedValue(null); show(<TermsScreen role={role} />); await screen.findByText('Nenhum termo de uso cadastrado.');
 });
 test.each([true, false])('editor publica termos novos/existentes: %s', async existing => {
@@ -258,6 +255,6 @@ test('mensagem de erro mostra detalhes da API e fallback', () => {
 });
 
 const SchoolDetails = routeFixture<{ id: string; }>((props) => (<SchoolRoute params={routeParams({ id: props.id })} />));
-const ClassroomDetailsPage = routeFixture<{ id: string; role: import("@/interfaces/auth").UserRole; }>((props) => (props.role === "admin" ? <AdminRoomRoute params={routeParams({ id: props.id })} /> : props.role === "coordenador" ? <CoordinatorRoomRoute params={routeParams({ id: props.id })} /> : props.role === "professor" ? <TeacherRoomRoute params={routeParams({ id: props.id })} /> : <StudentRoomRoute params={routeParams({ id: props.id })} />));
+const ClassroomDetailsPage = routeFixture<{ id: string; role: import("@/interfaces/auth").UserRole; }>((props) => (props.role === "admin" ? <AdminRoomRoute params={routeParams({ id: props.id })} /> : props.role === "coordenador" ? <CoordinatorRoomRoute params={routeParams({ id: props.id })} /> : <TeacherRoomRoute params={routeParams({ id: props.id })} />));
 const NewClassroomPage = routeFixture<{ role?: import("@/interfaces/auth").UserRole; }>((props) => (props.role === "admin" ? <AdminNewRoomRoute /> : <CoordinatorNewRoomRoute />));
-const TermsScreen = routeFixture<{ role: import("@/interfaces/auth").UserRole; edit?: boolean; }>((props) => (props.edit ? <EditTermsRoute /> : props.role === "admin" ? <AdminTermsRoute /> : props.role === "coordenador" ? <CoordinatorTermsRoute /> : props.role === "professor" ? <TeacherTermsRoute /> : <StudentTermsRoute />));
+const TermsScreen = routeFixture<{ role: import("@/interfaces/auth").UserRole; edit?: boolean; }>((props) => (props.edit ? <EditTermsRoute /> : props.role === "admin" ? <AdminTermsRoute /> : props.role === "coordenador" ? <CoordinatorTermsRoute /> : <TeacherTermsRoute />));

@@ -1,9 +1,37 @@
-import { normalizeText } from "@/utils/text";
 import type { Quiz, StudentQuizResult } from "@/integrations/quizzes/api";
 import type { Subject, User } from "@/integrations/types";
 import { scoreQuiz } from "@/utils/quizResults";
 import { canAccessSubject } from "@/utils/subjectAccess";
+import { normalizeText } from "@/utils/text";
 import { CreateQuizSchema } from "@/validation/Quiz.validation";
+
+export function mockRankingTotals(
+  users: User[],
+  startsAt: number,
+  endsAt: number,
+) {
+  const totals = new Map<
+    number,
+    { correctAnswers: number; completedActivities: number }
+  >();
+  for (const quiz of quizzes) {
+    for (const result of mockQuizStudents(quiz, users)) {
+      const submittedAt = result.submittedAt
+        ? Date.parse(result.submittedAt)
+        : NaN;
+      if (!result.score || !(submittedAt >= startsAt && submittedAt < endsAt))
+        continue;
+      const total = totals.get(result.studentId) ?? {
+        correctAnswers: 0,
+        completedActivities: 0,
+      };
+      total.correctAnswers += result.score.correct;
+      total.completedActivities += 1;
+      totals.set(result.studentId, total);
+    }
+  }
+  return totals;
+}
 
 const demoQuestions = [
   ...Array.from({ length: 4 }, (_, index) => ({
@@ -135,7 +163,6 @@ export function mockQuizStudents(
         user.role === "STUDENT" && user.classroomId === quiz.classroomId,
     )
     .map((student, index) => {
-      // Apenas atividades de exemplo têm respostas; novas atividades começam vazias.
       const participation =
         ({ 2: 90, 3: 65, 4: 80, 6: 100 } as Record<number, number>)[
           quiz.classroomId
@@ -217,7 +244,8 @@ export function mockSubjectQuizzes(
 ) {
   if (current.role !== "TEACHER" || !canAccessSubject(subject, current.id))
     throw new Error("Você não tem acesso aos quizzes desta matéria.");
-  const themes = subject.topics?.map((topic) => topic.title) ?? demoThemes(subject.name);
+  const themes =
+    subject.topics?.map((topic) => topic.title) ?? demoThemes(subject.name);
   if (action === "themes" && method === "GET") return themes;
   if (action !== "quizzes") throw new Error("Ação de quiz não disponível.");
   if (method === "GET")

@@ -19,13 +19,22 @@ test('login cancela cache anterior, limpa demonstração e grava credenciais', a
   expect(client.getQueryData(['old'])).toBeUndefined(); expect(sessionStorage.getItem('pulso-demo-session')).toBeNull();
   expect(useAuthState.getState().session).toEqual(session);
 });
+test.each([false, true])('login bloqueia aluno antes de salvar sessão, com 2FA: %s', async (twoFactorRequired) => {
+  jest.mocked(authApi.login).mockResolvedValue({ ...session, twoFactorRequired, user: { ...session.user, role: 'STUDENT' } });
+  const { result } = renderHook(useLogin, { wrapper: queryWrapper().wrapper });
+  await act(async () => {
+    await expect(result.current.mutateAsync({ email: 'aluno@example.com', password: 'Password1' })).rejects.toThrow('apenas no aplicativo');
+  });
+  expect(useAuthState.getState().session).toBeNull();
+});
+
 test.each([false, true])('logout limpa sessão e cache mesmo quando falha: %s', async fail => {
   const { client, wrapper } = queryWrapper(); client.setQueryData(['old'], 'secret');
   useAuthState.getState().setSession(session);
   if (fail) jest.mocked(authApi.logout).mockRejectedValue(new Error('offline')); else jest.mocked(authApi.logout).mockResolvedValue();
   const { result } = renderHook(useLogout, { wrapper });
   await act(async () => { await result.current.mutateAsync().catch(() => { }); });
-  expect(useAuthState.getState().session).toBeNull(); expect(client.getQueryData(['old'])).toBeUndefined(); expect(client.getQueryData(['session'])).toBeNull();
+  expect(useAuthState.getState().session).toBeNull(); expect(client.getQueryData(['old'])).toBeUndefined(); expect(client.getQueryData(['session']) ?? null).toBeNull();
 });
 test('consulta sessão encaminha signal', async () => {
   jest.mocked(authApi.me).mockResolvedValue(me); const { result } = renderHook(useMe, { wrapper: queryWrapper().wrapper });

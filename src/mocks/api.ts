@@ -15,6 +15,7 @@ import { mockPassword } from "./platform";
 import {
   mockDeleteClassroomQuizzes,
   mockQuizStudents,
+  mockRankingTotals,
   mockSubjectQuizzes,
   mockTeacherQuizzes,
 } from "./quizzes";
@@ -251,6 +252,54 @@ export function mockRequest(
   const parts = url.pathname.split("/").filter(Boolean);
   const data = (body ?? {}) as Record<string, unknown>;
   if (path === "/me") return { ...current };
+  if (url.pathname === "/ranking" && method === "GET") {
+    if (current.role === "STUDENT") throw new Error("Alunos não têm acesso ao ranking na plataforma web.");
+    const admin = current.role === "ADMIN";
+    const allowedSchools = schools.filter((school) => admin || (
+      current.role === "TEACHER"
+        ? school.teacherIds?.includes(current.id)
+        : (current.schoolIds ?? [current.schoolId]).includes(school.id)
+    ));
+    const schoolId = url.searchParams.get("schoolId") || "";
+    const grade = url.searchParams.get("grade") || "";
+    const classroomId = url.searchParams.get("classroomId") || "";
+    const classroomIdentifier = url.searchParams.get("classroomIdentifier") || "";
+    if (classroomIdentifier && (!schoolId || !/^[A-Z]$/.test(classroomIdentifier)))
+      throw new Error("Selecione uma escola autorizada e um identificador de A a Z.");
+    if (schoolId && !allowedSchools.some((school) => String(school.id) === schoolId))
+      throw new Error("Você não tem acesso ao ranking desta escola.");
+    if (grade && !schoolId && !admin)
+      throw new Error("Selecione uma escola à qual você tem acesso para filtrar por série.");
+    if (classroomId && (!schoolId || !rooms.some((room) => String(room.id) === classroomId && String(room.schoolId) === schoolId)))
+      throw new Error("Selecione uma turma da escola autorizada.");
+    // Calendário exclusivamente demonstrativo: janelas de dois meses.
+    // Em produção, o backend deve usar as datas do calendário escolar.
+    const now = new Date();
+    const month = Math.floor(now.getMonth() / 2) * 2;
+    const start = new Date(now.getFullYear(), month, 1);
+    const end = new Date(now.getFullYear(), month + 2, 1);
+    const totals = mockRankingTotals(users, start.getTime(), end.getTime());
+    const gradeOf = (name: string) => name.replace(/\s+[A-Za-z]$/, "");
+    const entries = users.filter((user) => user.role === "STUDENT").flatMap((student) => {
+      const room = rooms.find((room) => room.id === student.classroomId);
+      const school = schools.find((school) => school.id === room?.schoolId);
+      const total = totals.get(student.id);
+      if (!room || !school || !total) return [];
+      if (schoolId && String(school.id) !== schoolId) return [];
+      if (grade && gradeOf(room.name) !== grade) return [];
+      if (classroomId && String(room.id) !== classroomId) return [];
+      if (classroomIdentifier && room.name.trim().match(/[A-Za-z]+$/)?.[0] !== classroomIdentifier) return [];
+      return [{ studentId: student.id, name: student.fullName, schoolId: school.id, schoolName: school.nome, grade: admin || schoolId ? gradeOf(room.name) : null, classroomName: schoolId ? room.name : null, ...total }];
+    });
+    return {
+      period: { label: `${start.toLocaleDateString("pt-BR")} a ${new Date(end.getTime() - 1).toLocaleDateString("pt-BR")}`, startsAt: start.toISOString(), endsAt: end.toISOString() },
+      schools: allowedSchools.map((school) => ({ id: school.id, name: school.nome })),
+      grades: admin || schoolId ? [...new Set(rooms.filter((room) => !schoolId || String(room.schoolId) === schoolId).map((room) => gradeOf(room.name)))].sort((a, b) => a.localeCompare(b, "pt-BR", { numeric: true })) : [],
+      canFilterGlobalGrades: admin,
+      classrooms: schoolId ? rooms.filter((room) => String(room.schoolId) === schoolId).map((room) => ({ id: room.id, name: room.name, grade: gradeOf(room.name) })) : [],
+      entries,
+    };
+  }
   if (parts[0] === "school-invitations") {
     if (current.role !== "TEACHER")
       throw new Error(
