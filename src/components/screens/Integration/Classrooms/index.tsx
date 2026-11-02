@@ -231,9 +231,11 @@ export function ClassroomList({
 export function ClassroomForm({
   existing,
   onCreated,
+  onSuccessClose,
 }: {
   existing?: Classroom;
   onCreated?: (room: Classroom) => void;
+  onSuccessClose?: () => void;
 }) {
   const [success, setSuccess] = useState(false);
   const [selectionError, setSelectionError] = useState("");
@@ -245,6 +247,7 @@ export function ClassroomForm({
           name: body.name,
           identifier: body.identifier!,
         }),
+    onSuccessClose,
   );
   async function submit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();

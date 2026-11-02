@@ -8,11 +8,13 @@
   LogOut,
   School,
   Users,
+  Trophy,
   type LucideIcon,
 } from "lucide-react";
 
 export type IconName =
   | "home"
+  | "trophy"
   | "school"
   | "users"
   | "book"
@@ -24,6 +26,7 @@ export type IconName =
 
 const icons: Record<IconName, LucideIcon> = {
   home: House,
+  trophy: Trophy,
   school: School,
   users: Users,
   book: BookOpen,

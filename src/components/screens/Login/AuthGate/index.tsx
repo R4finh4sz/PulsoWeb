@@ -186,6 +186,7 @@ function AuthorizedGate({ children }: { children: ReactNode; }) {
 }
 const subscribe = () => () => { };
 export function AuthGate({ children }: { children: ReactNode; }) {
+  const client = useQueryClient();
   const session = useAuthState((state) => state.session);
   const mounted = useSyncExternalStore(
     subscribe,
@@ -200,6 +201,13 @@ export function AuthGate({ children }: { children: ReactNode; }) {
     pathname === "/forgot-password";
   useEffect(() => {
     if (!mounted) return;
+    if (session?.user.role === "STUDENT") {
+      useAuthState.getState().setSession(null);
+      void client.cancelQueries();
+      client.clear();
+      router.replace("/");
+      return;
+    }
     if (!session) {
       if (pathname !== "/" && !publicRegistration) router.replace("/");
       return;
@@ -214,13 +222,15 @@ export function AuthGate({ children }: { children: ReactNode; }) {
       Math.min(remaining, 2147483647),
     );
     return () => clearTimeout(timer);
-  }, [session, mounted, pathname, router, publicRegistration]);
+  }, [session, mounted, pathname, router, publicRegistration, client]);
   if (!mounted)
     return (
       <p role="status" className="p-8">
         Carregando…
       </p>
     );
+  if (session?.user.role === "STUDENT")
+    return <p role="status" className="p-8">Voltando ao login…</p>;
   if (publicRegistration) return children;
   if (!session)
     return pathname === "/" ? (
@@ -229,24 +239,6 @@ export function AuthGate({ children }: { children: ReactNode; }) {
       <p role="status" className="p-8">
         Entre para continuar…
       </p>
-    );
-  if (session.user.role === "STUDENT")
-    return (
-      <main className="mx-auto max-w-lg space-y-5 px-6 py-16 text-center">
-        <h1 className="text-2xl font-semibold">Acesso pelo aplicativo</h1>
-        <p className="text-sm text-(--muted)">
-          O acesso dos alunos está disponível apenas no aplicativo. A plataforma
-          web é destinada aos profissionais da escola.
-        </p>
-        <Button
-          onClick={() => {
-            useAuthState.getState().setSession(null);
-            router.replace("/");
-          }}
-        >
-          Entrar com outra conta
-        </Button>
-      </main>
     );
   if (session.twoFactorRequired) return <TwoFactorScreen session={session} />;
   return <AuthorizedGate>{children}</AuthorizedGate>;

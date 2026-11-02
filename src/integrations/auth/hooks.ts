@@ -17,7 +17,12 @@ export function useMe() {
 export function useLogin() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: authApi.login,
+    mutationFn: async (credentials: Parameters<typeof authApi.login>[0]) => {
+      const session = await authApi.login(credentials);
+      if (session.user.role === "STUDENT")
+        throw new Error("O acesso dos alunos está disponível apenas no aplicativo. A plataforma web é destinada aos profissionais da escola.");
+      return session;
+    },
     onMutate: async () => {
       useAuthState.getState().setSession(null);
       await client.cancelQueries();

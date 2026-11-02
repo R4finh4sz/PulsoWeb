@@ -55,12 +55,6 @@ export function DashboardShell({
         },
       ]
       : [...navigation];
-  if (user.role === "aluno")
-    sidebarNavigation.push({
-      label: "Quizzes",
-      href: "/student/quizzes",
-      icon: "book",
-    });
   if (user.role === "admin" || user.role === "coordenador")
     sidebarNavigation.push({
       label: "Solicitações de cadastro",
@@ -78,6 +72,9 @@ export function DashboardShell({
       href: pathname === home ? "#overview" : home,
       icon: "home" as const,
     },
+    ...(user.role !== "aluno"
+      ? [{ label: "Ranking", href: `${home}/ranking`, icon: "trophy" as const }]
+      : []),
     ...sidebarNavigation,
   ];
   const isActive = (href: string) => {

@@ -13,6 +13,7 @@ import {
   Inbox,
   LogOut,
   Users,
+  Trophy,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -77,7 +78,7 @@ export function TeacherShell({
             aria-label="Navegação principal"
             className={`order-3 flex w-full gap-1 overflow-x-auto pb-1 md:justify-center ${coordinator ? "2xl:order-none 2xl:w-auto" : "xl:order-none xl:w-auto"}`}
           >
-            {links.map(({ label, href, icon: Icon }) => (
+            {[links[0], { label: "Ranking", href: `${home}/ranking`, icon: Trophy }, ...links.slice(1)].map(({ label, href, icon: Icon }) => (
               <Link
                 key={href}
                 href={href}

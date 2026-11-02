@@ -1,14 +1,12 @@
 "use client";
 
-import { base, ClassroomForm } from "@/components/screens/Integration/Classrooms";
+import { ClassroomForm } from "@/components/screens/Integration/Classrooms";
 import {
-  actionClass,
   Protected,
   Workspace
 } from "@/components/screens/Integration/shared";
-import type { Classroom } from "@/integrations/types";
 import type { UserRole } from "@/interfaces/auth";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 function PageContent({
@@ -16,20 +14,14 @@ function PageContent({
 }: {
   role?: UserRole;
 }) {
-  const [created, setCreated] = useState<Classroom | null>(null);
+  const [created, setCreated] = useState(false);
+  const router = useRouter();
   return (
     <Protected role={role}>
       {(user) => (
         <Workspace user={user} title="Criar turma">
-          {created ? (
-            <Link
-              className={actionClass}
-              href={base(role) + "/classrooms/" + created.id}
-            >
-              Turma criada. Vincular alunos e professores
-            </Link>
-          ) : (
-            <ClassroomForm onCreated={setCreated} />
+          {!created && (
+            <ClassroomForm onCreated={() => setCreated(true)} onSuccessClose={() => router.back()} />
           )}
         </Workspace>
       )}
