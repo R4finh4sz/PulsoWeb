@@ -308,6 +308,76 @@ export function mockRequest(
     );
   if (path === "/me/deletion-requests" && method === "POST")
     return mockRequest("/me/deletion-request", method, body, token);
+  if (url.pathname === "/admin/metrics" && method === "GET") {
+    if (current.role !== "ADMIN")
+      throw new Error(
+        "Métricas técnicas disponíveis apenas para administradores.",
+      );
+    // shortcut: demo does not run a backend, keep technical samples empty until real telemetry is available.
+    return { current: null, history: [] };
+  }
+  if (url.pathname === "/schools/me/metrics/growth" && method === "GET") {
+    const year = Number(url.searchParams.get("year"));
+    if (!Number.isInteger(year) || year < 1 || year > 9999)
+      throw new Error("Informe um ano válido.");
+    const metrics = mockRequest(
+      "/schools/me/metrics",
+      "GET",
+      undefined,
+      token,
+    ) as import("@/integrations/metrics/api").SchoolMetrics;
+    // shortcut: demo users have no registration dates, add dated fixtures when demo needs growth history.
+    return {
+      schoolId: metrics.schoolId,
+      schoolName: metrics.schoolName,
+      year,
+      months: Array.from({ length: 12 }, (_, index) => ({
+        month: index + 1,
+        students: 0,
+        teachers: 0,
+        cumulativeStudents: 0,
+        cumulativeTeachers: 0,
+      })),
+      averageMonthlyStudents: 0,
+      averageMonthlyTeachers: 0,
+      studentsWithoutRegistrationDate: metrics.bigNumbers.students,
+      teachersWithoutRegistrationDate: metrics.bigNumbers.teachers,
+    };
+  }
+  if (path === "/schools/me/metrics" && method === "GET") {
+    if (current.role !== "PEDAGOGICAL_COORDINATOR" || !current.schoolId)
+      throw new Error("Coordenador sem escola ativa autorizada.");
+    const classrooms = rooms.filter(
+      (room) => room.schoolId === current.schoolId,
+    );
+    const schoolSubjects = subjects.filter((subject) =>
+      classrooms.some((room) => room.id === subject.classroomId),
+    );
+    return {
+      schoolId: current.schoolId,
+      schoolName: schools.find((school) => school.id === current.schoolId)
+        ?.nome,
+      bigNumbers: {
+        students: users.filter(
+          (user) =>
+            user.role === "STUDENT" && user.schoolId === current.schoolId,
+        ).length,
+        teachers: users.filter(
+          (user) =>
+            user.role === "TEACHER" &&
+            (user.schoolIds ?? [user.schoolId]).includes(current.schoolId),
+        ).length,
+        classrooms: classrooms.length,
+        subjects: schoolSubjects.length,
+        activities: 0,
+        submissions: 0,
+      },
+    };
+  }
+  if (url.pathname === "/rankings/students" && method === "GET") {
+    // shortcut: demo has no historical submissions, add period fixtures when demo needs history.
+    return [];
+  }
   if (path === "/me") return { ...current };
   if (url.pathname === "/ranking" && method === "GET") {
     if (current.role === "STUDENT")

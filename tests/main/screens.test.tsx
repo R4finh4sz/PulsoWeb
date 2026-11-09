@@ -1,3 +1,5 @@
+import AdminMetricsPage from "@/app/admin/metrics/page";
+import { metricsApi, type TechnicalSample } from "@/integrations/metrics/api";
 import AdminRoomRoute from "@/app/admin/classrooms/[id]/page";
 import AdminNewRoomRoute from "@/app/admin/classrooms/new/page";
 import CoordinatorsPage from "@/app/admin/coordinators/page";
@@ -19,6 +21,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { routeFixture, routeParams } from "../route-fixture";
 
@@ -42,6 +45,10 @@ import { usersApi } from "@/integrations/users/api";
 import { useFeedbackStore } from "@/store/feedbackStore";
 import { findAddressByCep } from "@/utils/viacep";
 import { admin, coordinator, queryWrapper, router, teacher } from "../helpers";
+jest.mock("@/integrations/metrics/api", () => ({
+  metricsApi: { admin: jest.fn() },
+}));
+jest.mock("@coreui/react-chartjs", () => ({ CChart: () => <canvas /> }));
 let pathname = "/admin";
 jest.mock("next/navigation", () => ({
   useRouter: () => router,
@@ -257,11 +264,96 @@ test("detalhes tratam campos vazios, coordenação ausente e erro de consulta", 
     "Não foi possível carregar",
   );
 });
-test("dashboard mostra métricas e logout", async () => {
+test("dashboard mostra atalhos administrativos e logout", async () => {
   show(<AdminDashboard />);
-  expect(await screen.findByText("100%")).toBeVisible();
+  const shortcuts = await screen.findByRole("navigation", {
+    name: "Acesso rápido",
+  });
+  expect(within(shortcuts).getAllByRole("link")).toHaveLength(6);
+  for (const href of [
+    "/admin/schools",
+    "/admin/schools/new",
+    "/admin/coordinators",
+    "/admin/metrics",
+    "/admin/registration-requests",
+    "/admin/ranking",
+  ]) {
+    expect(shortcuts.querySelector('a[href="' + href + '"]')).toBeVisible();
+  }
+  const navigation = screen.getByRole("navigation", {
+    name: "Navegação principal",
+  });
+  expect(within(navigation).getAllByRole("link")).toHaveLength(3);
+  expect(
+    within(navigation).getByRole("link", { name: "Termos de uso" }),
+  ).toHaveAttribute("href", "/admin/terms");
+  expect(within(navigation).getByRole("link", { name: "FAQ" })).toHaveAttribute(
+    "href",
+    "/admin/faq",
+  );
+  expect(screen.getByRole("link", { name: "Meu perfil" })).toHaveAttribute(
+    "href",
+    "/admin/profile",
+  );
+  expect(
+    within(navigation).getByRole("link", { name: "Início" }),
+  ).toHaveAttribute("aria-current", "page");
   fireEvent.click(screen.getByRole("button", { name: "Sair" }));
   await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
+});
+const technicalSample: TechnicalSample = {
+  timestamp: "2026-11-08T12:00:00Z",
+  uptimeSeconds: 7200,
+  intervalSeconds: 15,
+  requestsPerSecond: 12.5,
+  http5xxPercent: 0,
+  averageResponseMs: 35,
+  requestsPerSecondByStatus: { "200": 12.5 },
+  processCpuPercent: null,
+  heapUsedBytes: 1048576,
+  heapCommittedBytes: 2097152,
+  liveThreads: 20,
+  databaseActiveConnections: 2,
+  databaseIdleConnections: null,
+};
+test("métricas do admin exibem telemetria e permitem recuperar erro", async () => {
+  jest
+    .mocked(metricsApi.admin)
+    .mockRejectedValueOnce(new Error("Indicadores indisponíveis"))
+    .mockResolvedValue({
+      current: technicalSample,
+      history: [technicalSample],
+    });
+  show(<AdminMetricsPage />);
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Indicadores indisponíveis",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
+  const metrics = screen.getByRole("region", {
+    name: "Indicadores da plataforma",
+  });
+  expect(await within(metrics).findByText("1 MiB")).toBeVisible();
+  expect(
+    within(metrics).getByRole("heading", { name: "Requisições por segundo" }),
+  ).toBeVisible();
+  expect(within(metrics).getAllByText("12,5")).toHaveLength(3);
+  expect(within(metrics).getAllByText("0%")).toHaveLength(2);
+  expect(within(metrics).getAllByText("Indisponível")).toHaveLength(3);
+  fireEvent.click(within(metrics).getByText("Ver amostras"));
+  expect(
+    within(metrics).getByRole("region", { name: "Histórico de métricas" }),
+  ).toBeVisible();
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+});
+test("métricas do admin aguardam a primeira amostra sem inventar valores", async () => {
+  jest
+    .mocked(metricsApi.admin)
+    .mockResolvedValue({ current: null, history: [] });
+  show(<AdminMetricsPage />);
+  expect(
+    await screen.findByText(/Aguardando a primeira amostra/),
+  ).toBeVisible();
+  expect(screen.queryByText("0%")).not.toBeInTheDocument();
 });
 test("criação de escola exibe formulário e navegação", async () => {
   show(<CreateSchool />);
