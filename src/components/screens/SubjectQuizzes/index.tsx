@@ -1,9 +1,8 @@
 "use client";
 
-import { SubjectSyllabus } from "@/components/screens/ClassroomDetails/SubjectSyllabus";
 import {
   ErrorMessage,
-  actionClass
+  actionClass,
 } from "@/components/screens/Integration/shared";
 import { BackLink } from "@/components/ui/BackLink";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -14,7 +13,14 @@ import { subjectsApi } from "@/integrations/subjects/api";
 import { canAccessSubject } from "@/utils/subjectAccess";
 import type { CreateQuiz } from "@/validation/Quiz.validation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, LockKeyhole, MoreHorizontal, Plus } from "lucide-react";
+import {
+  BookOpen,
+  ChevronRight,
+  FileText,
+  LockKeyhole,
+  MoreHorizontal,
+  Plus,
+} from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { QuizForm } from "./QuizForm";
@@ -28,7 +34,6 @@ export function Content({
   subjectId: number;
   teacherId: number;
 }) {
-  const [themeName, setThemeName] = useState("");
   const [creating, setCreating] = useState(false);
   const [expandedQuiz, setExpandedQuiz] = useState<number | null>(null);
   const [success, setSuccess] = useState(false);
@@ -53,13 +58,6 @@ export function Content({
     queryKey: ["quiz-themes", classroomId, subjectId],
     queryFn: ({ signal }) => quizzesApi.themes(classroomId, subjectId, signal),
     enabled: authenticated && allowed,
-  });
-  const createTheme = useMutation({
-    mutationFn: () => quizzesApi.createTheme(classroomId, subjectId, themeName.trim()),
-    onSuccess: async () => {
-      setThemeName("");
-      await client.invalidateQueries({ queryKey: ["quiz-themes", classroomId, subjectId] });
-    },
   });
   const create = useMutation({
     mutationFn: (body: CreateQuiz) =>
@@ -123,7 +121,30 @@ export function Content({
           </p>
         </div>
       </div>
-      <SubjectSyllabus subject={subject} />
+      <Link
+        href={`/teacher/classrooms/${classroomId}/subjects/${subjectId}/syllabus`}
+        className="flex min-h-20 items-center gap-4 rounded-2xl border border-(--line) bg-white px-5 py-5 text-(--ink) hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--focus) sm:px-6"
+      >
+        <FileText
+          size={24}
+          strokeWidth={1.7}
+          aria-hidden="true"
+          className="shrink-0 text-(--blue-dark)"
+        />
+        <span className="min-w-0 flex-1">
+          <span className="block text-base font-semibold">
+            Ver ementa da disciplina
+          </span>
+          <span className="mt-1 block text-sm text-(--muted)">
+            Conteúdo programático e referências da matéria
+          </span>
+        </span>
+        <ChevronRight
+          size={20}
+          aria-hidden="true"
+          className="shrink-0 text-(--blue-dark)"
+        />
+      </Link>
       {!authenticated ? (
         <p className="rounded-xl border border-(--line) bg-white p-6 text-sm text-(--muted)">
           A criação de quizzes está disponível no acesso de demonstração. A
@@ -131,11 +152,7 @@ export function Content({
         </p>
       ) : (
         <>
-          <form className="flex flex-wrap items-end gap-3" onSubmit={(event) => { event.preventDefault(); if (themeName.trim() && !createTheme.isPending) createTheme.mutate(); }}>
-            <label>Novo tema<input required minLength={1} maxLength={40} value={themeName} onChange={(event) => setThemeName(event.target.value)} className="ml-3 rounded-lg border p-3" /></label>
-            <button className={actionClass} disabled={!themeName.trim() || createTheme.isPending}>Criar tema</button>
-          </form>
-          <ErrorMessage error={createTheme.error || quizzes.error || themes.error} />
+          <ErrorMessage error={quizzes.error || themes.error} />
           {(quizzes.isError || themes.isError) && (
             <button
               className={actionClass}
@@ -297,10 +314,10 @@ export function Content({
                                         {"ABCD"[optionIndex]}. {option}
                                         {question.correctOption ===
                                           optionIndex && (
-                                            <span className="ml-2 font-medium text-emerald-800">
-                                              (correta)
-                                            </span>
-                                          )}
+                                          <span className="ml-2 font-medium text-emerald-800">
+                                            (correta)
+                                          </span>
+                                        )}
                                       </li>
                                     ),
                                   )}

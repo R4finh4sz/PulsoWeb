@@ -1,8 +1,18 @@
-import type { buildClassroomReports } from "@/utils/teacherReports";
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 
-type ClassroomReport = ReturnType<typeof buildClassroomReports>[number];
+export type ClassroomReport = {
+  id: number;
+  name: string;
+  school: string;
+  studentCount: number | null;
+  activities: number;
+  average: number | null;
+  completion: number | null;
+  submitted: number;
+  assigned: number | null;
+  attention: number | null;
+};
 
 const columns =
   "lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_auto]";
@@ -52,8 +62,9 @@ export function SchoolReport({
                 {report.name}
               </Link>
               <p className="mt-1 text-xs leading-5 text-(--muted)">
-                {report.students.length}{" "}
-                {report.students.length === 1 ? "aluno" : "alunos"}
+                {report.studentCount === null
+                  ? "Alunos não informados"
+                  : `${report.studentCount} ${report.studentCount === 1 ? "aluno" : "alunos"}`}
                 {" · "}
                 {report.activities}{" "}
                 {report.activities === 1 ? "atividade" : "atividades"}
@@ -92,7 +103,7 @@ export function SchoolReport({
                       : `${format(report.completion)}%`}
                   </span>
                   <span className="mt-1 block text-xs leading-5 tabular-nums text-(--muted)">
-                    {report.submitted} de {report.assigned} previstas
+                    {report.submitted} de {report.assigned ?? "—"} previstas
                   </span>
                 </dd>
               </div>
@@ -102,16 +113,20 @@ export function SchoolReport({
                 </dt>
                 <dd>
                   <span
-                    className={`block text-base font-medium ${report.attention ? "text-amber-800" : "text-emerald-800"}`}
+                    className={`block text-base font-medium ${report.attention === null ? "text-(--muted)" : report.attention ? "text-amber-800" : "text-emerald-800"}`}
                   >
-                    {report.attention
-                      ? `${report.attention} ${report.attention === 1 ? "aluno" : "alunos"}`
-                      : "Sem pendências"}
+                    {report.attention === null
+                      ? "Não informado"
+                      : report.attention
+                        ? `${report.attention} ${report.attention === 1 ? "aluno" : "alunos"}`
+                        : "Sem pendências"}
                   </span>
                   <span className="mt-1 block text-xs leading-5 text-(--muted)">
-                    {report.attention
-                      ? "Com entregas vencidas"
-                      : "Nenhuma entrega vencida"}
+                    {report.attention === null
+                      ? "Histórico de destinatários incompleto"
+                      : report.attention
+                        ? "Com entregas vencidas"
+                        : "Nenhuma entrega vencida"}
                   </span>
                 </dd>
               </div>

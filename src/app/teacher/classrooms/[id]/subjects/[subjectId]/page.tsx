@@ -1,9 +1,7 @@
 "use client";
 
 import { TeacherShell } from "@/components/screens/Dashboard/TeacherShell";
-import {
-  Protected
-} from "@/components/screens/Integration/shared";
+import { Protected } from "@/components/screens/Integration/shared";
 import { Content } from "@/components/screens/SubjectQuizzes";
 import { use } from "react";
 
@@ -19,9 +17,9 @@ function PageContent({
       {(user) => (
         <TeacherShell user={user}>
           {Number.isSafeInteger(classroomId) &&
-            classroomId > 0 &&
-            Number.isSafeInteger(subjectId) &&
-            subjectId > 0 ? (
+          classroomId > 0 &&
+          Number.isSafeInteger(subjectId) &&
+          subjectId > 0 ? (
             <Content
               key={`${classroomId}:${subjectId}`}
               classroomId={classroomId}
@@ -40,7 +38,7 @@ function PageContent({
 export default function Page({
   params,
 }: {
-  params: Promise<{ id: string; subjectId: string; }>;
+  params: Promise<{ id: string; subjectId: string }>;
 }) {
   const { id, subjectId } = use(params);
   return <PageContent classroomId={Number(id)} subjectId={Number(subjectId)} />;

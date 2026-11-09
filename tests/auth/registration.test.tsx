@@ -30,12 +30,10 @@ beforeEach(() => {
   jest
     .mocked(authApi.terms)
     .mockResolvedValue({ title: "Termos", content: "Texto", version: "1" });
-  jest
-    .mocked(registrationApi.schools)
-    .mockResolvedValue({
-      content: [{ id: "1", name: "Escola", city: "SP", state: "SP" }],
-      totalPages: 1,
-    });
+  jest.mocked(registrationApi.schools).mockResolvedValue({
+    content: [{ id: "1", name: "Escola", city: "SP", state: "SP" }],
+    totalPages: 1,
+  });
   jest.mocked(registrationApi.invitation).mockResolvedValue(invitation);
   jest
     .mocked(registrationApi.register)
@@ -52,7 +50,7 @@ async function form(token?: string) {
   fireEvent.change(screen.getByLabelText("Nome completo"), {
     target: { value: "Ana Silva" },
   });
-  fireEvent.change(screen.getByLabelText("RA / matrícula"), {
+  fireEvent.change(screen.getByLabelText("Matrícula"), {
     target: { value: "123" },
   });
   fireEvent.change(screen.getByLabelText("Senha"), {

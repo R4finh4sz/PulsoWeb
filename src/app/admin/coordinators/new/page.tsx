@@ -6,12 +6,10 @@ import Button from "@/components/ui/Button";
 import { DashboardPanel } from "@/components/ui/DashboardPanel";
 import Input from "@/components/ui/Input";
 import { registrationApi } from "@/integrations/registration/api";
-import { useSchools } from "@/integrations/schools/hooks";
 import { useApiMutation } from "@/integrations/useApiMutation";
 import { useState, type SyntheticEvent } from "react";
 
 function CoordinatorInvitationForm() {
-  const schools = useSchools(true);
   const [schoolId, setSchoolId] = useState("");
   const [formVersion, setFormVersion] = useState(0);
   const mutation = useApiMutation((body: { email: string; schoolId: number }) =>
@@ -19,7 +17,7 @@ function CoordinatorInvitationForm() {
   );
   async function submit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (mutation.isPending) return;
+    if (mutation.isPending || !schoolId) return;
     const form = event.currentTarget;
     try {
       await mutation.mutateAsync({
@@ -52,16 +50,10 @@ function CoordinatorInvitationForm() {
           />
           <InvitationSchoolSelector
             key={formVersion}
-            schools={schools.data}
-            loading={schools.isPending}
-            error={schools.error}
             value={schoolId}
             onChange={setSchoolId}
           />
-          <Button
-            type="submit"
-            disabled={mutation.isPending || !schools.data?.length}
-          >
+          <Button type="submit" disabled={mutation.isPending || !schoolId}>
             {mutation.isPending ? "Enviando…" : "Enviar convite"}
           </Button>
           {mutation.isSuccess && (

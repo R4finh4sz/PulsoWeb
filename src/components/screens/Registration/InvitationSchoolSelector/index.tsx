@@ -1,141 +1,132 @@
 "use client";
 
-import { ErrorMessage } from "@/components/screens/Integration/shared";
-import type { School } from "@/integrations/schools/api";
-import { normalizeAddress } from "@/utils/text";
-import { findAddressByCep, formatCep, type ViaCepAddress } from "@/utils/viacep";
-import { ChevronDown, Search } from "lucide-react";
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import {
+  ErrorMessage,
+  actionClass,
+  fieldClass,
+} from "@/components/screens/Integration/shared";
+import Input from "@/components/ui/Input";
+import { schoolsApi } from "@/integrations/schools/api";
+import { formatCep, normalizeCep } from "@/utils/viacep";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
-export function InvitationSchoolSelector({ schools, loading, error, value, onChange }: {
-  schools: School[] | undefined;
-  loading: boolean;
-  error: unknown;
+export function InvitationSchoolSelector({
+  value,
+  onChange,
+}: {
   value: string;
   onChange: (value: string) => void;
 }) {
-  const [schoolSearch, setSchoolSearch] = useState("");
-  const [schoolAddress, setSchoolAddress] = useState<ViaCepAddress | null>(
-    null,
-  );
-  const [schoolMenuOpen, setSchoolMenuOpen] = useState(false);
-  const schoolMenu = useRef<HTMLDivElement>(null);
-  const filteredSchools = schools?.filter((school) => {
-    const search = normalizeAddress(schoolSearch);
-    const matchesName = Boolean(
-      search && normalizeAddress(school.nome).includes(search),
-    );
-    if (search && !schoolAddress && !matchesName) return false;
-    if (!schoolAddress) return true;
-    return [
-      [schoolAddress.logradouro, school.logradouro],
-      [schoolAddress.bairro, school.bairro],
-      [schoolAddress.localidade, school.cidade],
-    ]
-      .filter(([addressValue]) => addressValue)
-      .every(([addressValue, schoolValue]) => {
-        const address = normalizeAddress(addressValue);
-        const schoolName = normalizeAddress(schoolValue);
-        return (
-          schoolName === address ||
-          schoolName.includes(address) ||
-          address.includes(schoolName)
-        );
-      });
+  const [cep, setCep] = useState("");
+  const [page, setPage] = useState(0);
+  const digits = normalizeCep(cep);
+  const validCep = digits.length === 8;
+  const schools = useQuery({
+    queryKey: ["invitation-schools", digits, page],
+    queryFn: ({ signal }) => schoolsApi.searchByCep(digits, page, signal),
+    enabled: validCep,
   });
-  useEffect(() => {
-    function closeMenu(event: PointerEvent) {
-      if (!schoolMenu.current?.contains(event.target as Node))
-        setSchoolMenuOpen(false);
-    }
-    document.addEventListener("pointerdown", closeMenu);
-    return () => document.removeEventListener("pointerdown", closeMenu);
-  }, []);
-  async function searchSchoolByCep(event: ChangeEvent<HTMLInputElement>) {
-    const value = event.target.value;
-    setSchoolSearch(value);
-    onChange("");
-    setSchoolAddress(null);
-    const cep = value.replace(/\D/g, "");
-    if (cep.length !== 8) return;
-    const address = await findAddressByCep(formatCep(value).replace(/\D/g, ""));
-    setSchoolAddress(address);
-  }
 
   return (
-    <div ref={schoolMenu} className="relative">
-      <label
-        htmlFor="school-search"
-        className="block text-xs font-bold text-(--ink)"
-      >
-        Escola
-      </label>
-      <input
-        type="hidden"
-        name="schoolId"
-        value={value}
-        required
+    <div className="space-y-4">
+      <Input
+        id="school-cep"
+        label="CEP da escola"
+        inputMode="numeric"
+        autoComplete="postal-code"
+        placeholder="00000-000"
+        maxLength={9}
+        value={cep}
+        aria-describedby="school-cep-help"
+        onChange={(event) => {
+          setCep(formatCep(event.target.value));
+          setPage(0);
+          onChange("");
+        }}
       />
-      <button
-        type="button"
-        id="school-search"
-        aria-expanded={schoolMenuOpen}
-        onClick={() => setSchoolMenuOpen((value) => !value)}
-        className="mt-2 flex h-12 w-full items-center justify-between rounded-md border border-(--line) bg-white px-4 text-left text-sm outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-[var(--blue)]/15"
-      >
-        <span className={value ? "" : "text-(--muted)"}>
-          {schools?.find(
-            (school) => String(school.id) === value,
-          )?.nome || "Selecione a escola"}
-        </span>
-        <ChevronDown aria-hidden="true" className="h-4 w-4" />
-      </button>
-      {schoolMenuOpen && (
-        <div className="absolute inset-x-0 top-full z-20 mt-2 rounded-lg border border-(--line) bg-white p-2 shadow-lg">
-          <label className="flex items-center gap-2 rounded-md border border-(--line) px-3 py-2">
-            <Search
-              aria-hidden="true"
-              className="h-4 w-4 text-(--muted)"
-            />
-            <input
-              autoFocus
-              value={schoolSearch}
-              onChange={searchSchoolByCep}
-              placeholder="Nome ou CEP"
-              className="min-w-0 flex-1 text-sm outline-none"
-            />
-          </label>
-          <div className="mt-2 max-h-56 overflow-y-auto">
-            {filteredSchools?.map((school) => (
-              <button
-                type="button"
-                key={school.id}
-                onClick={() => {
-                  onChange(String(school.id));
-                  setSchoolMenuOpen(false);
-                }}
-                className="block w-full rounded-md px-3 py-2 text-left text-sm hover:bg-[#e8f5f8]"
-              >
-                {school.nome}
-                <span className="mt-1 block text-xs text-(--muted)">
-                  {school.cidade}
-                </span>
-              </button>
-            ))}
-            {loading && (
-              <p className="p-3 text-sm text-(--muted)">
-                Carregando escolas…
-              </p>
-            )}
-            {schools && !filteredSchools?.length && (
-              <p className="p-3 text-sm text-(--muted)">
-                Nenhuma escola encontrada.
-              </p>
-            )}
-          </div>
-        </div>
+      <p id="school-cep-help" className="text-xs text-(--muted)">
+        Informe os 8 dígitos do CEP para buscar as escolas cadastradas nesse
+        endereço.
+      </p>
+      {validCep && schools.isPending && (
+        <p role="status" className="text-sm text-(--muted)">
+          Buscando escolas…
+        </p>
       )}
-      <ErrorMessage error={error} />
+      {validCep && <ErrorMessage error={schools.error} />}
+      {validCep && schools.isError && (
+        <button
+          type="button"
+          className={actionClass}
+          onClick={() => void schools.refetch()}
+        >
+          Tentar novamente
+        </button>
+      )}
+      {validCep &&
+        schools.isSuccess &&
+        (schools.data.content.length === 0 ? (
+          <p role="status" className="text-sm text-(--muted)">
+            Nenhuma escola cadastrada para este CEP.
+          </p>
+        ) : (
+          <>
+            <label
+              htmlFor="invitation-school"
+              className="block text-sm font-medium"
+            >
+              Escola
+              <select
+                id="invitation-school"
+                name="schoolId"
+                className={fieldClass}
+                value={value}
+                required
+                onChange={(event) => onChange(event.target.value)}
+              >
+                <option value="">Selecione a escola</option>
+                {schools.data.content.map((school) => (
+                  <option key={school.id} value={school.id}>
+                    {school.name} · {school.city}/{school.state}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {schools.data.totalPages > 1 && (
+              <nav
+                aria-label="Páginas de escolas"
+                className="flex flex-wrap items-center justify-between gap-3 text-sm"
+              >
+                <button
+                  type="button"
+                  disabled={page === 0}
+                  className="min-h-11 text-(--blue-dark) disabled:opacity-50"
+                  onClick={() => {
+                    setPage(page - 1);
+                    onChange("");
+                  }}
+                >
+                  Anterior
+                </button>
+                <span>
+                  Página {page + 1} de {schools.data.totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={page + 1 >= schools.data.totalPages}
+                  className="min-h-11 text-(--blue-dark) disabled:opacity-50"
+                  onClick={() => {
+                    setPage(page + 1);
+                    onChange("");
+                  }}
+                >
+                  Próxima
+                </button>
+              </nav>
+            )}
+          </>
+        ))}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { schoolsApi } from "@/integrations/schools/api";
-import { useFeedbackStore } from "@/store/feedbackStore";
+import { showRequestError, useFeedbackStore } from "@/store/feedbackStore";
 import { SchoolSchema, type SchoolForm } from "@/validation/School.validation";
 import { useCallback, useRef, useState, type SyntheticEvent } from "react";
 
@@ -58,13 +58,7 @@ export function useCreateSchool() {
     } catch (cause) {
       submitted.current = false;
       setSaving(false);
-      showFeedback({
-        type: "error",
-        message:
-          cause instanceof Error
-            ? cause.message
-            : "Não foi possível criar a escola.",
-      });
+      showRequestError(cause);
     }
   }
   return { values, errors, saving, setField, handleSubmit };

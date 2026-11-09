@@ -1,7 +1,6 @@
 "use client";
 
 import { canAccessSubject } from "@/utils/subjectAccess";
-import { SubjectThemes } from "../SubjectThemes";
 
 import {
   actionClass,
@@ -13,7 +12,13 @@ import { useAuthState } from "@/integrations/auth/state";
 import { subjectsApi } from "@/integrations/subjects/api";
 import type { Subject } from "@/integrations/types";
 import { useMutation } from "@tanstack/react-query";
-import { BookOpen, LockKeyhole, MoreHorizontal, UserPlus } from "lucide-react";
+import {
+  BookOpen,
+  FileText,
+  LockKeyhole,
+  MoreHorizontal,
+  UserPlus,
+} from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -28,7 +33,6 @@ export function SubjectCard({
   const trigger = useRef<HTMLElement | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const [email, setEmail] = useState("");
-  const [showThemes, setShowThemes] = useState(false);
   const token = useAuthState((state) => state.session?.accessToken);
   const authenticated = !!token;
   const me = useMe();
@@ -109,7 +113,13 @@ export function SubjectCard({
               <MoreHorizontal size={22} aria-hidden="true" />
             </summary>
             <div className="absolute right-0 top-full mt-1 w-52 rounded-xl border border-(--line) bg-white p-1.5 shadow-lg">
-<button type="button" onClick={() => { if (menu.current) menu.current.open = false; setShowThemes(true); }} className="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm text-(--ink) hover:bg-cyan-50"><BookOpen size={17} aria-hidden="true" />Temas</button>
+              <Link
+                href={`/teacher/classrooms/${subject.classroomId}/subjects/${subject.id}/syllabus`}
+                className="flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm text-(--ink) hover:bg-cyan-50"
+              >
+                <FileText size={17} aria-hidden="true" />
+                Ementa
+              </Link>
               {owner && (
                 <button
                   type="button"
@@ -140,15 +150,6 @@ export function SubjectCard({
           </p>
         </Link>
       </div>
-      {showThemes && (
-        <SubjectThemes
-          subject={subject}
-          onClose={() => {
-            setShowThemes(false);
-            trigger.current?.focus();
-          }}
-        />
-      )}
       <dialog
         ref={dialog}
         aria-labelledby={`subject-invite-${subject.id}`}

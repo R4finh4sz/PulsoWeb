@@ -2,7 +2,10 @@
 
 import Button from "@/components/ui/Button";
 import { DashboardPanel } from "@/components/ui/DashboardPanel";
-import { classroomYears, classroomLetters } from "@/validation/Classroom.validation";
+import {
+  classroomYears,
+  classroomLetters,
+} from "@/validation/Classroom.validation";
 import MultiSelect from "@/components/ui/MultiSelect";
 import Select from "@/components/ui/Select";
 import { useCreateClassroom } from "@/hooks/useCreateClassroom";
@@ -11,7 +14,7 @@ import { useTeacherStore } from "@/store/teacherStore";
 import { BookOpen } from "lucide-react";
 import Link from "next/link";
 
-export function ClassroomForm({ user }: { user: SessionUser; }) {
+export function ClassroomForm({ user }: { user: SessionUser }) {
   const { values, errors, saving, schools, setField, handleSubmit } =
     useCreateClassroom(user);
   const allTeachers = useTeacherStore((state) => state.teachers);
@@ -61,7 +64,11 @@ export function ClassroomForm({ user }: { user: SessionUser; }) {
                 aria-describedby="year-help"
               >
                 <option value="">Selecione o ano</option>
-                {classroomYears.map((year) => <option key={year} value={year}>{year}º ano</option>)}
+                {classroomYears.map((year) => (
+                  <option key={year} value={year}>
+                    {year}º ano
+                  </option>
+                ))}
               </Select>
               <Select
                 id="identifier"
@@ -76,7 +83,11 @@ export function ClassroomForm({ user }: { user: SessionUser; }) {
                 aria-describedby="identifier-help"
               >
                 <option value="">Selecione a turma</option>
-                {classroomLetters.map((letter) => <option key={letter} value={letter}>{letter}</option>)}
+                {classroomLetters.map((letter) => (
+                  <option key={letter} value={letter}>
+                    {letter}
+                  </option>
+                ))}
               </Select>
             </div>
             <div className="grid gap-2 text-xs text-(--muted) sm:grid-cols-2">
@@ -97,6 +108,7 @@ export function ClassroomForm({ user }: { user: SessionUser; }) {
               <option>Manhã</option>
               <option>Tarde</option>
               <option>Noite</option>
+              <option>Integral</option>
             </Select>
           </div>
         </DashboardPanel>
