@@ -1,12 +1,12 @@
 "use client";
 
+import { passwordError } from "@/validation/password";
 import { BackLink } from "@/components/ui/BackLink";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import { authApi } from "@/integrations/auth/api";
 import { registrationApi } from "@/integrations/registration/api";
-import { passwordError } from "@/validation/password";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
@@ -276,7 +276,7 @@ export function RegistrationForm({ token }: { token?: string }) {
             <Input
               id="ra"
               name="ra"
-              label="RA / matrícula"
+              label="Matrícula"
               required
               inputMode="numeric"
               pattern="[0-9]+"
@@ -334,7 +334,7 @@ export function RegistrationForm({ token }: { token?: string }) {
             />
             <p className="text-xs text-(--muted)">
               Use pelo menos 8 caracteres, uma letra maiúscula de A a Z e um
-              número.
+              número, com no máximo 72 bytes UTF-8.
             </p>
             <Input
               id="confirmPassword"

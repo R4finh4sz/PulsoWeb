@@ -2,7 +2,7 @@
 
 import {
   ErrorMessage,
-  actionClass
+  actionClass,
 } from "@/components/screens/Integration/shared";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useAuthState } from "@/integrations/auth/state";
@@ -43,7 +43,7 @@ export function Activities() {
       <div>
         <h1 className="page-title">Atividades</h1>
         <p className="page-description mt-3">
-          Acompanhe os quizzes que você criou e os prazos de encerramento.
+          Acompanhe os quizzes da escola ativa e os prazos de encerramento.
         </p>
       </div>
       {!authenticated ? (
@@ -124,7 +124,8 @@ export function Activities() {
                     {activity.classroomName} · {activity.schoolName}
                   </p>
                   <p className="mt-2 text-sm text-(--muted)">
-                    {activity.questions.length} questões
+                    {activity.questionCount ?? activity.questions.length}{" "}
+                    questões
                   </p>
                   <p className="mt-5 flex items-start gap-2 text-sm font-medium text-(--blue-dark)">
                     <CalendarClock

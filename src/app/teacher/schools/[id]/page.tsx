@@ -7,19 +7,28 @@ import {
   Protected,
 } from "@/components/screens/Integration/shared";
 import { useSchools } from "@/integrations/schools/hooks";
-import { use } from "react";
+import { use, useEffect } from "react";
+import { useActiveSchool } from "@/integrations/auth/hooks";
+import { useAuthState } from "@/integrations/auth/state";
 
-export function PageContent({ id }: { id: number; }) {
+export function PageContent({ id }: { id: number }) {
   const schools = useSchools();
-  const school = schools.data?.find(
-    (school) =>
-      school.id === id,
-  );
+  const activeSchoolId = useAuthState((state) => state.session?.user.schoolId);
+  const { mutate, error, isPending } = useActiveSchool();
+  const school = schools.data?.find((school) => school.id === id);
+  useEffect(() => {
+    if (school && activeSchoolId !== id) mutate(id);
+  }, [school, activeSchoolId, id, mutate]);
   return (
     <Protected role="professor">
       {(user) => (
         <TeacherShell user={user}>
-          <ErrorMessage error={schools.error} />
+          <ErrorMessage error={schools.error || error} />
+          {error && (
+            <button onClick={() => mutate(id)} className="min-h-11 underline">
+              Tentar novamente
+            </button>
+          )}
           {schools.isPending ? (
             <p role="status">Carregando escola…</p>
           ) : school ? (
@@ -28,7 +37,11 @@ export function PageContent({ id }: { id: number; }) {
                 <h1 className="page-title">{school.nome}</h1>
                 <p className="page-description mt-3">Minhas turmas</p>
               </div>
-              <ClassroomList user={user} schoolId={id} />
+              {activeSchoolId === id && !isPending ? (
+                <ClassroomList user={user} schoolId={id} />
+              ) : (
+                !error && <p role="status">Carregando turmas da escola…</p>
+              )}
             </div>
           ) : (
             schools.isSuccess && (
@@ -41,11 +54,7 @@ export function PageContent({ id }: { id: number; }) {
   );
 }
 
-export default function Page({
-  params,
-}: {
-  params: Promise<{ id: string; }>;
-}) {
+export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   return <PageContent id={Number(id)} />;
 }

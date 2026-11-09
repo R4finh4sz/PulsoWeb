@@ -42,4 +42,21 @@ test("salva a ementa no mock e usa seus tópicos nos temas e nas questões", asy
       })),
     }),
   ).rejects.toThrow("tema válido");
+  const updatedTopic = {
+    ...topic,
+    title: "Porcentagens",
+    description: "Cálculo de porcentagens.",
+  };
+  await subjectsApi.updateSyllabus(5, subject.id, {
+    name: subject.name,
+    syllabus: subject.syllabus ?? "",
+    topics: [updatedTopic],
+  });
+  expect(
+    (await subjectsApi.list(5)).find((item) => item.id === subject.id)?.topics,
+  ).toEqual([updatedTopic]);
+  expect(await quizzesApi.themes(5, subject.id)).toEqual([updatedTopic.title]);
+  expect((await quizzesApi.list(5, subject.id))[0].questions[0].theme).toBe(
+    topic.title,
+  );
 });

@@ -1,3 +1,4 @@
+import { buildClassroomReports, reportMetrics } from "@/utils/teacherReports";
 import type { Faq } from "@/integrations/faqs/api";
 import type { AccountDeletion } from "@/integrations/profile/deletions";
 import type { Registration } from "@/integrations/registration/api";
@@ -420,7 +421,11 @@ export function mockRequest(
       entries,
     };
   }
-  if (parts[0] === "school-invitations") {
+  if (
+    parts[0] === "school-invitations" ||
+    (parts[0] === "me" && parts[1] === "school-invitations")
+  ) {
+    if (parts[0] === "me") parts.shift();
     if (current.role !== "TEACHER")
       throw new Error(
         "Somente professores podem responder convites de escolas.",
@@ -632,6 +637,68 @@ export function mockRequest(
         })),
     );
   }
+  if (url.pathname === "/teacher/reports" && method === "GET") {
+    const results = mockTeacherQuizzes(current, subjects)
+      .filter((quiz) => {
+        const room = rooms.find((room) => room.id === quiz.classroomId);
+        return (
+          (!url.searchParams.has("schoolId") ||
+            room?.schoolId === Number(url.searchParams.get("schoolId"))) &&
+          (!url.searchParams.has("classroomId") ||
+            quiz.classroomId === Number(url.searchParams.get("classroomId"))) &&
+          (url.searchParams.get("status") !== "FINISHED" ||
+            quiz.status === "CLOSED")
+        );
+      })
+      .map((quiz) => {
+        const room = rooms.find((room) => room.id === quiz.classroomId);
+        return {
+          quiz: {
+            ...quiz,
+            subjectName:
+              subjects.find((subject) => subject.id === quiz.subjectId)?.name ??
+              "Disciplina",
+            classroomName: room?.name ?? "Turma",
+            schoolName:
+              schools.find((school) => school.id === room?.schoolId)?.nome ??
+              "Escola",
+          },
+          students: mockQuizStudents(quiz, users),
+        };
+      });
+    const reports = buildClassroomReports(results);
+    const metrics = reportMetrics(reports.flatMap((room) => room.students));
+    const summary = {
+      averageGrade: metrics.average,
+      expectedSubmissions: metrics.assigned,
+      submittedCount: metrics.submitted,
+      completionPercentage: metrics.completion,
+      studentsWithOverdue: metrics.attention,
+      recipientHistoryComplete: true,
+    };
+    return {
+      generatedAt: new Date().toISOString(),
+      summary: {
+        ...summary,
+        classroomCount: reports.length,
+        activityCount: results.length,
+      },
+      classrooms: reports.map((room) => ({
+        classroomId: room.id,
+        classroomName: room.name,
+        schoolId: rooms.find((item) => item.id === room.id)?.schoolId ?? null,
+        schoolName: room.school,
+        studentCount: room.students.length,
+        activityCount: room.activities,
+        averageGrade: room.average,
+        expectedSubmissions: room.assigned,
+        submittedCount: room.submitted,
+        completionPercentage: room.completion,
+        studentsWithOverdue: room.attention,
+        recipientHistoryComplete: true,
+      })),
+    };
+  }
   if (path === "/teacher/activities" && method === "GET")
     return clone(
       mockTeacherQuizzes(current, subjects).map((quiz) => {
@@ -665,6 +732,33 @@ export function mockRequest(
     return { ...terms };
   }
   if (parts[0] === "schools") {
+    if (parts[1] === "search" && method === "GET") {
+      const cep = url.searchParams.get("cep")?.replace(/\D/g, "");
+      const q = (url.searchParams.get("q") ?? "").toLocaleLowerCase("pt-BR");
+      const page = Number(url.searchParams.get("page") ?? 0);
+      const size = Number(url.searchParams.get("size") ?? 20);
+      const results = schools.filter(
+        (school) =>
+          (!cep || school.cep?.replace(/\D/g, "") === cep) &&
+          school.nome.toLocaleLowerCase("pt-BR").includes(q),
+      );
+      return {
+        content: results
+          .slice(page * size, (page + 1) * size)
+          .map((school) => ({
+            id: String(school.id),
+            name: school.nome,
+            city: school.cidade,
+            state: school.uf ?? "",
+            cep: school.cep ?? null,
+          })),
+        page,
+        size,
+        totalElements: results.length,
+        totalPages: Math.ceil(results.length / size),
+      };
+    }
+
     if (method === "POST") {
       const school = { ...data, id: schools.length + 1 } as School;
       schools.push(school);
@@ -904,6 +998,23 @@ export function mockRequest(
         }
         if (!canAccessSubject(subject, current.id))
           throw new Error("Aceite o convite para acessar esta matéria.");
+        if (
+          parts.length === 5 &&
+          parts[4] === "syllabus" &&
+          method === "PATCH"
+        ) {
+          if (current.role !== "TEACHER")
+            throw new Error(
+              "Somente professores da disciplina podem editar a ementa.",
+            );
+          const parsed = CreateSubjectSchema.parse({
+            topics: data.topics,
+            name: subject.name,
+            syllabus: subject.syllabus ?? "",
+          });
+          subject.topics = parsed.topics;
+          return clone(subject);
+        }
         return mockSubjectQuizzes(subject, current, parts[4], method, body);
       }
       if (method === "POST") {

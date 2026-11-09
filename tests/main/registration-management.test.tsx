@@ -32,7 +32,7 @@ jest.mock("@/integrations/registration/api", () => ({
   },
 }));
 jest.mock("@/integrations/schools/api", () => ({
-  schoolsApi: { list: jest.fn() },
+  schoolsApi: { list: jest.fn(), searchByCep: jest.fn() },
 }));
 jest.mock("@/utils/viacep", () => ({
   ...jest.requireActual("@/utils/viacep"),
@@ -65,14 +65,12 @@ const InvitationPage = ({
 }) =>
   resource === "coordinators" ? <NewCoordinatorPage /> : <NewTeacherPage />;
 test("coordenação separa professores e alunos, busca e aprova sem transferências", async () => {
-  jest
-    .mocked(authApi.me)
-    .mockResolvedValue({
-      id: 2,
-      role: "PEDAGOGICAL_COORDINATOR",
-      fullName: "Coord",
-      email: "c@b.com",
-    } as Awaited<ReturnType<typeof authApi.me>>);
+  jest.mocked(authApi.me).mockResolvedValue({
+    id: 2,
+    role: "PEDAGOGICAL_COORDINATOR",
+    fullName: "Coord",
+    email: "c@b.com",
+  } as Awaited<ReturnType<typeof authApi.me>>);
   jest.mocked(registrationApi.list).mockResolvedValue({
     content: [
       { ...request, hasPhoto: false },
@@ -114,20 +112,32 @@ test("coordenação separa professores e alunos, busca e aprova sem transferênc
   );
 });
 beforeEach(() => {
-  jest
-    .mocked(authApi.me)
-    .mockResolvedValue({
-      id: 1,
-      role: "ADMIN",
-      fullName: "Admin",
-      email: "admin@b.com",
-    } as Awaited<ReturnType<typeof authApi.me>>);
+  jest.mocked(authApi.me).mockResolvedValue({
+    id: 1,
+    role: "ADMIN",
+    fullName: "Admin",
+    email: "admin@b.com",
+  } as Awaited<ReturnType<typeof authApi.me>>);
   jest
     .mocked(registrationApi.list)
     .mockResolvedValue({ content: [request], totalPages: 2 });
   jest.mocked(registrationApi.photo).mockResolvedValue(new Blob(["photo"]));
   jest.mocked(registrationApi.review).mockResolvedValue(request);
   jest.mocked(schoolsApi.list).mockResolvedValue([school]);
+  jest
+    .mocked(schoolsApi.searchByCep)
+    .mockResolvedValue({
+      content: [
+        {
+          id: "1",
+          name: school.nome,
+          city: school.cidade,
+          state: "SP",
+          cep: "01001000",
+        },
+      ],
+      totalPages: 1,
+    });
   jest.mocked(registrationApi.invite).mockResolvedValue({ delivery: "EMAIL" });
 });
 test("solicitações exibem foto, aprovam/recusam e paginam", async () => {
@@ -201,14 +211,12 @@ test.each(["teachers", "coordinators"] as const)(
   "convite para %s envia email e escola quando exigida",
   async (resource) => {
     if (resource === "teachers")
-      jest
-        .mocked(authApi.me)
-        .mockResolvedValue({
-          id: 1,
-          role: "PEDAGOGICAL_COORDINATOR",
-          fullName: "Coord",
-          email: "c@b.com",
-        } as Awaited<ReturnType<typeof authApi.me>>);
+      jest.mocked(authApi.me).mockResolvedValue({
+        id: 1,
+        role: "PEDAGOGICAL_COORDINATOR",
+        fullName: "Coord",
+        email: "c@b.com",
+      } as Awaited<ReturnType<typeof authApi.me>>);
     const { container } = render(<InvitationPage resource={resource} />, {
       wrapper: queryWrapper().wrapper,
     });
@@ -217,17 +225,19 @@ test.each(["teachers", "coordinators"] as const)(
       target: { value: "a@b.com" },
     });
     if (resource === "coordinators") {
-      fireEvent.click(screen.getByRole("button", { name: "Escola" }));
-      fireEvent.change(screen.getByPlaceholderText("Nome ou CEP"), {
-        target: { value: "São" },
+      fireEvent.change(screen.getByLabelText("CEP da escola"), {
+        target: { value: "01001000" },
       });
-      fireEvent.click(
-        await screen.findByRole("button", { name: /Escola São Paulo/ }),
-      );
+      await screen.findByRole("option", { name: /Escola/ });
+      fireEvent.change(screen.getByLabelText("Escola"), {
+        target: { value: "1" },
+      });
     }
     fireEvent.submit(container.querySelector("form")!);
     expect(
-      await screen.findByText("Convite enviado por e-mail com link de cadastro."),
+      await screen.findByText(
+        "Convite enviado por e-mail com link de cadastro.",
+      ),
     ).toBeVisible();
     expect(registrationApi.invite).toHaveBeenCalledWith(
       resource,
@@ -237,36 +247,28 @@ test.each(["teachers", "coordinators"] as const)(
     );
   },
 );
-test("convite filtra nome e endereço do CEP e fecha menu externo", async () => {
-  jest
-    .mocked(findAddressByCep)
-    .mockResolvedValue({ logradouro: "Rua Teste", localidade: "São Paulo" });
+test("invitation searches registered schools by CEP without external address lookup", async () => {
   render(<InvitationPage resource="coordinators" />, {
     wrapper: queryWrapper().wrapper,
   });
-  await screen.findByLabelText("E-mail");
-  fireEvent.click(screen.getByRole("button", { name: "Escola" }));
-  const search = screen.getByPlaceholderText("Nome ou CEP");
-  fireEvent.change(search, { target: { value: "Ausente" } });
-  await screen.findByText("Nenhuma escola encontrada.");
-
-  fireEvent.change(search, { target: { value: "01001000" } });
-  await waitFor(() =>
-    expect(findAddressByCep).toHaveBeenCalledWith("01001000"),
+  fireEvent.change(await screen.findByLabelText("CEP da escola"), {
+    target: { value: "01001000" },
+  });
+  await screen.findByRole("option", { name: /Escola/ });
+  expect(schoolsApi.searchByCep).toHaveBeenCalledWith(
+    "01001000",
+    0,
+    expect.any(AbortSignal),
   );
-  await screen.findByRole("button", { name: /Escola São Paulo/ });
-  fireEvent.pointerDown(document.body);
-  expect(screen.queryByPlaceholderText("Nome ou CEP")).toBeNull();
+  expect(findAddressByCep).not.toHaveBeenCalled();
 });
 test("erro ao convidar mantém email para tentar novamente", async () => {
-  jest
-    .mocked(authApi.me)
-    .mockResolvedValue({
-      id: 1,
-      role: "PEDAGOGICAL_COORDINATOR",
-      fullName: "Coord",
-      email: "c@b.com",
-    } as Awaited<ReturnType<typeof authApi.me>>);
+  jest.mocked(authApi.me).mockResolvedValue({
+    id: 1,
+    role: "PEDAGOGICAL_COORDINATOR",
+    fullName: "Coord",
+    email: "c@b.com",
+  } as Awaited<ReturnType<typeof authApi.me>>);
   jest.mocked(registrationApi.invite).mockRejectedValue(new Error("Falha"));
   const { container } = render(<InvitationPage resource="teachers" />, {
     wrapper: queryWrapper().wrapper,

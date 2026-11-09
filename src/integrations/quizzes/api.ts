@@ -1,8 +1,15 @@
+import { teacherQuizzes } from "./teacher";
+import { useAuthState } from "@/integrations/auth/state";
+import { getDemoUser, mockAccessEnabled } from "@/mocks/access";
 import { apiRequest } from "@/api/client";
 import type { CreateQuiz } from "@/validation/Quiz.validation";
-import { ThemeNameSchema } from "@/validation/Theme.validation";
+
+const demo = () =>
+  mockAccessEnabled &&
+  !!getDemoUser(useAuthState.getState().session?.accessToken);
 
 export type Quiz = CreateQuiz & {
+  questionCount?: number;
   id: number;
   subjectId: number;
   classroomId: number;
@@ -44,27 +51,57 @@ export type Submission = {
   score: NonNullable<StudentQuizResult["score"]>;
 };
 export const quizzesApi = {
-  removeTheme: (classroomId: number, subjectId: number, name: string) =>
-    apiRequest<void>(path(classroomId, subjectId) + "/themes?" + new URLSearchParams({ name }), { method: "DELETE" }),
-  studentList: (signal?: AbortSignal) => apiRequest<StudentQuiz[]>("/student/quizzes", { signal }),
-  get: (id: number, signal?: AbortSignal) => apiRequest<StudentQuiz>(`/quizzes/${id}`, { signal }),
-  result: (id: number, signal?: AbortSignal) => apiRequest<Submission>(`/quizzes/${id}/result`, { signal }),
-  submit: (id: number, answers: (number | null)[]) => apiRequest<Submission>(`/quizzes/${id}/submit`, { method: "POST", body: { answers } }),
-  createTheme: async (classroomId: number, subjectId: number, name: string) => apiRequest<string | { name: string }>(path(classroomId, subjectId) + "/themes", { method: "POST", body: { name: ThemeNameSchema.parse(name) } }),
+  reports: async (signal?: AbortSignal): Promise<QuizResults[]> => {
+    if (!demo()) return teacherQuizzes.reports(signal);
+    const activities = await quizzesApi.activities(signal);
+    return Promise.all(
+      activities.map((activity) => quizzesApi.results(activity.id, signal)),
+    );
+  },
+  studentList: (signal?: AbortSignal) =>
+    apiRequest<StudentQuiz[]>("/student/quizzes", { signal }),
+  get: (id: number, signal?: AbortSignal) =>
+    apiRequest<StudentQuiz>(`/quizzes/${id}`, { signal }),
+  result: (id: number, signal?: AbortSignal) =>
+    apiRequest<Submission>(`/quizzes/${id}/result`, { signal }),
+  submit: (id: number, answers: (number | null)[]) =>
+    apiRequest<Submission>(`/quizzes/${id}/submit`, {
+      method: "POST",
+      body: { answers },
+    }),
 
   results: (quizId: number, signal?: AbortSignal) =>
-    apiRequest<QuizResults>(`/teacher/activities/${quizId}/results`, {
-      signal,
-    }),
+    !demo()
+      ? teacherQuizzes.results(quizId, signal)
+      : apiRequest<QuizResults>(`/teacher/activities/${quizId}/results`, {
+          signal,
+        }),
   activities: (signal?: AbortSignal) =>
-    apiRequest<TeacherActivity[]>("/teacher/activities", { signal }),
+    !demo()
+      ? teacherQuizzes.activities(signal)
+      : apiRequest<TeacherActivity[]>("/teacher/activities", { signal }),
   themes: (classroomId: number, subjectId: number, signal?: AbortSignal) =>
-    apiRequest<(string | { name: string })[]>(path(classroomId, subjectId) + "/themes", { signal }).then((themes) => themes.map((theme) => typeof theme === "string" ? theme : theme.name)),
+    !demo()
+      ? teacherQuizzes.themes(classroomId, subjectId, signal)
+      : apiRequest<(string | { name: string })[]>(
+          path(classroomId, subjectId) + "/themes",
+          { signal },
+        ).then((themes) =>
+          themes.map((theme) =>
+            typeof theme === "string" ? theme : theme.name,
+          ),
+        ),
   list: (classroomId: number, subjectId: number, signal?: AbortSignal) =>
-    apiRequest<Quiz[]>(path(classroomId, subjectId) + "/quizzes", { signal }),
+    !demo()
+      ? teacherQuizzes.list(classroomId, subjectId, signal)
+      : apiRequest<Quiz[]>(path(classroomId, subjectId) + "/quizzes", {
+          signal,
+        }),
   create: (classroomId: number, subjectId: number, body: CreateQuiz) =>
-    apiRequest<Quiz>(path(classroomId, subjectId) + "/quizzes", {
-      method: "POST",
-      body,
-    }),
+    !demo()
+      ? teacherQuizzes.create(subjectId, body)
+      : apiRequest<Quiz>(path(classroomId, subjectId) + "/quizzes", {
+          method: "POST",
+          body,
+        }),
 };

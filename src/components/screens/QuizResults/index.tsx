@@ -3,7 +3,7 @@ import { normalizeText } from "@/utils/text";
 
 import {
   ErrorMessage,
-  actionClass
+  actionClass,
 } from "@/components/screens/Integration/shared";
 import { BackLink } from "@/components/ui/BackLink";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -13,7 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ClipboardList, Search, Users } from "lucide-react";
 import { useState } from "react";
 
-export function Results({ quizId }: { quizId: number; }) {
+export function Results({ quizId }: { quizId: number }) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [filter, setFilter] = useState("ALL");
@@ -168,37 +168,40 @@ export function Results({ quizId }: { quizId: number; }) {
                         </ul>
                       ) : (
                         <p className="mt-2 text-sm text-emerald-800">
-                          Nenhum erro. Todas as questões foram respondidas
-                          corretamente.
+                          {student.score.correct === student.score.total
+                            ? "Nenhum erro. Todas as questões foram respondidas corretamente."
+                            : "Esta atividade não possui análise de erros por tema."}
                         </p>
                       )}
                     </div>
-                    <details>
-                      <summary className="cursor-pointer text-sm font-medium text-(--blue-dark)">
-                        Respostas por questão
-                      </summary>
-                      <ol className="mt-4 list-decimal space-y-4 pl-5">
-                        {student.score.review.map((answer, index) => (
-                          <li key={index} className="text-sm">
-                            <p className="break-words font-medium">
-                              {answer.question}
-                            </p>
-                            <p className="mt-1 text-xs text-(--muted)">
-                              {answer.theme} ·{" "}
-                              {answer.isCorrect ? "Correta" : "Incorreta"}
-                            </p>
-                            <p className="mt-2 break-words">
-                              Resposta: {answer.answer ?? "Sem resposta"}
-                            </p>
-                            {!answer.isCorrect && (
-                              <p className="break-words text-emerald-800">
-                                Resposta correta: {answer.correctAnswer}
+                    {student.score.review.length > 0 && (
+                      <details>
+                        <summary className="cursor-pointer text-sm font-medium text-(--blue-dark)">
+                          Respostas por questão
+                        </summary>
+                        <ol className="mt-4 list-decimal space-y-4 pl-5">
+                          {student.score.review.map((answer, index) => (
+                            <li key={index} className="text-sm">
+                              <p className="break-words font-medium">
+                                {answer.question}
                               </p>
-                            )}
-                          </li>
-                        ))}
-                      </ol>
-                    </details>
+                              <p className="mt-1 text-xs text-(--muted)">
+                                {answer.theme} ·{" "}
+                                {answer.isCorrect ? "Correta" : "Incorreta"}
+                              </p>
+                              <p className="mt-2 break-words">
+                                Resposta: {answer.answer ?? "Sem resposta"}
+                              </p>
+                              {!answer.isCorrect && (
+                                <p className="break-words text-emerald-800">
+                                  Resposta correta: {answer.correctAnswer}
+                                </p>
+                              )}
+                            </li>
+                          ))}
+                        </ol>
+                      </details>
+                    )}
                   </div>
                 ) : (
                   <p className="mt-5 border-t border-(--line) pt-5 text-sm text-(--muted)">

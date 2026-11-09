@@ -9,6 +9,7 @@ import {
 } from "@/components/screens/Integration/shared";
 import { StatCard } from "@/components/ui/StatCard";
 import { useSchools } from "@/integrations/schools/hooks";
+import { useUsers } from "@/integrations/users/hooks";
 import { getInitials } from "@/utils/text";
 import { ArrowRight, Search } from "lucide-react";
 import Link from "next/link";
@@ -16,11 +17,12 @@ import { useState } from "react";
 
 export default function AdminSchoolsPage() {
   const query = useSchools();
+  const students = useUsers("students", { page: 0, size: 1 });
+  const teachers = useUsers("teachers", { page: 0, size: 1 });
   const [search, setSearch] = useState("");
   const term = search.trim().toLocaleLowerCase("pt-BR");
-  const schools = query.data?.filter(
-    (school) =>
-      school.nome.toLocaleLowerCase("pt-BR").includes(term),
+  const schools = query.data?.filter((school) =>
+    school.nome.toLocaleLowerCase("pt-BR").includes(term),
   );
   return (
     <Protected role="admin">
@@ -40,9 +42,33 @@ export default function AdminSchoolsPage() {
               }
               icon="users"
             />
-            <StatCard label="Alunos cadastrados" value="--" icon="users" />
-            <StatCard label="Professores cadastrados" value="--" icon="users" />
+            <StatCard
+              label="Alunos cadastrados"
+              value={
+                students.isError ? "--" : (students.data?.totalElements ?? "--")
+              }
+              icon="users"
+            />
+            <StatCard
+              label="Professores cadastrados"
+              value={
+                teachers.isError ? "--" : (teachers.data?.totalElements ?? "--")
+              }
+              icon="users"
+            />
           </div>
+          {(students.isError || teachers.isError) && (
+            <button
+              type="button"
+              className={actionClass}
+              onClick={() => {
+                if (students.isError) void students.refetch();
+                if (teachers.isError) void teachers.refetch();
+              }}
+            >
+              Tentar carregar totais novamente
+            </button>
+          )}
           <section className="space-y-4 rounded-xl bg-white p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">Escolas cadastradas</h2>

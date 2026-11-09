@@ -2,24 +2,16 @@
 
 import { SubjectForm } from "@/components/screens/ClassroomDetails/CreateSubject";
 import { TeacherShell } from "@/components/screens/Dashboard/TeacherShell";
-import {
-  Protected
-} from "@/components/screens/Integration/shared";
-import { useAuthState } from "@/integrations/auth/state";
-import { getDemoUser, mockAccessEnabled } from "@/mocks/access";
+import { Protected } from "@/components/screens/Integration/shared";
 import { use } from "react";
 
-function PageContent({ classroomId }: { classroomId: number; }) {
-  const token = useAuthState((state) => state.session?.accessToken);
+function PageContent({ classroomId }: { classroomId: number }) {
   return (
     <Protected role="professor">
       {(user) => (
         <TeacherShell user={user}>
           {Number.isSafeInteger(classroomId) && classroomId > 0 ? (
-            <SubjectForm
-              classroomId={classroomId}
-              canSave={mockAccessEnabled && !!getDemoUser(token)}
-            />
+            <SubjectForm classroomId={classroomId} canSave={true} />
           ) : (
             <p role="alert">Identificador de turma inválido.</p>
           )}
@@ -29,7 +21,7 @@ function PageContent({ classroomId }: { classroomId: number; }) {
   );
 }
 
-export default function Page({ params }: { params: Promise<{ id: string; }>; }) {
+export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   return <PageContent classroomId={Number(id)} />;
 }

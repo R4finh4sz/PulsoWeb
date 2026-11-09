@@ -3,12 +3,13 @@
 import {
   actionClass,
   ErrorMessage,
-  fieldClass
+  fieldClass,
 } from "@/components/screens/Integration/shared";
 import { useUnsavedQuiz } from "@/components/screens/SubjectQuizzes/useUnsavedQuiz";
 import { FeedbackModalContent } from "@/components/ui/FeedbackModal";
 import { useClassroom } from "@/integrations/classrooms/hooks";
 import { MAX_SUBJECTS, subjectsApi } from "@/integrations/subjects/api";
+import type { Subject } from "@/integrations/types";
 import { useApiMutation } from "@/integrations/useApiMutation";
 import {
   CreateSubjectSchema,
@@ -16,7 +17,7 @@ import {
   type CreateSubject,
   type SubjectTopic,
 } from "@/validation/Subject.validation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
@@ -48,36 +49,59 @@ function FieldError({
 export function SubjectForm({
   classroomId,
   canSave,
+  existing,
+  onSaved,
 }: {
   classroomId: number;
   canSave: boolean;
+  existing?: Subject;
+  onSaved?: () => void;
 }) {
   const router = useRouter();
+  const client = useQueryClient();
   const room = useClassroom(classroomId);
   const subjects = useQuery({
     queryKey: ["subjects", classroomId],
     queryFn: ({ signal }) => subjectsApi.list(classroomId, signal),
   });
-  const [name, setName] = useState("");
-  const nextId = useRef(1);
-  const [topics, setTopics] = useState(() => [{ id: 0, ...emptyTopic() }]);
+  const initialTopics = existing?.topics?.length
+    ? existing.topics
+    : [emptyTopic()];
+  const [name, setName] = useState(existing?.name ?? "");
+  const nextId = useRef(initialTopics.length);
+  const [topics, setTopics] = useState(() =>
+    initialTopics.map((topic, id) => ({ ...topic, id })),
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const removeDialog = useRef<HTMLDialogElement>(null);
   const [topicToRemove, setTopicToRemove] = useState<number | null>(null);
   const mutation = useApiMutation((body: CreateSubject) =>
-    subjectsApi.create(classroomId, body),
+    existing
+      ? subjectsApi.updateSyllabus(classroomId, existing.id, body)
+      : subjectsApi.create(classroomId, body),
   );
-  const dirty = !!(
-    name ||
-    topics.some((topic) => topic.title || topic.description || topic.references)
-  );
+  const dirty = existing
+    ? JSON.stringify(
+        topics.map(({ title, description, references }) => ({
+          title,
+          description,
+          references,
+        })),
+      ) !== JSON.stringify(initialTopics)
+    : !!(
+        name ||
+        topics.some(
+          (topic) => topic.title || topic.description || topic.references,
+        )
+      );
   const { requestExit, confirmation } = useUnsavedQuiz(
     dirty && !mutation.isSuccess,
     mutation.isPending,
-    "Sair da criação da disciplina?",
+    existing ? "Sair da edição da ementa?" : "Sair da criação da disciplina?",
   );
-  const back = `/teacher/classrooms/${classroomId}`;
-  const limitReached = (subjects.data?.length ?? 0) >= MAX_SUBJECTS;
+  const back = `/teacher/classrooms/${classroomId}${existing ? `/subjects/${existing.id}/syllabus` : ""}`;
+  const limitReached =
+    !existing && (subjects.data?.length ?? 0) >= MAX_SUBJECTS;
   const pending = mutation.isPending;
 
   useEffect(() => {
@@ -130,7 +154,7 @@ export function SubjectForm({
     );
     const parsed = CreateSubjectSchema.safeParse({
       name,
-      syllabus: "",
+      syllabus: existing?.syllabus ?? "",
       topics: filledTopics,
     });
     if (!parsed.success) {
@@ -152,7 +176,12 @@ export function SubjectForm({
     setErrors({});
     try {
       const subject = await mutation.mutateAsync(parsed.data);
-      router.push(`${back}/subjects/${subject.id}`);
+      if (existing) {
+        await client.invalidateQueries({
+          queryKey: ["quiz-themes", classroomId, existing.id],
+        });
+        onSaved?.();
+      } else router.push(`${back}/subjects/${subject.id}`);
     } catch {
       // Preserve all fields so the teacher can retry.
     }
@@ -182,13 +211,19 @@ export function SubjectForm({
       <button
         type="button"
         disabled={pending}
-        onClick={() => requestExit(() => router.push(back))}
+        onClick={() =>
+          requestExit(() =>
+            existing && onSaved ? onSaved() : router.push(back),
+          )
+        }
         className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-(--blue-dark) hover:underline focus-visible:outline-2 focus-visible:outline-offset-4"
       >
         <ArrowLeft size={18} aria-hidden="true" /> Voltar
       </button>
       <header>
-        <h1 className="page-title">Nova disciplina</h1>
+        <h1 className="page-title">
+          {existing ? `Editar ementa · ${existing.name}` : "Nova disciplina"}
+        </h1>
         <p className="page-description mt-2 break-words">
           {room.data.name} · Organize a ementa e os temas das atividades.
         </p>
@@ -212,7 +247,7 @@ export function SubjectForm({
         onSubmit={submit}
         noValidate
         className="space-y-8 rounded-xl bg-(--surface) p-5 shadow-[0_8px_28px_rgba(22,62,75,0.10)] sm:p-8"
-        aria-label="Criar disciplina"
+        aria-label={existing ? "Editar ementa" : "Criar disciplina"}
       >
         <fieldset
           disabled={pending || limitReached}
@@ -227,6 +262,7 @@ export function SubjectForm({
                 id="subject-name"
                 name="name"
                 value={name}
+                readOnly={!!existing}
                 onChange={(event) => {
                   setName(event.target.value);
                   clearError("subject-name");
@@ -410,7 +446,11 @@ export function SubjectForm({
           <button
             type="button"
             disabled={pending}
-            onClick={() => requestExit(() => router.push(back))}
+            onClick={() =>
+              requestExit(() =>
+                existing && onSaved ? onSaved() : router.push(back),
+              )
+            }
             className="min-h-12 rounded-xl border border-(--line) px-5 text-sm font-medium hover:bg-white disabled:opacity-50"
           >
             Cancelar
@@ -420,7 +460,7 @@ export function SubjectForm({
             disabled={pending || limitReached || !canSave}
             className={`${actionClass} min-h-12`}
           >
-            {pending ? "Salvando disciplina…" : "Criar disciplina"}
+            {pending ? "Salvando…" : existing ? "Salvar" : "Criar disciplina"}
           </button>
         </div>
       </form>

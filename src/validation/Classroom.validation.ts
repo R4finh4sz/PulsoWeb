@@ -15,12 +15,20 @@ export const ClassroomSchema = z.object({
       (ids) => new Set(ids).size === ids.length,
       "Não repita professores.",
     ),
-  period: z.enum(["Manhã", "Tarde", "Noite"], { error: "Selecione um turno." }),
+  period: z.enum(["Manhã", "Tarde", "Noite", "Integral"], {
+    error: "Selecione um turno.",
+  }),
 });
 
 export type ClassroomForm = z.infer<typeof ClassroomSchema>;
 
-export const ClassroomSelectionSchema = ClassroomSchema.pick({ year: true, identifier: true, period: true });
+export const ClassroomSelectionSchema = ClassroomSchema.pick({
+  year: true,
+  identifier: true,
+  period: true,
+});
 export const classroomYears = ["1", "2", "3"];
-export const classroomLetters = Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index));
-export const classroomPeriods = ["Manhã", "Tarde", "Noite"];
+export const classroomLetters = Array.from({ length: 26 }, (_, index) =>
+  String.fromCharCode(65 + index),
+);
+export const classroomPeriods = ["Manhã", "Tarde", "Noite", "Integral"];
