@@ -19,7 +19,7 @@ import {
   actionClass,
   EmptyState,
   ErrorMessage,
-  fieldClass
+  fieldClass,
 } from "@/components/screens/Integration/shared";
 const labels = {
   students: "Alunos",
@@ -122,7 +122,7 @@ export function UserForm({
       });
       if (!existing) form.reset();
       onDone?.();
-    } catch { }
+    } catch {}
   }
   return (
     <form
@@ -155,7 +155,7 @@ export function UserForm({
           name="email"
           type="email"
           required
-          maxLength={50}
+          maxLength={254}
           defaultValue={existing?.email}
           className={fieldClass}
         />
@@ -380,7 +380,7 @@ export function UserList({
     </section>
   );
 }
-export function UsersHome({ user }: { user: SessionUser; }) {
+export function UsersHome({ user }: { user: SessionUser }) {
   return user.role === "admin" ? (
     <UserList resource="coordinators" />
   ) : user.role === "coordenador" ? (
