@@ -1,104 +1,80 @@
 "use client";
 
-import { ActivityRow, Metric, panelClass } from "@/components/screens/AdminDashboard";
-import {
-  ErrorMessage,
-  Protected,
-  Workspace,
-} from "@/components/screens/Integration/shared";
-import { useSchools } from "@/integrations/schools/hooks";
-import { useUsers } from "@/integrations/users/hooks";
+import { Protected, Workspace } from "@/components/screens/Integration/shared";
+import { DashboardIcon, type IconName } from "@/components/ui/DashboardIcon";
 import Link from "next/link";
 
-export default function AdminHome() {
-  const schools = useSchools();
-  const coordinators = useUsers("coordinators", { page: 0, size: 1 });
-  const loading = schools.isPending || coordinators.isPending;
+const shortcuts: {
+  title: string;
+  description: string;
+  href: string;
+  icon: IconName;
+}[] = [
+  {
+    title: "Escolas",
+    description: "Consulte e gerencie as escolas da rede.",
+    href: "/admin/schools",
+    icon: "school",
+  },
+  {
+    title: "Cadastrar escola",
+    description: "Adicione uma instituição à plataforma.",
+    href: "/admin/schools/new",
+    icon: "school",
+  },
+  {
+    title: "Coordenadores",
+    description: "Consulte os coordenadores cadastrados.",
+    href: "/admin/coordinators",
+    icon: "users",
+  },
+  {
+    title: "Métricas",
+    description: "Acompanhe os indicadores da plataforma.",
+    href: "/admin/metrics",
+    icon: "chart",
+  },
+  {
+    title: "Solicitações de cadastro",
+    description: "Analise os pedidos de acesso à plataforma.",
+    href: "/admin/registration-requests",
+    icon: "check",
+  },
+  {
+    title: "Ranking",
+    description: "Consulte a classificação da rede escolar.",
+    href: "/admin/ranking",
+    icon: "trophy",
+  },
+];
 
+export default function AdminHome() {
   return (
     <Protected role="admin">
       {(user) => (
-        <Workspace user={user} title="Visão geral">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-sm text-(--muted)">
-                Acompanhe o movimento da sua rede escolar.
-              </p>
-              <p className="mt-1 text-xs text-(--muted)">
-                Última atualização: agora
-              </p>
-            </div>
-          </div>
-          <ErrorMessage error={schools.error || coordinators.error} />
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <Metric
-              label="Escolas cadastradas"
-              value={schools.data?.length ?? "--"}
-              detail="Instituições na sua rede"
-              icon="school"
-              tone="bg-[#e1f5f8] text-[#008da8]"
-            />
-            <Metric
-              label="Coordenadores"
-              value={coordinators.data?.totalElements ?? "--"}
-              detail="Lideranças cadastradas"
-              icon="users"
-              tone="bg-[#ddf8e8] text-[#18a957]"
-            />
-            <Metric
-              label="Alertas do sistema"
-              value="0"
-              detail="Nenhuma pendência crítica"
-              icon="chart"
-              tone="bg-[#fff2c9] text-[#d99700]"
-            />
-            <Metric
-              label="Disponibilidade"
-              value={loading ? "--" : "100%"}
-              detail="Serviços operacionais"
-              icon="check"
-              tone="bg-[#e1f5f8] text-[#008da8]"
-            />
-          </div>
-          <div>
-            <section className={panelClass}>
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <h2 className="font-semibold">Atividade recente</h2>
-                <Link
-                  href="/admin/schools"
-                  className="text-xs font-medium text-(--blue)"
-                >
-                  Ver escolas
-                </Link>
-              </div>
-              <ul>
-                <ActivityRow
-                  icon="school"
-                  tone="bg-[#e1f5f8] text-[#008da8]"
-                  title="Painel administrativo consultado"
-                  detail="Acompanhe escolas e coordenadores da rede"
-                  status="Ativo"
-                />
-                <ActivityRow
-                  icon="users"
-                  tone="bg-[#ddf8e8] text-[#18a957]"
-                  title="Gestão de coordenadores disponível"
-                  detail="Consulte ou cadastre novas lideranças"
-                  status="Pronto"
-                />
-                <ActivityRow
-                  icon="check"
-                  tone="bg-[#fff2c9] text-[#d99700]"
-                  title="Nenhuma pendência encontrada"
-                  detail="A plataforma está em dia"
-                  status="Estável"
-                />
-              </ul>
-            </section>
-          </div>
+        <Workspace
+          user={user}
+          title="Administração"
+          description="Escolha o que você deseja gerenciar na plataforma."
+        >
+          <nav
+            aria-label="Acesso rápido"
+            className="mx-auto grid max-w-4xl grid-cols-1 gap-3 sm:grid-cols-2"
+          >
+            {shortcuts.map(({ title, description, href, icon }) => (
+              <Link
+                key={href}
+                href={href}
+                title={description}
+                className="flex min-h-36 min-w-0 flex-col items-center justify-center gap-3 rounded-xl bg-[#163e4b] px-5 py-7 text-center text-white transition-colors hover:bg-[#245362]"
+              >
+                <DashboardIcon name={icon} className="h-8 w-8" />
+                <h2 className="text-base font-medium">{title}</h2>
+              </Link>
+            ))}
+          </nav>
         </Workspace>
       )}
     </Protected>
   );
 }
-

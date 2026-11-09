@@ -32,32 +32,3 @@ export function Metric({
     </article>
   );
 }
-
-export function ActivityRow({
-  icon,
-  tone,
-  title,
-  detail,
-  status,
-}: {
-  icon: "users" | "school" | "check";
-  tone: string;
-  title: string;
-  detail: string;
-  status: string;
-}) {
-  return (
-    <li className="flex items-center gap-3 border-b border-(--line) py-4 last:border-b-0 last:pb-0 first:pt-0">
-      <span className={`rounded-lg p-2 ${tone}`}>
-        <DashboardIcon name={icon} className="h-4 w-4" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium">{title}</p>
-        <p className="mt-1 text-xs text-(--muted)">{detail}</p>
-      </div>
-      <span className="rounded-full bg-[#e6f8ed] px-2.5 py-1 text-[10px] font-medium text-[#168044]">
-        {status}
-      </span>
-    </li>
-  );
-}

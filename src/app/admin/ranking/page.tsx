@@ -1,7 +1,7 @@
 "use client";
 
 import { Protected, Workspace } from "@/components/screens/Integration/shared";
-import { RankingContent } from "@/components/screens/Ranking";
+import { CoordinatorRanking } from "@/components/screens/Ranking/CoordinatorRanking";
 
 export default function Page() {
   return (
@@ -10,9 +10,9 @@ export default function Page() {
         <Workspace
           user={user}
           title="Ranking"
-          description="Acompanhe os destaques em acertos e participação entre todas as escolas."
+          description="Consulte a classificação dos alunos por ano, bimestre e escola."
         >
-          <RankingContent />
+          <CoordinatorRanking admin />
         </Workspace>
       )}
     </Protected>

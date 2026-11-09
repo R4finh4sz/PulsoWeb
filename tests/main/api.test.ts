@@ -1,3 +1,8 @@
+import { faqsApi } from "@/integrations/faqs/api";
+import { profileApi } from "@/integrations/profile/api";
+import { reportsApi } from "@/integrations/reports/api";
+import { metricsApi } from "@/integrations/metrics/api";
+import { studentRankingApi } from "@/integrations/ranking/students";
 import { apiRequest, ApiError } from "@/api/client";
 import { authApi } from "@/integrations/auth/api";
 import { classroomsApi } from "@/integrations/classrooms/api";
@@ -183,6 +188,35 @@ test.each([
     "PATCH",
     { status: "REJECTED", reason: "Motivo" },
   ],
+  [() => authApi.revokeTerms(), "/terms/revoke", "POST", undefined],
+  [
+    () =>
+      authApi.updateTwoFactor({ enabled: true, currentPassword: "Senha123" }),
+    "/auth/2fa",
+    "PATCH",
+    { enabled: true, currentPassword: "Senha123" },
+  ],
+  [
+    () =>
+      profileApi.changePassword({
+        currentPassword: "Senha123",
+        newPassword: "Nova12345",
+        confirmPassword: "Nova12345",
+      }),
+    "/auth/password",
+    "PATCH",
+    { currentPassword: "Senha123", newPassword: "Nova12345" },
+  ],
+  [
+    () =>
+      profileApi.requestDeletion({
+        currentPassword: "Senha123",
+        reason: "Motivo",
+      }),
+    "/me/deletion-requests",
+    "POST",
+    { currentPassword: "Senha123", reason: "Motivo" },
+  ],
 ] as const)(
   "envia método, caminho e payload corretos: %s",
   async (call, path, method, body) => {
@@ -284,4 +318,107 @@ test("me e termos tratam somente os status esperados", async () => {
     request.mockRejectedValueOnce(new Error("network"));
     await expect(call()).rejects.toThrow("network");
   }
+});
+
+test("FAQ envia edição por PUT para o id existente", async () => {
+  const body = {
+    title: "Pergunta",
+    message: "Resposta",
+    targetRole: "PEDAGOGICAL_COORDINATOR",
+  };
+  await faqsApi.update(7, body);
+  expect(request).toHaveBeenCalledWith("/faqs/7", { method: "PUT", body });
+});
+
+test("pesquisa escolas por CEP no servidor com paginação", async () => {
+  const signal = new AbortController().signal;
+  await schoolsApi.searchByCep("01001000", 1, signal);
+  expect(request).toHaveBeenCalledWith(
+    "/schools/search?cep=01001000&page=1&size=20",
+    { signal },
+  );
+});
+
+test("relatório envia filtros e cancelamento para a rota do professor", async () => {
+  const signal = new AbortController().signal;
+  await reportsApi.get(
+    { schoolId: 7, classroomId: 2, status: "FINISHED" },
+    signal,
+  );
+  expect(request).toHaveBeenCalledWith(
+    "/teacher/reports?schoolId=7&classroomId=2&status=FINISHED",
+    { signal },
+  );
+});
+
+test("edição da ementa envia somente tópicos para a disciplina correta", async () => {
+  const body = {
+    name: "Matemática",
+    syllabus: "Texto preservado",
+    topics: [
+      {
+        title: "Frações",
+        description: "Operações com frações.",
+        references: "",
+      },
+    ],
+  };
+  await subjectsApi.updateSyllabus(2, 7, body);
+  expect(request).toHaveBeenCalledWith("/classrooms/2/subjects/7/syllabus", {
+    method: "PATCH",
+    body: { topics: body.topics },
+  });
+});
+
+test("ranking envia o período e omite escola no escopo geral; métricas propagam cancelamento", async () => {
+  const signal = new AbortController().signal;
+  await studentRankingApi.list({ year: 2026, bimester: 4 }, signal);
+  expect(request).toHaveBeenLastCalledWith(
+    "/rankings/students?year=2026&bimester=4",
+    { signal },
+  );
+  await studentRankingApi.list(
+    { year: 2026, bimester: 2, schoolId: 7 },
+    signal,
+  );
+  expect(request).toHaveBeenLastCalledWith(
+    "/rankings/students?year=2026&bimester=2&schoolId=7",
+    { signal },
+  );
+  await metricsApi.school(signal);
+  expect(request).toHaveBeenLastCalledWith("/schools/me/metrics", { signal });
+  await metricsApi.growth(2026, signal);
+  expect(request).toHaveBeenLastCalledWith(
+    "/schools/me/metrics/growth?year=2026",
+    { signal },
+  );
+});
+
+test("new password validation prevents invalid requests", async () => {
+  await expect(
+    authApi.resetPassword("a@b.com", "token", "lowercase1", "lowercase1"),
+  ).rejects.toThrow();
+  await expect(
+    registrationApi.complete("token", {
+      name: "Ana",
+      ra: "1",
+      password: "lowercase1",
+      termsAccepted: true,
+      termsVersion: "1",
+    }),
+  ).rejects.toThrow();
+  await expect(
+    registrationApi.register({
+      name: "Ana",
+      ra: "1",
+      email: "a@b.com",
+      birthDate: "2000-01-01",
+      password: "Password1",
+      confirmPassword: "Different1",
+      schoolId: 1,
+      termsAccepted: true,
+      termsVersion: "1",
+    }),
+  ).rejects.toThrow("iguais");
+  expect(request).not.toHaveBeenCalled();
 });

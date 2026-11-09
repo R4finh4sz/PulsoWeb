@@ -45,6 +45,7 @@ export function TeacherShell({
     : coordinator
       ? [
           { label: "Início", href: home, icon: House },
+          { label: "Métricas", href: `${home}/metrics`, icon: ChartColumn },
           { label: "Alunos", href: `${home}/students`, icon: Users },
           { label: "Professores", href: `${home}/teachers`, icon: Users },
           {
