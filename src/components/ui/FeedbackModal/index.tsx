@@ -14,7 +14,11 @@ type FeedbackModalProps = {
   message: ReactNode;
   onClose: () => void;
   actionLabel?: string;
-  secondaryAction?: { label: string; onClick: () => void; destructive?: boolean };
+  secondaryAction?: {
+    label: string;
+    onClick: () => void;
+    destructive?: boolean;
+  };
   autoFocusAction?: boolean;
   icon?: LucideIcon;
   error?: ReactNode;
@@ -73,7 +77,7 @@ export function FeedbackModalContent({
           disabled={disabled}
           autoFocus={autoFocusAction}
           onClick={onClose}
-          className={`min-h-16 min-w-0 w-full rounded-xl px-3 py-3 ${secondaryAction ? "text-sm sm:text-base" : "text-xl"} font-semibold ${(secondaryAction?.destructive && type === "error") ? "border border-(--line) text-[#55565b] hover:bg-slate-50" : `text-white ${success ? "bg-[#5d8c3e]" : "bg-[var(--blue-dark)]"}`}`}
+          className={`min-h-16 min-w-0 w-full rounded-xl px-3 py-3 ${secondaryAction ? "text-sm sm:text-base" : "text-xl"} font-semibold ${secondaryAction?.destructive && type === "error" ? "border border-(--line) text-[#55565b] hover:bg-slate-50" : `text-white ${success ? "bg-[#5d8c3e]" : type === "error" ? "bg-[#e83e32] hover:bg-[#cf3026]" : "bg-[var(--blue-dark)]"}`}`}
         >
           {actionLabel ?? (success ? "Fechar" : "Tentar novamente")}
         </button>

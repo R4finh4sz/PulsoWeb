@@ -1,6 +1,7 @@
 "use client";
 
 import { authApi } from "@/integrations/auth/api";
+import { refreshSession } from "@/api/client";
 import { toSessionUser } from "@/integrations/auth/session";
 import { useAuthState } from "@/integrations/auth/state";
 import { homeRoutes } from "@/interfaces/auth";
@@ -16,8 +17,9 @@ import {
 
 import Button from "@/components/ui/Button";
 import { TwoFactorScreen } from "@/components/screens/Login/TwoFactorScreen";
+import { RequestErrorModal } from "../RequestErrorModal";
 
-function BlockingDialog({ children }: { children: ReactNode; }) {
+function BlockingDialog({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     ref.current?.showModal();
@@ -33,18 +35,14 @@ function BlockingDialog({ children }: { children: ReactNode; }) {
     </dialog>
   );
 }
-function Failure({ error }: { error: Error | null; }) {
-  return error ? (
-    <p role="alert" className="my-4 text-sm text-red-700">
-      {error.message}
-    </p>
-  ) : null;
+function Failure({ error }: { error: Error | null }) {
+  return <RequestErrorModal error={error} />;
 }
-function AuthorizedGate({ children }: { children: ReactNode; }) {
+function AuthorizedGate({ children }: { children: ReactNode }) {
+  const session = useAuthState((state) => state.session);
   const router = useRouter();
   const pathname = usePathname();
   const client = useQueryClient();
-  const [reading, setReading] = useState(false);
   const [checkedVersion, setCheckedVersion] = useState<string | null>(null);
 
   const terms = useQuery({
@@ -59,12 +57,32 @@ function AuthorizedGate({ children }: { children: ReactNode; }) {
   });
   const checked = !!terms.data && checkedVersion === terms.data.version;
   const hasAccepted =
-    !!terms.data && !!accepted.data?.includes(terms.data.version);
+    session?.user.termsAccepted === true &&
+    !!terms.data &&
+    !!accepted.data?.includes(terms.data.version);
   const accept = useMutation({
     mutationFn: async () => {
       if (!terms.data || !checked)
         throw new Error("Leia e aceite os termos para continuar.");
-      await authApi.accept(terms.data.version);
+      const version = terms.data.version;
+      const current = useAuthState.getState().session;
+      await authApi.accept(version);
+      const latest = useAuthState.getState().session;
+      if (current && latest?.accessToken === current.accessToken) {
+        useAuthState.getState().setSession({
+          ...latest,
+          user: {
+            ...latest.user,
+            termsAccepted: true,
+            termsAcceptedVersions: [
+              ...new Set([
+                ...(latest.user.termsAcceptedVersions ?? []),
+                version,
+              ]),
+            ],
+          },
+        });
+      }
       await client.invalidateQueries({ queryKey: ["terms-accepted"] });
     },
     onError: () => {
@@ -73,7 +91,11 @@ function AuthorizedGate({ children }: { children: ReactNode; }) {
     },
   });
   const noTerms = terms.isSuccess && terms.data === null;
-  const ready = (noTerms || hasAccepted) && !terms.isError && !accepted.isError;
+  const missingRequiredTerms = noTerms && session?.user.termsAccepted === false;
+  const ready =
+    ((noTerms && !missingRequiredTerms) || hasAccepted) &&
+    !terms.isError &&
+    !accepted.isError;
   const me = useQuery({
     queryKey: ["session"],
     queryFn: ({ signal }) => authApi.me(signal),
@@ -97,11 +119,19 @@ function AuthorizedGate({ children }: { children: ReactNode; }) {
         Verificando termos de uso…
       </p>
     );
-  if (terms.error || accepted.error)
+  if (terms.error || accepted.error || missingRequiredTerms)
     return (
       <BlockingDialog>
         <h1 id="auth-title">Não foi possível verificar os termos</h1>
-        <Failure error={terms.error || accepted.error} />
+        <Failure
+          error={
+            terms.error ||
+            accepted.error ||
+            new Error(
+              "Os termos de uso precisam ser aceitos, mas não estão disponíveis. Tente novamente mais tarde.",
+            )
+          }
+        />
         <Button
           onClick={() => {
             void terms.refetch();
@@ -118,48 +148,35 @@ function AuthorizedGate({ children }: { children: ReactNode; }) {
         <h1 id="auth-title" className="text-xl font-semibold">
           Termos de uso
         </h1>
-        {!reading ? (
-          <>
-            <p className="my-5 text-sm">
-              Para acessar o Pulso Escolar, você precisa ler e aceitar os termos
-              de uso.
-            </p>
-            <Button onClick={() => setReading(true)}>Ler termos de uso</Button>
-          </>
-        ) : (
-          <>
-            <h2 className="mt-5 font-semibold">{terms.data?.title}</h2>
-            <p className="text-xs text-slate-500">
-              Versão {terms.data?.version}
-            </p>
-            <div
-              tabIndex={0}
-              className="my-5 max-h-[45dvh] overflow-y-auto whitespace-pre-wrap rounded-lg border p-4 text-sm leading-6"
-            >
-              {terms.data?.content}
-            </div>
-            <label className="mb-5 flex gap-3 text-sm">
-              <input
-                type="checkbox"
-                checked={checked}
-                disabled={accept.isPending}
-                onChange={(event) =>
-                  setCheckedVersion(
-                    event.target.checked ? terms.data!.version : null,
-                  )
-                }
-              />
-              Li e aceito os termos de uso.
-            </label>
-            <Failure error={accept.error} />
-            <Button
-              disabled={!checked || accept.isPending || terms.isFetching}
-              onClick={() => accept.mutate()}
-            >
-              {accept.isPending ? "Registrando aceite…" : "Aceitar e continuar"}
-            </Button>
-          </>
-        )}
+        <p className="mt-5 text-xs text-slate-500">
+          Versão {terms.data?.version}
+        </p>
+        <div
+          tabIndex={0}
+          className="my-5 max-h-[45dvh] overflow-y-auto whitespace-pre-wrap rounded-lg border p-4 text-sm leading-6"
+        >
+          {terms.data?.content}
+        </div>
+        <label className="mb-5 flex gap-3 text-sm">
+          <input
+            type="checkbox"
+            checked={checked}
+            disabled={accept.isPending}
+            onChange={(event) =>
+              setCheckedVersion(
+                event.target.checked ? terms.data!.version : null,
+              )
+            }
+          />
+          Li e aceito os termos de uso.
+        </label>
+        <Failure error={accept.error} />
+        <Button
+          disabled={!checked || accept.isPending || terms.isFetching}
+          onClick={() => accept.mutate()}
+        >
+          {accept.isPending ? "Registrando aceite…" : "Aceitar e continuar"}
+        </Button>
       </BlockingDialog>
     );
   if (me.error)
@@ -184,8 +201,8 @@ function AuthorizedGate({ children }: { children: ReactNode; }) {
     );
   return children;
 }
-const subscribe = () => () => { };
-export function AuthGate({ children }: { children: ReactNode; }) {
+const subscribe = () => () => {};
+export function AuthGate({ children }: { children: ReactNode }) {
   const client = useQueryClient();
   const session = useAuthState((state) => state.session);
   const mounted = useSyncExternalStore(
@@ -214,11 +231,14 @@ export function AuthGate({ children }: { children: ReactNode; }) {
     }
     const remaining = Date.parse(session.expiresAt) - Date.now();
     if (!(remaining > 0)) {
-      useAuthState.getState().setSession(null);
+      void refreshSession().catch(() => undefined);
       return;
     }
     const timer = setTimeout(
-      () => useAuthState.getState().setSession(null),
+      () => {
+        if (Date.parse(session.expiresAt) <= Date.now())
+          void refreshSession().catch(() => undefined);
+      },
       Math.min(remaining, 2147483647),
     );
     return () => clearTimeout(timer);
@@ -230,7 +250,11 @@ export function AuthGate({ children }: { children: ReactNode; }) {
       </p>
     );
   if (session?.user.role === "STUDENT")
-    return <p role="status" className="p-8">Voltando ao login…</p>;
+    return (
+      <p role="status" className="p-8">
+        Voltando ao login…
+      </p>
+    );
   if (publicRegistration) return children;
   if (!session)
     return pathname === "/" ? (

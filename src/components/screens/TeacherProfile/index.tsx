@@ -3,44 +3,49 @@
 import {
   ErrorMessage,
   actionClass,
-  fieldClass
+  fieldClass,
 } from "@/components/screens/Integration/shared";
 import { BackLink } from "@/components/ui/BackLink";
 import { FeedbackModalContent } from "@/components/ui/FeedbackModal";
 import Input from "@/components/ui/Input";
 import { useLogout } from "@/integrations/auth/hooks";
-import { useAuthState } from "@/integrations/auth/state";
 import { profileApi, type ChangePassword } from "@/integrations/profile/api";
 import type { SessionUser } from "@/interfaces/auth";
 import { homeRoutes } from "@/interfaces/auth";
-import { getDemoUser, mockAccessEnabled } from "@/mocks/access";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
   BadgeCheck,
+  CircleHelp,
   Download,
   FileText,
   GraduationCap,
   LockKeyhole,
+  Mail,
+  ShieldCheck,
+  UserRound,
   Trash2,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { TwoFactorSettings } from "./TwoFactorSettings";
 
-export function Profile({ user }: { user: SessionUser; }) {
+export function Profile({ user }: { user: SessionUser }) {
+  const admin = user.role === "admin";
   const profileLabel =
-    user.role === "coordenador" ? "Dados do coordenador" : "Dados do professor";
-  const token = useAuthState((state) => state.session?.accessToken);
-  const demo = mockAccessEnabled && !!getDemoUser(token);
+    user.role === "admin"
+      ? "Dados do administrador"
+      : user.role === "coordenador"
+        ? "Dados do coordenador"
+        : "Dados do professor";
   const client = useQueryClient();
   const router = useRouter();
   const logout = useLogout();
   const profile = useQuery({
     queryKey: ["teacher-profile", user.id],
     queryFn: ({ signal }) => profileApi.get(signal),
-    enabled: demo,
   });
   const [active, setActive] = useState<"password" | "deletion">("password");
   const dialog = useRef<HTMLDialogElement>(null);
@@ -76,6 +81,7 @@ export function Profile({ user }: { user: SessionUser; }) {
   });
   const busy = password.isPending || deletion.isPending || logout.isPending;
   function open(value: "password" | "deletion") {
+    if (admin && value === "deletion") return;
     setActive(value);
     setDeletionPassword("");
     setDeletionReason("");
@@ -115,7 +121,7 @@ export function Profile({ user }: { user: SessionUser; }) {
             className="space-y-4 border-0 rounded-2xl bg-[#e8faff] px-5 py-6 shadow-sm"
           >
             <h2 className="text-lg font-semibold">{profileLabel}</h2>
-            {demo && profile.isPending ? (
+            {profile.isPending ? (
               <p role="status">Carregando dados…</p>
             ) : (
               <>
@@ -130,38 +136,78 @@ export function Profile({ user }: { user: SessionUser; }) {
                 )}
                 {profile.data && (
                   <dl className="divide-y divide-blue-200 rounded-2xl bg-[#e8faff] px-5">
-                    <div className="flex gap-3 py-5">
-                      <GraduationCap
-                        size={21}
-                        aria-hidden="true"
-                        className="mt-1 shrink-0 text-(--blue-dark)"
-                      />
-                      <div className="min-w-0">
-                        <dt className="text-xs text-(--muted)">Escolas</dt>
-                        <dd className="mt-1 space-y-1 text-sm">
-                          {profile.data.schools.length
-                            ? profile.data.schools.map((school) => (
-                              <p key={school.id} className="break-words">
-                                {school.nome}
-                              </p>
-                            ))
-                            : "Nenhuma escola vinculada"}
-                        </dd>
-                      </div>
-                    </div>
-                    <div className="flex gap-3 py-5">
-                      <BadgeCheck
-                        size={21}
-                        aria-hidden="true"
-                        className="mt-1 shrink-0 text-(--blue-dark)"
-                      />
-                      <div>
-                        <dt className="text-xs text-(--muted)">Matrícula</dt>
-                        <dd className="mt-1 text-sm">
-                          {profile.data.user.ra || "Não informada"}
-                        </dd>
-                      </div>
-                    </div>
+                    {admin ? (
+                      [
+                        {
+                          label: "Nome completo",
+                          value: profile.data.user.fullName,
+                          Icon: UserRound,
+                        },
+                        {
+                          label: "E-mail",
+                          value: profile.data.user.email,
+                          Icon: Mail,
+                        },
+                        {
+                          label: "Perfil de acesso",
+                          value: "Administrador",
+                          Icon: ShieldCheck,
+                        },
+                      ].map(({ label, value, Icon }) => (
+                        <div key={label} className="flex gap-3 py-5">
+                          <Icon
+                            size={21}
+                            aria-hidden="true"
+                            className="mt-1 shrink-0 text-(--blue-dark)"
+                          />
+                          <div className="min-w-0">
+                            <dt className="text-xs text-(--muted)">{label}</dt>
+                            <dd className="mt-1 break-words text-sm">
+                              {value}
+                            </dd>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <>
+                        <div className="flex gap-3 py-5">
+                          <GraduationCap
+                            size={21}
+                            aria-hidden="true"
+                            className="mt-1 shrink-0 text-(--blue-dark)"
+                          />
+                          <div className="min-w-0">
+                            <dt className="text-xs text-(--muted)">Escolas</dt>
+                            <dd className="mt-1 space-y-1 text-sm">
+                              {profile.data.schools.length
+                                ? profile.data.schools.map((school) => (
+                                    <p key={school.id} className="break-words">
+                                      {"nome" in school
+                                        ? school.nome
+                                        : school.name}
+                                    </p>
+                                  ))
+                                : "Nenhuma escola vinculada"}
+                            </dd>
+                          </div>
+                        </div>
+                        <div className="flex gap-3 py-5">
+                          <BadgeCheck
+                            size={21}
+                            aria-hidden="true"
+                            className="mt-1 shrink-0 text-(--blue-dark)"
+                          />
+                          <div>
+                            <dt className="text-xs text-(--muted)">
+                              Matrícula
+                            </dt>
+                            <dd className="mt-1 text-sm">
+                              {profile.data.user.ra || "Não informada"}
+                            </dd>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </dl>
                 )}
               </>
@@ -170,9 +216,14 @@ export function Profile({ user }: { user: SessionUser; }) {
         </div>
         <section aria-label="Conta" className="space-y-4">
           <h2 className="text-lg font-semibold">Conta</h2>
+          <TwoFactorSettings />
+          <Link href={`${homeRoutes[user.role]}/faq`} className={optionClass}>
+            <CircleHelp size={21} aria-hidden="true" />
+            FAQ - Perguntas frequentes
+            <ArrowRight size={18} className="ml-auto" aria-hidden="true" />
+          </Link>
           <button
             type="button"
-            disabled={!demo}
             onClick={() => open("password")}
             className={optionClass}
           >
@@ -182,7 +233,7 @@ export function Profile({ user }: { user: SessionUser; }) {
           </button>
           <button
             type="button"
-            disabled={!demo || download.isPending}
+            disabled={download.isPending}
             onClick={() => download.mutate()}
             className={optionClass}
           >
@@ -195,18 +246,26 @@ export function Profile({ user }: { user: SessionUser; }) {
             Termos de uso
             <ArrowRight size={18} className="ml-auto" aria-hidden="true" />
           </Link>
-          <button
-            type="button"
-            disabled={!demo || profile.data?.deletionRequested}
-            onClick={() => open("deletion")}
-            className={optionClass}
-          >
-            <Trash2 size={21} aria-hidden="true" />
-            {profile.data?.deletionRequested
-              ? "Exclusão solicitada"
-              : "Solicitar exclusão de conta"}
-            <ArrowRight size={18} className="ml-auto" aria-hidden="true" />
-          </button>
+          {!admin && (
+            <button
+              type="button"
+              disabled={
+                profile.isPending ||
+                profile.isError ||
+                profile.data?.deletionRequested ||
+                profile.data?.deletionRequest?.status === "PENDING"
+              }
+              onClick={() => open("deletion")}
+              className={optionClass}
+            >
+              <Trash2 size={21} aria-hidden="true" />
+              {profile.data?.deletionRequested ||
+              profile.data?.deletionRequest?.status === "PENDING"
+                ? "Exclusão solicitada"
+                : "Solicitar exclusão de conta"}
+              <ArrowRight size={18} className="ml-auto" aria-hidden="true" />
+            </button>
+          )}
           <ErrorMessage error={download.error} />
         </section>
       </div>
@@ -231,7 +290,7 @@ export function Profile({ user }: { user: SessionUser; }) {
         >
           <X size={18} />
         </button>
-        {active === "deletion" ? (
+        {!admin && active === "deletion" ? (
           deletion.isSuccess ? (
             <FeedbackModalContent
               type="success"
@@ -375,7 +434,7 @@ export function Profile({ user }: { user: SessionUser; }) {
                 type="password"
                 required
                 minLength={8}
-                maxLength={128}
+                maxLength={72}
                 autoComplete="new-password"
               />
               <Input
@@ -385,7 +444,7 @@ export function Profile({ user }: { user: SessionUser; }) {
                 type="password"
                 required
                 minLength={8}
-                maxLength={128}
+                maxLength={72}
                 autoComplete="new-password"
               />
             </fieldset>

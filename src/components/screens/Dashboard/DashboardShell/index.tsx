@@ -15,7 +15,7 @@ type Props = {
   user: SessionUser;
   title: string;
   description: string;
-  navigation: { label: string; href: string; icon: IconName; }[];
+  navigation: { label: string; href: string; icon: IconName }[];
   children: ReactNode;
 };
 
@@ -43,17 +43,17 @@ export function DashboardShell({
   const sidebarNavigation =
     user.role === "coordenador"
       ? [
-        ...navigation.filter(
-          (item) =>
-            item.label !== "Professores" &&
-            item.href !== "/coordinator/students/new",
-        ),
-        {
-          label: "Professores",
-          href: "/coordinator/teachers",
-          icon: "school" as const,
-        },
-      ]
+          ...navigation.filter(
+            (item) =>
+              item.label !== "Professores" &&
+              item.href !== "/coordinator/students/new",
+          ),
+          {
+            label: "Professores",
+            href: "/coordinator/teachers",
+            icon: "school" as const,
+          },
+        ]
       : [...navigation];
   if (user.role === "admin" || user.role === "coordenador")
     sidebarNavigation.push({
@@ -69,13 +69,16 @@ export function DashboardShell({
   const links = [
     {
       label: "Início",
-      href: pathname === home ? "#overview" : home,
+      href: home,
       icon: "home" as const,
     },
     ...(user.role !== "aluno"
       ? [{ label: "Ranking", href: `${home}/ranking`, icon: "trophy" as const }]
       : []),
     ...sidebarNavigation,
+    ...(user.role === "admin"
+      ? [{ label: "FAQ", href: "/admin/faq", icon: "help" as const }]
+      : []),
   ];
   const isActive = (href: string) => {
     if (href.startsWith("#")) return activeSection === href;
@@ -85,7 +88,11 @@ export function DashboardShell({
     );
   };
 
-  if (user.role === "professor" || user.role === "coordenador")
+  if (
+    user.role === "admin" ||
+    user.role === "professor" ||
+    user.role === "coordenador"
+  )
     return (
       <TeacherShell user={user}>
         <div className="space-y-7">
@@ -99,8 +106,8 @@ export function DashboardShell({
     );
 
   return (
-    <div className="min-h-screen bg-[#f5f8fa] lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
-      <aside className="flex flex-col bg-[var(--blue)] text-white lg:sticky lg:top-0 lg:h-screen">
+    <div className="min-h-screen bg-[#eef5f7] lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
+      <aside className="flex flex-col bg-[#163e4b] text-white lg:sticky lg:top-0 lg:h-dvh lg:overflow-y-auto">
         <div className="border-b border-white/20 px-6 py-5">
           <Image
             src={logo}
@@ -111,21 +118,21 @@ export function DashboardShell({
         </div>
         <nav
           aria-label="Navegação principal"
-          className="flex flex-wrap gap-2 px-6 py-6 lg:flex-col lg:items-start"
+          className="flex gap-2 overflow-x-auto px-4 py-5 lg:flex-col"
         >
           {links.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               aria-current={isActive(item.href) ? "location" : undefined}
-              className={`flex items-center gap-2.5 rounded-full px-3 py-2 text-sm transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${isActive(item.href) ? "bg-white/25 font-medium" : ""}`}
+              className={`flex shrink-0 items-center gap-3 rounded-xl px-3 py-3 text-sm transition-colors hover:bg-[#245362] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${isActive(item.href) ? "bg-[#dff3f7] font-medium text-[#164b5b] hover:bg-[#dff3f7]" : "text-[#d8e9ee]"}`}
             >
               <DashboardIcon name={item.icon} className="h-[18px] w-[18px]" />
               {item.label}
             </Link>
           ))}
         </nav>
-        <div className="mx-6 mb-6 mt-auto hidden rounded-xl bg-white/25 p-4 lg:block">
+        <div className="mx-6 mb-6 mt-auto hidden rounded-xl bg-[#245362] p-4 lg:block">
           <DashboardIcon name="help" className="mb-3 h-5 w-5" />
           <p className="text-xs font-semibold">Central de ajuda</p>
           <p className="mt-2 text-xs leading-5 text-white">

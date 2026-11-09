@@ -5,13 +5,14 @@ import logo from "@/assets/images/LogoImage.png";
 import { BackLink } from "@/components/ui/BackLink";
 import Button from "@/components/ui/Button";
 import { authApi } from "@/integrations/auth/api";
+import { RequestErrorModal } from "../RequestErrorModal";
 import { useAuthState, type LoginResponse } from "@/integrations/auth/state";
 import { useMutation } from "@tanstack/react-query";
 import { Timer } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
-export function TwoFactorScreen({ session }: { session: LoginResponse; }) {
+export function TwoFactorScreen({ session }: { session: LoginResponse }) {
   const [digits, setDigits] = useState<string[]>(Array(6).fill(""));
   const [now, setNow] = useState(() => Date.now());
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
@@ -29,7 +30,11 @@ export function TwoFactorScreen({ session }: { session: LoginResponse; }) {
     onSuccess: () =>
       useAuthState
         .getState()
-        .setSession({ ...session, twoFactorRequired: false }),
+        .setSession({
+          ...session,
+          twoFactorRequired: false,
+          twoFactorEnabled: true,
+        }),
     onSettled: () => {
       submitting.current = false;
     },
@@ -50,11 +55,11 @@ export function TwoFactorScreen({ session }: { session: LoginResponse; }) {
 
   const resendIn = Math.max(
     0,
-    Math.ceil((Date.parse(session.resendAvailableAt) - now) / 1000),
+    Math.ceil((Date.parse(session.resendAvailableAt ?? "") - now) / 1000) || 0,
   );
   const expiresIn = Math.max(
     0,
-    Math.ceil((Date.parse(session.codeExpiresAt) - now) / 1000),
+    Math.ceil((Date.parse(session.codeExpiresAt ?? "") - now) / 1000) || 0,
   );
   const countdown = `${Math.floor(expiresIn / 60)
     .toString()
@@ -104,6 +109,7 @@ export function TwoFactorScreen({ session }: { session: LoginResponse; }) {
         <div className="mx-auto mt-auto hidden w-full max-w-[410px] pt-16 lg:block">
           <Image
             src={illustration}
+            loading="eager"
             alt=""
             sizes="410px"
             className="h-auto w-full"
@@ -225,7 +231,7 @@ export function TwoFactorScreen({ session }: { session: LoginResponse; }) {
             id="code-error"
             className="mt-4 min-h-6 text-center text-sm text-red-700"
           >
-            {error && <p role="alert">{error.message}</p>}
+            <RequestErrorModal error={error} />
           </div>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-1.5 text-sm sm:mt-12">

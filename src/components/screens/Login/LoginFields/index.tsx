@@ -4,6 +4,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { useLoginForm } from "@/hooks/useLoginForm";
 import { LoginAction } from "../LoginAction";
+import { RequestErrorModal } from "../RequestErrorModal";
 
 export function LoginFields() {
   const { values, errors, error, saving, setField, handleSubmit } =
@@ -38,11 +39,7 @@ export function LoginFields() {
         />
         <LoginAction />
       </div>
-      {error && (
-        <p role="alert" className="text-sm text-red-600">
-          {error}
-        </p>
-      )}
+      <RequestErrorModal error={error} />
       <Button type="submit" disabled={saving} className="mt-4">
         {saving ? "Entrando…" : "Continuar"}
       </Button>

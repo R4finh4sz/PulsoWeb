@@ -104,7 +104,7 @@ export const registrationApi = {
         method: "POST",
         body: {
           name: body.name,
-          matricula: body.ra.trim(),
+          ra: body.ra.trim(),
           password: body.password,
           termsAccepted: body.termsAccepted,
           termsVersion: body.termsVersion,

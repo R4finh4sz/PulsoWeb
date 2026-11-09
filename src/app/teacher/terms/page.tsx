@@ -1,11 +1,8 @@
 "use client";
 
-import {
-  Protected,
-  Workspace
-} from "@/components/screens/Integration/shared";
+import { Protected, Workspace } from "@/components/screens/Integration/shared";
 import { TermsContent } from "@/components/screens/Terms";
-import { BackLink } from "@/components/ui/BackLink";
+import { TermsActions } from "@/components/screens/Terms/TermsActions";
 import { type UserRole } from "@/interfaces/auth";
 
 function PageContent({
@@ -19,7 +16,7 @@ function PageContent({
     <Protected role={role}>
       {(user) => (
         <Workspace user={user} title="Termos de uso">
-          <BackLink />
+          <TermsActions />
           <TermsContent role={role} edit={edit} />
         </Workspace>
       )}

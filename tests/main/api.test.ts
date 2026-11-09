@@ -21,20 +21,20 @@ test.each([
   ],
   [
     () => authApi.requestPasswordReset("a@b.com"),
-    "/auth/password-reset/request",
+    "/auth/password-recovery/request",
     "POST",
     { email: "a@b.com" },
   ],
   [
     () => authApi.verifyPasswordReset("a@b.com", "123456"),
-    "/auth/password-reset/verify",
+    "/auth/password-recovery/verify",
     "POST",
     { email: "a@b.com", code: "123456" },
   ],
   [
     () =>
       authApi.resetPassword("a@b.com", "reset-token", "Newpass1", "Newpass1"),
-    "/auth/password-reset/reset",
+    "/auth/password-recovery/reset",
     "POST",
     {
       email: "a@b.com",
@@ -171,7 +171,7 @@ test.each([
     "POST",
     {
       name: "Ana",
-      matricula: "1000",
+      ra: "1000",
       password: "Password1",
       termsAccepted: true,
       termsVersion: "1",
@@ -226,6 +226,7 @@ test.each([
   expect(request).toHaveBeenCalledWith(path, { signal });
 });
 test("consultas paginadas preservam filtros", async () => {
+  request.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
   await usersApi.list("students");
   expect(request).toHaveBeenLastCalledWith("/students", { signal: undefined });
   await usersApi.list("teachers", { page: 0, q: "Ana" });

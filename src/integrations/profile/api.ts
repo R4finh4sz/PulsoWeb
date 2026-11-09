@@ -5,9 +5,10 @@ import type { School } from "@/integrations/schools/api";
 
 export type TeacherProfile = {
   user: User;
-  schools: School[];
+  schools: (School | { id: string; name: string })[];
   classrooms: Classroom[];
   deletionRequested: boolean;
+  deletionRequest?: { status: "PENDING" | "APPROVED" | "REJECTED" } | null;
 };
 export type ChangePassword = {
   currentPassword: string;
@@ -28,9 +29,15 @@ export const profileApi = {
       );
     const invalidPassword = passwordError(body.newPassword);
     if (invalidPassword) return Promise.reject(new Error(invalidPassword));
-    return apiRequest<void>("/me/password", { method: "PUT", body });
+    return apiRequest<void>("/auth/password", {
+      method: "PATCH",
+      body: {
+        currentPassword: body.currentPassword,
+        newPassword: body.newPassword,
+      },
+    });
   },
   export: () => apiRequest<Record<string, unknown>>("/me/export"),
   requestDeletion: (body: DeletionRequest) =>
-    apiRequest<void>("/me/deletion-request", { method: "POST", body }),
+    apiRequest<void>("/me/deletion-requests", { method: "POST", body }),
 };

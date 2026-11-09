@@ -60,6 +60,7 @@ export function createDemoSession(user: User): LoginResponse {
     tokenType: "Bearer",
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     twoFactorRequired: false,
+    twoFactorEnabled: false,
     codeExpiresAt: "",
     resendAvailableAt: "",
     user: {

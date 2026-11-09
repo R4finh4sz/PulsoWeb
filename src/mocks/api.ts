@@ -1,3 +1,4 @@
+import type { Faq } from "@/integrations/faqs/api";
 import type { AccountDeletion } from "@/integrations/profile/deletions";
 import type { Registration } from "@/integrations/registration/api";
 import type { School, SchoolInvitation } from "@/integrations/schools/api";
@@ -37,6 +38,8 @@ users.push(
   ),
 );
 const passwords = new Map<number, string>();
+const faqs: Faq[] = [];
+const revokedTerms = new Set<number>();
 const deletionRequests = new Map<
   number,
   AccountDeletion & { schoolId: number | null }
@@ -88,18 +91,15 @@ const studentNames = [
   "Mariana",
 ];
 users.push(
-  ...Array.from(
-    { length: 39 },
-    (_, index): User => ({
-      id: 100 + index,
-      fullName: `${studentNames[index % studentNames.length]} ${["Santos", "Oliveira", "Souza"][Math.floor(index / studentNames.length)]}`,
-      email: `aluno${index + 2}@exemplo.com`,
-      ra: String(index + 2).padStart(5, "0"),
-      role: "STUDENT",
-      classroomId: 1,
-      schoolId: 1,
-    }),
-  ),
+  ...Array.from({ length: 39 }, (_, index): User => ({
+    id: 100 + index,
+    fullName: `${studentNames[index % studentNames.length]} ${["Santos", "Oliveira", "Souza"][Math.floor(index / studentNames.length)]}`,
+    email: `aluno${index + 2}@exemplo.com`,
+    ra: String(index + 2).padStart(5, "0"),
+    role: "STUDENT",
+    classroomId: 1,
+    schoolId: 1,
+  })),
 );
 const rooms: Classroom[] = [
   {
@@ -162,18 +162,15 @@ for (const [classroomId, count] of [
     teacherIds: [3],
   });
   users.push(
-    ...Array.from(
-      { length: count },
-      (_, index): User => ({
-        id: 1000 + classroomId * 100 + index,
-        fullName: `${studentNames[(index + classroomId) % studentNames.length]} ${["Almeida", "Costa", "Pereira"][Math.floor(index / studentNames.length)]}`,
-        email: `turma${classroomId}.aluno${index + 1}@exemplo.com`,
-        ra: `${classroomId}${String(index + 1).padStart(4, "0")}`,
-        role: "STUDENT",
-        classroomId,
-        schoolId: room.schoolId,
-      }),
-    ),
+    ...Array.from({ length: count }, (_, index): User => ({
+      id: 1000 + classroomId * 100 + index,
+      fullName: `${studentNames[(index + classroomId) % studentNames.length]} ${["Almeida", "Costa", "Pereira"][Math.floor(index / studentNames.length)]}`,
+      email: `turma${classroomId}.aluno${index + 1}@exemplo.com`,
+      ra: `${classroomId}${String(index + 1).padStart(4, "0")}`,
+      role: "STUDENT",
+      classroomId,
+      schoolId: room.schoolId,
+    })),
   );
 }
 const subjectInvitations: SubjectInvitation[] = clone(demoSubjectInvitations);
@@ -251,26 +248,107 @@ export function mockRequest(
   const url = new URL(path, "http://mock.local");
   const parts = url.pathname.split("/").filter(Boolean);
   const data = (body ?? {}) as Record<string, unknown>;
+  if (path === "/auth/password" && method === "PATCH")
+    return mockRequest(
+      "/me/password",
+      "PUT",
+      { ...data, confirmPassword: data.newPassword },
+      token,
+    );
+  if (path === "/me/deletion-requests" && method === "POST")
+    return mockRequest("/me/deletion-request", method, body, token);
+  if (parts[0] === "faqs") {
+    if (method === "GET" && !parts[1])
+      return clone(
+        faqs.filter(
+          (faq) => current.role === "ADMIN" || faq.targetRole === current.role,
+        ),
+      );
+    if (current.role !== "ADMIN")
+      throw new Error("Somente administradores podem editar o FAQ.");
+    if (method === "POST" || method === "PUT") {
+      const input = z
+        .object({
+          title: z.string().trim().min(1).max(200),
+          message: z.string().trim().min(1).max(5000),
+          targetRole: z.enum(["TEACHER", "PEDAGOGICAL_COORDINATOR", "STUDENT"]),
+        })
+        .parse(data);
+      if (method === "POST" && !parts[1]) {
+        const faq = { id: faqs.length + 1, ...input };
+        faqs.push(faq);
+        return clone(faq);
+      }
+      const faq = faqs.find((faq) => String(faq.id) === parts[1]);
+      if (!faq) throw new Error("Pergunta não encontrada.");
+      Object.assign(faq, input);
+      return clone(faq);
+    }
+    throw new Error("Operação de FAQ indisponível na demonstração.");
+  }
+  if (path === "/auth/2fa" && method === "PATCH") {
+    if (
+      typeof data.enabled !== "boolean" ||
+      data.currentPassword !== (passwords.get(current.id) ?? mockPassword)
+    )
+      throw new Error("Senha atual incorreta.");
+    if (current.role === "ADMIN" && !data.enabled)
+      throw new Error(
+        "A verificação em duas etapas é obrigatória para administradores.",
+      );
+    return;
+  }
+  if (path === "/auth/password" && method === "PATCH")
+    return mockRequest(
+      "/me/password",
+      "PUT",
+      { ...data, confirmPassword: data.newPassword },
+      token,
+    );
+  if (path === "/me/deletion-requests" && method === "POST")
+    return mockRequest("/me/deletion-request", method, body, token);
   if (path === "/me") return { ...current };
   if (url.pathname === "/ranking" && method === "GET") {
-    if (current.role === "STUDENT") throw new Error("Alunos não têm acesso ao ranking na plataforma web.");
+    if (current.role === "STUDENT")
+      throw new Error("Alunos não têm acesso ao ranking na plataforma web.");
     const admin = current.role === "ADMIN";
-    const allowedSchools = schools.filter((school) => admin || (
-      current.role === "TEACHER"
-        ? school.teacherIds?.includes(current.id)
-        : (current.schoolIds ?? [current.schoolId]).includes(school.id)
-    ));
+    const allowedSchools = schools.filter(
+      (school) =>
+        admin ||
+        (current.role === "TEACHER"
+          ? school.teacherIds?.includes(current.id)
+          : (current.schoolIds ?? [current.schoolId]).includes(school.id)),
+    );
     const schoolId = url.searchParams.get("schoolId") || "";
     const grade = url.searchParams.get("grade") || "";
     const classroomId = url.searchParams.get("classroomId") || "";
-    const classroomIdentifier = url.searchParams.get("classroomIdentifier") || "";
-    if (classroomIdentifier && (!schoolId || !/^[A-Z]$/.test(classroomIdentifier)))
-      throw new Error("Selecione uma escola autorizada e um identificador de A a Z.");
-    if (schoolId && !allowedSchools.some((school) => String(school.id) === schoolId))
+    const classroomIdentifier =
+      url.searchParams.get("classroomIdentifier") || "";
+    if (
+      classroomIdentifier &&
+      (!schoolId || !/^[A-Z]$/.test(classroomIdentifier))
+    )
+      throw new Error(
+        "Selecione uma escola autorizada e um identificador de A a Z.",
+      );
+    if (
+      schoolId &&
+      !allowedSchools.some((school) => String(school.id) === schoolId)
+    )
       throw new Error("Você não tem acesso ao ranking desta escola.");
     if (grade && !schoolId && !admin)
-      throw new Error("Selecione uma escola à qual você tem acesso para filtrar por série.");
-    if (classroomId && (!schoolId || !rooms.some((room) => String(room.id) === classroomId && String(room.schoolId) === schoolId)))
+      throw new Error(
+        "Selecione uma escola à qual você tem acesso para filtrar por série.",
+      );
+    if (
+      classroomId &&
+      (!schoolId ||
+        !rooms.some(
+          (room) =>
+            String(room.id) === classroomId &&
+            String(room.schoolId) === schoolId,
+        ))
+    )
       throw new Error("Selecione uma turma da escola autorizada.");
     // Calendário exclusivamente demonstrativo: janelas de dois meses.
     // Em produção, o backend deve usar as datas do calendário escolar.
@@ -280,23 +358,65 @@ export function mockRequest(
     const end = new Date(now.getFullYear(), month + 2, 1);
     const totals = mockRankingTotals(users, start.getTime(), end.getTime());
     const gradeOf = (name: string) => name.replace(/\s+[A-Za-z]$/, "");
-    const entries = users.filter((user) => user.role === "STUDENT").flatMap((student) => {
-      const room = rooms.find((room) => room.id === student.classroomId);
-      const school = schools.find((school) => school.id === room?.schoolId);
-      const total = totals.get(student.id);
-      if (!room || !school || !total) return [];
-      if (schoolId && String(school.id) !== schoolId) return [];
-      if (grade && gradeOf(room.name) !== grade) return [];
-      if (classroomId && String(room.id) !== classroomId) return [];
-      if (classroomIdentifier && room.name.trim().match(/[A-Za-z]+$/)?.[0] !== classroomIdentifier) return [];
-      return [{ studentId: student.id, name: student.fullName, schoolId: school.id, schoolName: school.nome, grade: admin || schoolId ? gradeOf(room.name) : null, classroomName: schoolId ? room.name : null, ...total }];
-    });
+    const entries = users
+      .filter((user) => user.role === "STUDENT")
+      .flatMap((student) => {
+        const room = rooms.find((room) => room.id === student.classroomId);
+        const school = schools.find((school) => school.id === room?.schoolId);
+        const total = totals.get(student.id);
+        if (!room || !school || !total) return [];
+        if (schoolId && String(school.id) !== schoolId) return [];
+        if (grade && gradeOf(room.name) !== grade) return [];
+        if (classroomId && String(room.id) !== classroomId) return [];
+        if (
+          classroomIdentifier &&
+          room.name.trim().match(/[A-Za-z]+$/)?.[0] !== classroomIdentifier
+        )
+          return [];
+        return [
+          {
+            studentId: student.id,
+            name: student.fullName,
+            schoolId: school.id,
+            schoolName: school.nome,
+            grade: admin || schoolId ? gradeOf(room.name) : null,
+            classroomName: schoolId ? room.name : null,
+            ...total,
+          },
+        ];
+      });
     return {
-      period: { label: `${start.toLocaleDateString("pt-BR")} a ${new Date(end.getTime() - 1).toLocaleDateString("pt-BR")}`, startsAt: start.toISOString(), endsAt: end.toISOString() },
-      schools: allowedSchools.map((school) => ({ id: school.id, name: school.nome })),
-      grades: admin || schoolId ? [...new Set(rooms.filter((room) => !schoolId || String(room.schoolId) === schoolId).map((room) => gradeOf(room.name)))].sort((a, b) => a.localeCompare(b, "pt-BR", { numeric: true })) : [],
+      period: {
+        label: `${start.toLocaleDateString("pt-BR")} a ${new Date(end.getTime() - 1).toLocaleDateString("pt-BR")}`,
+        startsAt: start.toISOString(),
+        endsAt: end.toISOString(),
+      },
+      schools: allowedSchools.map((school) => ({
+        id: school.id,
+        name: school.nome,
+      })),
+      grades:
+        admin || schoolId
+          ? [
+              ...new Set(
+                rooms
+                  .filter(
+                    (room) => !schoolId || String(room.schoolId) === schoolId,
+                  )
+                  .map((room) => gradeOf(room.name)),
+              ),
+            ].sort((a, b) => a.localeCompare(b, "pt-BR", { numeric: true }))
+          : [],
       canFilterGlobalGrades: admin,
-      classrooms: schoolId ? rooms.filter((room) => String(room.schoolId) === schoolId).map((room) => ({ id: room.id, name: room.name, grade: gradeOf(room.name) })) : [],
+      classrooms: schoolId
+        ? rooms
+            .filter((room) => String(room.schoolId) === schoolId)
+            .map((room) => ({
+              id: room.id,
+              name: room.name,
+              grade: gradeOf(room.name),
+            }))
+        : [],
       entries,
     };
   }
@@ -387,6 +507,10 @@ export function mockRequest(
     if (
       current.role !== "TEACHER" &&
       current.role !== "PEDAGOGICAL_COORDINATOR" &&
+      !(
+        current.role === "ADMIN" &&
+        ["profile", "export", "password"].includes(parts[1])
+      ) &&
       !(current.role === "STUDENT" && parts[1] === "deletion-request")
     )
       throw new Error(
@@ -431,7 +555,8 @@ export function mockRequest(
       if (
         typeof password !== "string" ||
         password.length < 8 ||
-        !/[A-Za-z]/.test(password) ||
+        new TextEncoder().encode(password).length > 72 ||
+        !/[A-Z]/.test(password) ||
         !/[0-9]/.test(password)
       )
         throw new Error(
@@ -525,8 +650,16 @@ export function mockRequest(
       }),
     );
   if (path === "/auth/logout") return undefined;
-  if (path === "/terms/accepted") return [terms.version];
-  if (path === "/terms/accept") return undefined;
+  if (path === "/terms/accepted")
+    return revokedTerms.has(current.id) ? [] : [terms.version];
+  if (path === "/terms/accept" && method === "POST") {
+    revokedTerms.delete(current.id);
+    return undefined;
+  }
+  if (path === "/terms/revoke" && method === "POST") {
+    revokedTerms.add(current.id);
+    return undefined;
+  }
   if (path === "/terms") {
     if (method !== "GET") terms = { ...terms, ...data };
     return { ...terms };
