@@ -8,7 +8,7 @@ import { useSchools } from "@/integrations/schools/hooks";
 import { UserRound } from "lucide-react";
 import { use } from "react";
 
-function PageContent({ id }: { id: string; }) {
+function PageContent({ id }: { id: string }) {
   const user = useSession("admin");
   const query = useSchools();
   if (!user)
@@ -87,13 +87,6 @@ function PageContent({ id }: { id: string; }) {
               </div>
             </DashboardPanel>
           </div>
-          <DashboardPanel
-            id="school-classrooms"
-            title="Turmas da escola"
-            description="Vínculo de turmas por escola ainda não está disponível na API."
-          >
-            <p className="text-sm text-(--muted)">--</p>
-          </DashboardPanel>
         </div>
       )}
     </DashboardShell>
@@ -103,7 +96,7 @@ function PageContent({ id }: { id: string; }) {
 export default function SchoolPage({
   params,
 }: {
-  params: Promise<{ id: string; }>;
+  params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
   return <PageContent id={id} />;

@@ -2,23 +2,31 @@
 import { ApiError } from "@/api/client";
 import { DashboardShell } from "@/components/screens/Dashboard/DashboardShell";
 import { useMe } from "@/integrations/auth/hooks";
+import { useAuthState } from "@/integrations/auth/state";
 import { toSessionUser } from "@/integrations/auth/session";
 import { homeRoutes, type SessionUser, type UserRole } from "@/interfaces/auth";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 export const fieldClass =
   "mt-2 min-h-12 w-full rounded-xl border border-(--line) bg-white px-4 py-3 text-sm outline-none transition-colors focus:border-[var(--blue-dark)] focus:ring-2 focus:ring-cyan-100 disabled:bg-slate-50";
 export const actionClass =
   "inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--blue-dark)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#076a83] disabled:opacity-50 ";
 export { EmptyState } from "@/components/ui/EmptyState";
-export function ErrorMessage({ error }: { error: unknown; }) {
+export const schoolRequiredMessage =
+  "Sua conta precisa estar vinculada a uma escola para acessar esta funcionalidade.";
+export function ErrorMessage({ error }: { error: unknown }) {
+  const role = useAuthState((state) => state.session?.user.role);
   if (!error) return null;
   return (
     <div role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-700">
       <p>
-        {error instanceof Error
-          ? error.message
-          : "Não foi possível carregar os dados."}
+        {error instanceof ApiError &&
+        error.status === 403 &&
+        role === "PEDAGOGICAL_COORDINATOR"
+          ? "Acesso negado. " + schoolRequiredMessage
+          : error instanceof Error
+            ? error.message
+            : "Não foi possível carregar os dados."}
       </p>
       {error instanceof ApiError &&
         error.errors.map((message) => <p key={message}>{message}</p>)}
@@ -33,6 +41,7 @@ export function Protected({
   children: (user: SessionUser) => ReactNode;
 }) {
   const session = useMe();
+  const pathname = usePathname();
   const router = useRouter();
   const user = session.data ? toSessionUser(session.data) : null;
   useEffect(() => {
@@ -55,6 +64,16 @@ export function Protected({
         Carregando seu espaço…
       </p>
     );
+  if (
+    role === "coordenador" &&
+    /^\/coordinator\/(students|teachers|classrooms)(\/|$)/.test(pathname) &&
+    !(session.data?.schoolId ?? session.data?.activeSchoolId)
+  )
+    return (
+      <Workspace user={user} title="Acesso indisponível">
+        <p role="alert">{schoolRequiredMessage}</p>
+      </Workspace>
+    );
   return children(user);
 }
 export function Workspace({
@@ -71,34 +90,34 @@ export function Workspace({
   const navigation =
     user.role === "admin"
       ? [
-        { label: "Escolas", href: "/admin/schools", icon: "school" as const },
-        {
-          label: "Coordenadores",
-          href: "/admin/coordinators",
-          icon: "users" as const,
-        },
-      ]
-      : user.role === "coordenador"
-        ? [
+          { label: "Escolas", href: "/admin/schools", icon: "school" as const },
           {
-            label: "Turmas",
-            href: "/coordinator/classrooms",
-            icon: "book" as const,
-          },
-          {
-            label: "Alunos",
-            href: "/coordinator/students/new",
+            label: "Coordenadores",
+            href: "/admin/coordinators",
             icon: "users" as const,
           },
         ]
-        : user.role === "professor"
-          ? [
+      : user.role === "coordenador"
+        ? [
             {
-              label: "Minhas turmas",
-              href: "/teacher/classrooms",
+              label: "Turmas",
+              href: "/coordinator/classrooms",
               icon: "book" as const,
             },
+            {
+              label: "Alunos",
+              href: "/coordinator/students/new",
+              icon: "users" as const,
+            },
           ]
+        : user.role === "professor"
+          ? [
+              {
+                label: "Minhas turmas",
+                href: "/teacher/classrooms",
+                icon: "book" as const,
+              },
+            ]
           : [];
   return (
     <DashboardShell
