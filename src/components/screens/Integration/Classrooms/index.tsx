@@ -30,7 +30,7 @@ import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import {
   ErrorMessage,
   actionClass,
-  fieldClass
+  fieldClass,
 } from "@/components/screens/Integration/shared";
 export const base = (role: UserRole) => homeRoutes[role];
 export function ClassroomList({
@@ -40,11 +40,12 @@ export function ClassroomList({
   user: SessionUser;
   schoolId?: number;
 }) {
-  const query = useClassrooms(true, user.role === "professor");
+  const query = useClassrooms(user.role !== "admin", user.role === "professor");
   const activeSchool = useActiveSchool();
   const activeSchoolId = useAuthState((state) => state.session?.user.schoolId);
   const router = useRouter();
   const [search, setSearch] = useState("");
+  if (user.role === "admin") return <p role="alert">Acesso negado.</p>;
   const term = search.trim().toLocaleLowerCase("pt-BR");
   const rooms = query.data?.filter(
     (room) =>
@@ -146,7 +147,7 @@ export function ClassroomList({
     <section className="space-y-4 rounded-xl bg-white p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">Turmas cadastradas</h2>
-        {(user.role === "coordenador" || user.role === "admin") && (
+        {user.role === "coordenador" && (
           <Link
             className={actionClass}
             href={base(user.role) + "/classrooms/new"}
@@ -244,9 +245,9 @@ export function ClassroomForm({
       existing
         ? classroomsApi.update(existing.id, body)
         : classroomsApi.create({
-          name: body.name,
-          identifier: body.identifier!,
-        }),
+            name: body.name,
+            identifier: body.identifier!,
+          }),
     onSuccessClose,
   );
   async function submit(event: SyntheticEvent<HTMLFormElement>) {
@@ -668,7 +669,10 @@ function Roster({
             removing={mutation.isPending}
             onRemove={
               manager
-                ? (person) => { mutation.reset(); setSelectedPerson(person); }
+                ? (person) => {
+                    mutation.reset();
+                    setSelectedPerson(person);
+                  }
                 : undefined
             }
           />
@@ -722,11 +726,18 @@ function Roster({
           type="error"
           titleId={titleId}
           title="Desvincular da turma?"
-          message={<>O vínculo de <strong>{selectedPerson?.fullName}</strong> com esta turma será removido. O cadastro será mantido.</>}
+          message={
+            <>
+              O vínculo de <strong>{selectedPerson?.fullName}</strong> com esta
+              turma será removido. O cadastro será mantido.
+            </>
+          }
           actionLabel="Cancelar"
           autoFocusAction
           disabled={mutation.isPending}
-          error={mutation.error ? <ErrorMessage error={mutation.error} /> : undefined}
+          error={
+            mutation.error ? <ErrorMessage error={mutation.error} /> : undefined
+          }
           onClose={() => setSelectedPerson(null)}
           secondaryAction={{
             label: mutation.isPending ? "Desvinculando…" : "Sim, desvincular",
@@ -746,7 +757,7 @@ function Roster({
     </section>
   );
 }
-function Subjects({ room, user }: { room: Classroom; user: SessionUser; }) {
+function Subjects({ room, user }: { room: Classroom; user: SessionUser }) {
   const [search, setSearch] = useState("");
   const query = useQuery({
     queryKey: ["subjects", room.id],
@@ -767,7 +778,11 @@ function Subjects({ room, user }: { room: Classroom; user: SessionUser; }) {
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <label className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-(--line) bg-white px-4 py-3 focus-within:border-[var(--blue-dark)] focus-within:ring-2 focus-within:ring-cyan-100">
-          <Search size={18} aria-hidden="true" className="shrink-0 text-(--muted)" />
+          <Search
+            size={18}
+            aria-hidden="true"
+            className="shrink-0 text-(--muted)"
+          />
           <input
             type="search"
             aria-label="Buscar matérias"
@@ -777,19 +792,25 @@ function Subjects({ room, user }: { room: Classroom; user: SessionUser; }) {
             className="min-w-0 w-full bg-transparent text-sm outline-none placeholder:text-(--muted)"
           />
         </label>
-        {user.role === "professor" && (
-          query.isSuccess && !limitReached ? (
-            <Link href={`/teacher/classrooms/${room.id}/subjects/new`} className={`${actionClass} min-h-12 shrink-0 gap-2`}>
+        {user.role === "professor" &&
+          (query.isSuccess && !limitReached ? (
+            <Link
+              href={`/teacher/classrooms/${room.id}/subjects/new`}
+              className={`${actionClass} min-h-12 shrink-0 gap-2`}
+            >
               <Plus size={18} aria-hidden="true" />
               Criar nova matéria
             </Link>
           ) : (
-            <button type="button" disabled className={`${actionClass} min-h-12 shrink-0 gap-2`}>
+            <button
+              type="button"
+              disabled
+              className={`${actionClass} min-h-12 shrink-0 gap-2`}
+            >
               <Plus size={18} aria-hidden="true" />
               Criar nova matéria
             </button>
-          )
-        )}
+          ))}
       </div>
       {user.role === "professor" && limitReached && (
         <p role="status" className="text-sm text-(--muted)">
@@ -802,7 +823,10 @@ function Subjects({ room, user }: { room: Classroom; user: SessionUser; }) {
         <EmptyState icon={BookOpen} title="Nenhuma disciplina cadastrada." />
       )}
       {!!query.data?.length && !filteredSubjects?.length && (
-        <EmptyState icon={BookOpen} title="Nenhuma matéria encontrada para esta busca." />
+        <EmptyState
+          icon={BookOpen}
+          title="Nenhuma matéria encontrada para esta busca."
+        />
       )}
       <ul className="grid gap-5 sm:grid-cols-2">
         {filteredSubjects?.map((subject) => (
@@ -828,9 +852,10 @@ function Subjects({ room, user }: { room: Classroom; user: SessionUser; }) {
     </section>
   );
 }
-export function Details({ id, user }: { id: number; user: SessionUser; }) {
-  const query = useClassroom(id);
-  const manager = user.role === "admin" || user.role === "coordenador";
+export function Details({ id, user }: { id: number; user: SessionUser }) {
+  const query = useClassroom(id, user.role !== "admin");
+  if (user.role === "admin") return <p role="alert">Acesso negado.</p>;
+  const manager = user.role === "coordenador";
   if (!Number.isSafeInteger(id) || id < 1)
     return <p role="alert">Identificador de turma inválido.</p>;
   if (query.isPending) return <p role="status">Carregando turma…</p>;
