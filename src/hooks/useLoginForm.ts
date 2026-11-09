@@ -2,6 +2,7 @@
 import { useState, useRef, type SyntheticEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useLogin } from "@/integrations/auth/hooks";
+import { ApiError } from "@/api/client";
 import {
   LoginSchema,
   type LoginErrors,
@@ -13,7 +14,7 @@ export function useLoginForm() {
   const submitted = useRef(false);
   const [values, setValues] = useState<LoginForm>({ email: "", password: "" });
   const [errors, setErrors] = useState<LoginErrors>({});
-  const [error, setError] = useState("");
+  const [error, setError] = useState<Error | string>("");
   function setField(field: keyof LoginForm, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
@@ -41,7 +42,13 @@ export function useLoginForm() {
       router.replace("/");
     } catch (cause) {
       setError(
-        cause instanceof Error ? cause.message : "Não foi possível entrar.",
+        cause instanceof ApiError
+          ? cause
+          : cause instanceof TypeError
+            ? "Não foi possível conectar ao servidor. Tente novamente em instantes."
+            : cause instanceof Error
+              ? cause.message
+              : "Não foi possível entrar.",
       );
     } finally {
       submitted.current = false;

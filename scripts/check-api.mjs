@@ -1,4 +1,4 @@
-﻿import assert from "node:assert/strict";
+import assert from "node:assert/strict";
 import fs from "node:fs";
 import { test } from "node:test";
 import vm from "node:vm";
@@ -26,7 +26,9 @@ function loadClient(fetch, initial = { accessToken: "teacher-token" }) {
     require: (path) =>
       path.includes("state")
         ? { useAuthState: state }
-        : { API_BASE_URL: "/api" },
+        : path.includes("feedbackStore")
+          ? { showRequestError: () => {} }
+          : { API_BASE_URL: "/api" },
     fetch,
     Headers,
     FormData,
@@ -62,12 +64,12 @@ test("login never sends previous credentials or requests CSRF", async () => {
 });
 test("password reset requests are public and do not clear the current session", async () => {
   const api = loadClient(async (url, options) => {
-    assert.equal(url, "/api/auth/password-reset/request");
+    assert.equal(url, "/api/auth/password-recovery/request");
     assert.equal(options.headers.get("Authorization"), null);
     return Response.json({}, { status: 401 });
   });
   await assert.rejects(
-    api.apiRequest("/auth/password-reset/request", {
+    api.apiRequest("/auth/password-recovery/request", {
       method: "POST",
       body: { email: "teacher@example.com" },
     }),
@@ -78,7 +80,7 @@ test("password reset requests are public and do not clear the current session", 
 });
 test("password reset sends the backend reset payload", async () => {
   const api = loadClient(async (url, options) => {
-    assert.equal(url, "/api/auth/password-reset/reset");
+    assert.equal(url, "/api/auth/password-recovery/reset");
     assert.equal(options.headers.get("Authorization"), null);
     assert.deepEqual(JSON.parse(options.body), {
       email: "teacher@example.com",
@@ -88,7 +90,7 @@ test("password reset sends the backend reset payload", async () => {
     });
     return new Response(null, { status: 204 });
   });
-  await api.apiRequest("/auth/password-reset/reset", {
+  await api.apiRequest("/auth/password-recovery/reset", {
     method: "POST",
     body: {
       email: "teacher@example.com",

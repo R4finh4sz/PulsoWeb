@@ -21,12 +21,12 @@ export const authApi = {
   login: (body: { email: string; password: string }) =>
     apiRequest<LoginResponse>("/auth/login", { method: "POST", body }),
   requestPasswordReset: (email: string) =>
-    apiRequest<void>("/auth/password-reset/request", {
+    apiRequest<void>("/auth/password-recovery/request", {
       method: "POST",
       body: { email },
     }),
   verifyPasswordReset: (email: string, code: string) =>
-    apiRequest<PasswordResetVerification>("/auth/password-reset/verify", {
+    apiRequest<PasswordResetVerification>("/auth/password-recovery/verify", {
       method: "POST",
       body: { email, code },
     }),
@@ -40,11 +40,13 @@ export const authApi = {
     if (invalidPassword) throw new Error(invalidPassword);
     if (newPassword !== confirmPassword)
       throw new Error("As senhas precisam ser iguais.");
-    return apiRequest<void>("/auth/password-reset/reset", {
+    return apiRequest<void>("/auth/password-recovery/reset", {
       method: "POST",
       body: { email, resetToken, newPassword, confirmPassword },
     });
   },
+  updateTwoFactor: (body: { enabled: boolean; currentPassword: string }) =>
+    apiRequest<void>("/auth/2fa", { method: "PATCH", body }),
   verify: (code: string) =>
     apiRequest<void>("/auth/2fa/verify", { method: "POST", body: { code } }),
   resend: () =>
@@ -68,6 +70,7 @@ export const authApi = {
     apiRequest<Terms>("/terms", { method: "PUT", body }),
   accepted: (signal?: AbortSignal) =>
     apiRequest<string[]>("/terms/accepted", { signal }),
+  revokeTerms: () => apiRequest<void>("/terms/revoke", { method: "POST" }),
   accept: (version: string) =>
     apiRequest<void>("/terms/accept", {
       method: "POST",

@@ -7,9 +7,12 @@ export type LoginResponse = {
   accessToken: string;
   tokenType: string;
   expiresAt: string;
+  refreshToken?: string | null;
+  refreshExpiresAt?: string | null;
   twoFactorRequired: boolean;
-  codeExpiresAt: string;
-  resendAvailableAt: string;
+  twoFactorEnabled?: boolean;
+  codeExpiresAt: string | null;
+  resendAvailableAt: string | null;
   user: {
     role: Role;
     classroomId: number | null;

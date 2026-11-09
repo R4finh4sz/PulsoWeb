@@ -6,6 +6,7 @@ import Button from "@/components/ui/Button";
 import { FeedbackModal } from "@/components/ui/FeedbackModal";
 import Input from "@/components/ui/Input";
 import { authApi } from "@/integrations/auth/api";
+import { showRequestError } from "@/store/feedbackStore";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type SubmitEvent } from "react";
@@ -76,7 +77,9 @@ export function PasswordRecovery() {
     event.preventDefault();
     setError(null);
     try {
-      await request.mutateAsync(email.trim());
+      const normalizedEmail = email.trim().toLowerCase();
+      await request.mutateAsync(normalizedEmail);
+      setEmail(normalizedEmail);
       setShowSentModal(true);
     } catch (failure) {
       setError(
@@ -127,14 +130,7 @@ export function PasswordRecovery() {
           "Sua senha foi alterada. Volte ao login para acessar sua conta.",
       });
     } catch (failure) {
-      setResetFeedback({
-        type: "error",
-        title: "Não foi possível alterar a senha",
-        message:
-          failure instanceof Error
-            ? failure.message
-            : "Não foi possível redefinir a senha.",
-      });
+      showRequestError(failure);
     }
   }
 
@@ -247,6 +243,7 @@ export function PasswordRecovery() {
                 type="password"
                 autoComplete="new-password"
                 minLength={8}
+                maxLength={72}
                 required
                 placeholder="Digite sua nova senha..."
               />
@@ -257,6 +254,7 @@ export function PasswordRecovery() {
                 type="password"
                 autoComplete="new-password"
                 minLength={8}
+                maxLength={72}
                 required
                 placeholder="Repita sua nova senha..."
               />

@@ -1,7 +1,8 @@
 import { API_BASE_URL } from "./config";
 import { mockAccessEnabled, getDemoUser } from "@/mocks/access";
 import { mockRequest } from "@/mocks/api";
-import { useAuthState } from "@/integrations/auth/state";
+import { useAuthState, type LoginResponse } from "@/integrations/auth/state";
+import { showRequestError } from "@/store/feedbackStore";
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -18,10 +19,21 @@ type Options = Omit<RequestInit, "body"> & {
 };
 const publicAuthPaths = new Set([
   "/auth/login",
-  "/auth/password-reset/request",
-  "/auth/password-reset/verify",
-  "/auth/password-reset/reset",
+  "/auth/refresh",
+  "/auth/register",
+  "/schools/search",
+  "/auth/password-recovery/request",
+  "/auth/password-recovery/verify",
+  "/auth/password-recovery/reset",
 ]);
+function isPublicPath(path: string) {
+  return (
+    publicAuthPaths.has(path) ||
+    path.startsWith("/schools/search?") ||
+    (/^\/invitations\/[^/]+(?:\/(verify|resend|complete))?$/.test(path) &&
+      !["/invitations/teachers", "/invitations/coordinators"].includes(path))
+  );
+}
 async function send<T>(
   path: string,
   options: RequestInit,
@@ -29,7 +41,7 @@ async function send<T>(
 ): Promise<T> {
   const response = await fetch(API_BASE_URL + path, {
     ...options,
-    credentials: "omit",
+    credentials: isPublicPath(path) ? "include" : "omit",
     cache: "no-store",
   });
   if (!response.ok) {
@@ -47,7 +59,64 @@ async function send<T>(
   if (responseType === "blob") return (await response.blob()) as T;
   return response.json() as Promise<T>;
 }
-export async function apiRequest<T>(
+let refreshing: { token: string; promise: Promise<void> } | null = null;
+
+export function refreshSession(): Promise<void> {
+  const session = useAuthState.getState().session;
+  if (session && refreshing?.token === session.accessToken)
+    return refreshing.promise;
+  if (
+    !session ||
+    session.twoFactorRequired ||
+    !session.refreshToken ||
+    !(Date.parse(session.refreshExpiresAt ?? "") > Date.now())
+  ) {
+    if (session) useAuthState.getState().setSession(null);
+    return Promise.reject(
+      new ApiError(401, "Sua sessão expirou. Entre novamente."),
+    );
+  }
+  const promise = send<LoginResponse>("/auth/refresh", {
+    method: "POST",
+    headers: new Headers({
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify({ refreshToken: session.refreshToken }),
+  })
+    .then((renewed) => {
+      const current = useAuthState.getState().session;
+      if (current?.accessToken !== session.accessToken)
+        throw new DOMException(
+          "Sessão alterada durante a renovação.",
+          "AbortError",
+        );
+      if (!renewed.accessToken || !(Date.parse(renewed.expiresAt) > Date.now()))
+        throw new ApiError(401, "Sua sessão expirou. Entre novamente.");
+      useAuthState
+        .getState()
+        .setSession({
+          ...current,
+          accessToken: renewed.accessToken,
+          tokenType: renewed.tokenType,
+          expiresAt: renewed.expiresAt,
+          refreshToken: null,
+          refreshExpiresAt: null,
+        });
+    })
+    .catch((error) => {
+      if (useAuthState.getState().session?.accessToken === session.accessToken)
+        useAuthState.getState().setSession(null);
+      showRequestError(error);
+      throw error;
+    })
+    .finally(() => {
+      if (refreshing?.promise === promise) refreshing = null;
+    });
+  refreshing = { token: session.accessToken, promise };
+  return promise;
+}
+async function request<T>(
   path: string,
   { body, responseType, ...options }: Options = {},
 ): Promise<T> {
@@ -57,14 +126,23 @@ export async function apiRequest<T>(
   const multipart = body instanceof FormData;
   if (body !== undefined && !multipart)
     headers.set("Content-Type", "application/json");
-  const session = useAuthState.getState().session;
+  const isPublicAuthPath = isPublicPath(path);
+  let session = useAuthState.getState().session;
   if (mockAccessEnabled && getDemoUser(session?.accessToken)) {
     options.signal?.throwIfAborted();
     return mockRequest(path, method, body, session!.accessToken) as T;
   }
+  if (
+    !isPublicAuthPath &&
+    session &&
+    Date.parse(session.expiresAt) <= Date.now()
+  ) {
+    await refreshSession();
+    options.signal?.throwIfAborted();
+    session = useAuthState.getState().session;
+  }
   if (session && path !== "/auth/login")
     headers.set("Authorization", `Bearer ${session.accessToken}`);
-  const isPublicAuthPath = publicAuthPaths.has(path);
   if (isPublicAuthPath) headers.delete("Authorization");
   try {
     const result = await send<T>(
@@ -96,9 +174,31 @@ export async function apiRequest<T>(
     if (
       error instanceof ApiError &&
       error.status === 401 &&
+      session?.refreshToken &&
+      !session.twoFactorRequired &&
+      Date.parse(session.refreshExpiresAt ?? "") > Date.now() &&
+      session.accessToken === useAuthState.getState().session?.accessToken
+    ) {
+      await refreshSession();
+      return request<T>(path, { ...options, body, responseType });
+    }
+    if (
+      error instanceof ApiError &&
+      error.status === 401 &&
       session?.accessToken === useAuthState.getState().session?.accessToken
     )
       useAuthState.getState().setSession(null);
+    throw error;
+  }
+}
+export async function apiRequest<T>(
+  path: string,
+  options: Options = {},
+): Promise<T> {
+  try {
+    return await request<T>(path, options);
+  } catch (error) {
+    showRequestError(error);
     throw error;
   }
 }

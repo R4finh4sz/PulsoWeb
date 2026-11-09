@@ -8,7 +8,18 @@ export function useMe() {
     queryFn: async ({ signal }) => {
       const user = await authApi.me(signal);
       const session = useAuthState.getState().session;
-      if (user && session) useAuthState.getState().setSession({ ...session, user: { ...session.user, schoolId: user.schoolId ?? null, activeSchoolId: user.activeSchoolId, schoolIds: user.schoolIds } });
+      if (user && session)
+        useAuthState
+          .getState()
+          .setSession({
+            ...session,
+            user: {
+              ...session.user,
+              schoolId: user.schoolId ?? null,
+              activeSchoolId: user.activeSchoolId,
+              schoolIds: user.schoolIds,
+            },
+          });
       return user;
     },
     retry: false,
@@ -20,7 +31,9 @@ export function useLogin() {
     mutationFn: async (credentials: Parameters<typeof authApi.login>[0]) => {
       const session = await authApi.login(credentials);
       if (session.user.role === "STUDENT")
-        throw new Error("O acesso dos alunos está disponível apenas no aplicativo. A plataforma web é destinada aos profissionais da escola.");
+        throw new Error(
+          "O acesso dos alunos está disponível apenas no aplicativo. A plataforma web é destinada aos profissionais da escola.",
+        );
       return session;
     },
     onMutate: async () => {
@@ -30,7 +43,12 @@ export function useLogin() {
       sessionStorage.removeItem("pulso-demo-session");
     },
     onSuccess: (session) => {
-      useAuthState.getState().setSession(session);
+      useAuthState
+        .getState()
+        .setSession({
+          ...session,
+          twoFactorEnabled: session.twoFactorRequired,
+        });
     },
   });
 }
@@ -56,10 +74,26 @@ export function useActiveSchool() {
       const user = await authApi.me();
       if (!user) throw new Error("Sua sessão expirou. Entre novamente.");
       const session = useAuthState.getState().session;
-      if (session) useAuthState.getState().setSession({ ...session, user: { ...session.user, schoolIds: user.schoolIds, activeSchoolId: user.activeSchoolId, schoolId: user.schoolId ?? null } });
+      if (session)
+        useAuthState
+          .getState()
+          .setSession({
+            ...session,
+            user: {
+              ...session.user,
+              schoolIds: user.schoolIds,
+              activeSchoolId: user.activeSchoolId,
+              schoolId: user.schoolId ?? null,
+            },
+          });
       client.setQueryData(["session"], user);
-      client.removeQueries({ predicate: (query) => query.queryKey[0] !== "session" && query.queryKey[0] !== "schools" });
-      await client.invalidateQueries({ predicate: (query) => query.queryKey[0] !== "session" });
+      client.removeQueries({
+        predicate: (query) =>
+          query.queryKey[0] !== "session" && query.queryKey[0] !== "schools",
+      });
+      await client.invalidateQueries({
+        predicate: (query) => query.queryKey[0] !== "session",
+      });
       return user;
     },
   });
