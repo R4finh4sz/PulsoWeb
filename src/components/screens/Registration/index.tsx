@@ -6,12 +6,13 @@ import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import { authApi } from "@/integrations/auth/api";
 import { registrationApi } from "@/integrations/registration/api";
+import { passwordError } from "@/validation/password";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import { ErrorMessage } from "../Integration/shared";
 
-export function RegistrationForm({ token }: { token?: string; }) {
+export function RegistrationForm({ token }: { token?: string }) {
   const [search, setSearch] = useState("");
   const [acceptedVersion, setAcceptedVersion] = useState<string | null>(null);
   const [error, setError] = useState<Error | null>(null);
@@ -61,12 +62,8 @@ export function RegistrationForm({ token }: { token?: string; }) {
       if (!/\S+\s+\S+/.test(name)) throw new Error("Informe nome e sobrenome.");
       if (password !== data.get("confirmPassword"))
         throw new Error("As senhas precisam ser iguais.");
-      if (new TextEncoder().encode(password).length > 72)
-        throw new Error(
-          "A senha deve ter no máximo 72 bytes. Use menos caracteres especiais.",
-        );
-      if (token && (!/[A-Z]/.test(password) || !/[0-9]/.test(password)))
-        throw new Error("A senha deve conter uma letra maiúscula e um número.");
+      const invalidPassword = passwordError(password);
+      if (invalidPassword) throw new Error(invalidPassword);
       const common = {
         name,
         ra: String(data.get("ra")),
@@ -81,6 +78,7 @@ export function RegistrationForm({ token }: { token?: string; }) {
       return registrationApi.register(
         {
           ...common,
+          confirmPassword: password,
           email: String(data.get("email")).trim(),
           birthDate: String(data.get("birthDate")),
           schoolId: Number(data.get("schoolId")),
@@ -181,9 +179,7 @@ export function RegistrationForm({ token }: { token?: string; }) {
                     value={digit}
                     placeholder="0"
                     onFocus={(event) => event.target.select()}
-                    onChange={(event) =>
-                      enterDigits(index, event.target.value)
-                    }
+                    onChange={(event) => enterDigits(index, event.target.value)}
                     onPaste={(event) => {
                       event.preventDefault();
                       enterDigits(index, event.clipboardData.getData("text"));
@@ -337,8 +333,8 @@ export function RegistrationForm({ token }: { token?: string; }) {
               maxLength={72}
             />
             <p className="text-xs text-(--muted)">
-              Use de 8 a 72 caracteres
-              {token ? ", incluindo uma letra maiúscula e um número" : ""}.
+              Use pelo menos 8 caracteres, uma letra maiúscula de A a Z e um
+              número.
             </p>
             <Input
               id="confirmPassword"
@@ -379,8 +375,7 @@ export function RegistrationForm({ token }: { token?: string; }) {
             )}
             {terms.isSuccess && !terms.data && (
               <p role="alert">
-                O cadastro estará disponível quando os termos forem
-                publicados.
+                O cadastro estará disponível quando os termos forem publicados.
               </p>
             )}
             <ErrorMessage error={error} />

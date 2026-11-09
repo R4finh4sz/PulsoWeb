@@ -1,10 +1,15 @@
+import { passwordError } from "@/validation/password";
 import { ApiError, apiRequest } from "@/api/client";
 import type { User } from "../types";
 import type { LoginResponse } from "./state";
 export type Terms = { title: string; version: string; content: string };
 export type PasswordResetVerification = { resetToken: string };
 export const authApi = {
-  activeSchool: (schoolId: number) => apiRequest<void>("/me/active-school", { method: "PATCH", body: { schoolId } }),
+  activeSchool: (schoolId: number) =>
+    apiRequest<void>("/me/active-school", {
+      method: "PATCH",
+      body: { schoolId },
+    }),
   me: async (signal?: AbortSignal) => {
     try {
       return await apiRequest<User>("/me", { signal });
@@ -25,16 +30,21 @@ export const authApi = {
       method: "POST",
       body: { email, code },
     }),
-  resetPassword: (
+  resetPassword: async (
     email: string,
     resetToken: string,
     newPassword: string,
     confirmPassword: string,
-  ) =>
-    apiRequest<void>("/auth/password-reset/reset", {
+  ) => {
+    const invalidPassword = passwordError(newPassword);
+    if (invalidPassword) throw new Error(invalidPassword);
+    if (newPassword !== confirmPassword)
+      throw new Error("As senhas precisam ser iguais.");
+    return apiRequest<void>("/auth/password-reset/reset", {
       method: "POST",
       body: { email, resetToken, newPassword, confirmPassword },
-    }),
+    });
+  },
   verify: (code: string) =>
     apiRequest<void>("/auth/2fa/verify", { method: "POST", body: { code } }),
   resend: () =>

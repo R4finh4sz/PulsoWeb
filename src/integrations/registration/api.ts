@@ -1,3 +1,4 @@
+import { passwordError } from "@/validation/password";
 import { apiRequest, queryString } from "@/api/client";
 import type { Role } from "../types";
 
@@ -20,6 +21,7 @@ export type RegistrationInput = {
   email: string;
   birthDate: string;
   password: string;
+  confirmPassword: string;
   schoolId: number;
   termsAccepted: boolean;
   termsVersion: string;
@@ -44,7 +46,11 @@ export const registrationApi = {
       content: { id: string; name: string; city: string; state: string }[];
       totalPages: number;
     }>("/schools/search" + queryString({ q, size: 100 }), { signal }),
-  register: (body: RegistrationInput, photo?: File) => {
+  register: async (body: RegistrationInput, photo?: File) => {
+    const invalidPassword = passwordError(body.password);
+    if (invalidPassword) throw new Error(invalidPassword);
+    if (body.password !== body.confirmPassword)
+      throw new Error("As senhas precisam ser iguais.");
     if (!photo)
       return apiRequest<{ id: number; status: RegistrationStatus }>(
         "/auth/register",
@@ -61,7 +67,11 @@ export const registrationApi = {
   invite: (
     resource: "teachers" | "coordinators",
     body: { email: string; schoolId?: number },
-  ) => apiRequest<{ delivery: "INTERNAL" | "EMAIL" }>("/invitations/" + resource, { method: "POST", body: resource === "teachers" ? { email: body.email } : body }),
+  ) =>
+    apiRequest<{ delivery: "INTERNAL" | "EMAIL" }>("/invitations/" + resource, {
+      method: "POST",
+      body: resource === "teachers" ? { email: body.email } : body,
+    }),
   invitation: (token: string, signal?: AbortSignal) =>
     apiRequest<Invitation>("/invitations/" + encodeURIComponent(token), {
       signal,
@@ -76,7 +86,7 @@ export const registrationApi = {
       "/invitations/" + encodeURIComponent(token) + "/resend",
       { method: "POST" },
     ),
-  complete: (
+  complete: async (
     token: string,
     body: {
       name: string;
@@ -85,17 +95,23 @@ export const registrationApi = {
       termsAccepted: boolean;
       termsVersion: string;
     },
-  ) =>
-    apiRequest("/invitations/" + encodeURIComponent(token) + "/complete", {
-      method: "POST",
-      body: {
-        name: body.name,
-        matricula: body.ra.trim(),
-        password: body.password,
-        termsAccepted: body.termsAccepted,
-        termsVersion: body.termsVersion,
+  ) => {
+    const invalidPassword = passwordError(body.password);
+    if (invalidPassword) throw new Error(invalidPassword);
+    return apiRequest(
+      "/invitations/" + encodeURIComponent(token) + "/complete",
+      {
+        method: "POST",
+        body: {
+          name: body.name,
+          matricula: body.ra.trim(),
+          password: body.password,
+          termsAccepted: body.termsAccepted,
+          termsVersion: body.termsVersion,
+        },
       },
-    }),
+    );
+  },
   list: (status: RegistrationStatus, page: number, signal?: AbortSignal) =>
     apiRequest<{ content: Registration[]; totalPages: number }>(
       "/registration-requests" + queryString({ status, page, size: 20 }),
