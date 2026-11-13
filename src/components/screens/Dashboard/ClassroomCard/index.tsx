@@ -1,6 +1,7 @@
 "use client";
 
 import { DashboardIcon } from "@/components/ui/DashboardIcon";
+import { classroomLabel } from "@/utils/classroomLabel";
 import type { Classroom } from "@/interfaces/classroom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -11,7 +12,7 @@ export function ClassroomCard({ room }: { room: Classroom; }) {
   return (
     <Link
       href={`${base}/classrooms/${encodeURIComponent(room.id)}`}
-      aria-label={`Abrir turma ${room.name}`}
+      aria-label={`Abrir turma ${classroomLabel(room)}`}
       className="group block w-full rounded-xl border border-(--line) bg-white p-4 text-left transition hover:border-[var(--blue)] hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--blue)]"
     >
       <span className="flex items-center gap-3">
@@ -21,7 +22,7 @@ export function ClassroomCard({ room }: { room: Classroom; }) {
           <DashboardIcon name="book" />
         </span>
         <span className="flex-1">
-          <span className="block font-semibold">{room.name}</span>
+          <span className="block font-semibold">{classroomLabel(room)}</span>
           <span className="mt-1 block text-xs text-(--muted)">
             Ensino médio · {room.period}
           </span>

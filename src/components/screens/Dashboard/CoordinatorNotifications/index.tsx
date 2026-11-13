@@ -25,10 +25,12 @@ export function CoordinatorNotifications({ dark = false }: { dark?: boolean; }) 
   const pending = [
     ...(deletions.data ?? []).map((request) => ({
       ...request,
+      type: "DELETION" as const,
       deletion: true,
     })),
     ...(query.data?.content ?? []).map((request) => ({
       ...request,
+      type: request.type ?? "REGISTRATION",
       deletion: false,
     })),
   ];
@@ -133,13 +135,13 @@ export function CoordinatorNotifications({ dark = false }: { dark?: boolean; }) 
               <ul className="divide-y divide-(--line)">
                 {pending.slice(0, 3).map((request) => (
                   <li
-                    key={`${request.deletion ? "deletion" : "registration"}:${request.id}`}
+                    key={`${request.type}:${request.id}`}
                   >
                     <Link
                       href={
                         request.deletion
                           ? "/coordinator/registration-requests?type=deletion"
-                          : "/coordinator/registration-requests"
+                          : request.role === "STUDENT" ? "/coordinator/registration-requests?type=student" : "/coordinator/registration-requests"
                       }
                       onClick={() => setOpen(false)}
                       className="block px-5 py-4 hover:bg-cyan-50"
@@ -150,7 +152,7 @@ export function CoordinatorNotifications({ dark = false }: { dark?: boolean; }) 
                       <p className="mt-1 text-xs text-(--muted)">
                         {request.deletion
                           ? "Exclusão de conta de"
-                          : "Cadastro de"}{" "}
+                          : request.type === "TRANSFER" ? "Transferência de" : "Cadastro de"}{" "}
                         {request.role === "TEACHER" ? "professor" : "aluno"}{" "}
                         aguardando análise
                       </p>

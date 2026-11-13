@@ -8,10 +8,12 @@ import {
 import { BackLink } from "@/components/ui/BackLink";
 import { FeedbackModalContent } from "@/components/ui/FeedbackModal";
 import Input from "@/components/ui/Input";
+import { PasswordRequirements } from "@/components/ui/PasswordRequirements";
 import { useLogout } from "@/integrations/auth/hooks";
 import { profileApi, type ChangePassword } from "@/integrations/profile/api";
 import type { SessionUser } from "@/interfaces/auth";
 import { homeRoutes } from "@/interfaces/auth";
+import { showRequestError } from "@/store/feedbackStore";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
@@ -22,14 +24,15 @@ import {
   GraduationCap,
   LockKeyhole,
   Mail,
+  Pencil,
   ShieldCheck,
-  UserRound,
   Trash2,
+  UserRound,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TwoFactorSettings } from "./TwoFactorSettings";
 
 export function Profile({ user }: { user: SessionUser }) {
@@ -43,6 +46,25 @@ export function Profile({ user }: { user: SessionUser }) {
   const client = useQueryClient();
   const router = useRouter();
   const logout = useLogout();
+  const photoInput = useRef<HTMLInputElement>(null);
+  const photoImage = useRef<HTMLImageElement>(null);
+  const photo = useQuery({
+    queryKey: ["profile-photo", user.id],
+    queryFn: async ({ signal }) => (await profileApi.photo(signal)) ?? null,
+    retry: false,
+  });
+  useEffect(() => {
+    if (!photo.data || !photoImage.current) return;
+    const url = URL.createObjectURL(photo.data);
+    photoImage.current.src = url;
+    return () => URL.revokeObjectURL(url);
+  }, [photo.data]);
+  const updatePhoto = useMutation({
+    mutationFn: profileApi.updatePhoto,
+    onSuccess: () =>
+      client.invalidateQueries({ queryKey: ["profile-photo", user.id] }),
+    onError: showRequestError,
+  });
   const profile = useQuery({
     queryKey: ["teacher-profile", user.id],
     queryFn: ({ signal }) => profileApi.get(signal),
@@ -51,6 +73,8 @@ export function Profile({ user }: { user: SessionUser }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [deletionPassword, setDeletionPassword] = useState("");
   const [deletionReason, setDeletionReason] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
   const password = useMutation({
     mutationFn: profileApi.changePassword,
     onSuccess: async () => {
@@ -81,6 +105,8 @@ export function Profile({ user }: { user: SessionUser }) {
   });
   const busy = password.isPending || deletion.isPending || logout.isPending;
   function open(value: "password" | "deletion") {
+    setNewPassword("");
+    setConfirmation("");
     if (admin && value === "deletion") return;
     setActive(value);
     setDeletionPassword("");
@@ -101,17 +127,56 @@ export function Profile({ user }: { user: SessionUser }) {
       <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         <div className="space-y-8">
           <div className="text-center">
-            <span
-              aria-hidden="true"
-              className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-[#dff2f6] text-3xl font-semibold text-(--blue-dark)"
-            >
-              {user.name
-                .trim()
-                .split(/\s+/)
-                .slice(0, 2)
-                .map((part) => part[0])
-                .join("")}
-            </span>
+            <div className="relative mx-auto w-fit">
+              {photo.data ? (
+                // The authenticated image is loaded as a local blob URL.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  ref={photoImage}
+                  alt="Foto de perfil"
+                  className="h-44 w-44 rounded-full object-cover"
+                />
+              ) : (
+                <span
+                  aria-hidden="true"
+                  className="mx-auto flex h-44 w-44 items-center justify-center rounded-full bg-[#dff2f6] text-5xl font-semibold text-(--blue-dark)"
+                >
+                  {user.name
+                    .trim()
+                    .split(/\s+/)
+                    .slice(0, 2)
+                    .map((part) => part[0])
+                    .join("")}
+                </span>
+              )}
+              <input
+                ref={photoInput}
+                type="file"
+                accept="image/jpeg,image/png"
+                aria-label="Selecionar foto de perfil"
+                className="hidden"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (file && !updatePhoto.isPending) updatePhoto.mutate(file);
+                }}
+              />
+              <button
+                type="button"
+                aria-label="Alterar foto de perfil"
+                title="Alterar foto de perfil"
+                disabled={updatePhoto.isPending}
+                onClick={() => photoInput.current?.click()}
+                className="absolute bottom-0 right-0 flex h-11 w-11 items-center justify-center rounded-full border border-(--line) bg-white text-(--blue-dark) shadow-sm hover:bg-cyan-50 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
+              >
+                <Pencil size={18} aria-hidden="true" />
+              </button>
+            </div>
+            {updatePhoto.isPending && (
+              <p role="status" className="mt-2 text-sm text-(--muted)">
+                Atualizando foto…
+              </p>
+            )}
             <h2 className="mt-5 break-words text-xl font-semibold">
               {user.name}
             </h2>
@@ -436,6 +501,9 @@ export function Profile({ user }: { user: SessionUser }) {
                 minLength={8}
                 maxLength={72}
                 autoComplete="new-password"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+                aria-describedby="password-requirements"
               />
               <Input
                 id="confirmPassword"
@@ -446,7 +514,11 @@ export function Profile({ user }: { user: SessionUser }) {
                 minLength={8}
                 maxLength={72}
                 autoComplete="new-password"
+                value={confirmation}
+                onChange={(event) => setConfirmation(event.target.value)}
+                aria-describedby="password-requirements"
               />
+              <PasswordRequirements password={newPassword} confirmation={confirmation} />
             </fieldset>
             <ErrorMessage error={password.error} />
             <div className="grid grid-cols-2 gap-3">

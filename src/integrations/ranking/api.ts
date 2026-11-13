@@ -7,6 +7,7 @@ export type RankingEntry = {
   schoolName: string;
   grade: string | null;
   classroomName?: string | null;
+  classroomIdentifier?: string | null;
   correctAnswers: number;
   completedActivities: number;
 };

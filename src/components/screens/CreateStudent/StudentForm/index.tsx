@@ -1,4 +1,5 @@
 "use client";
+import { classroomLabel } from "@/utils/classroomLabel";
 
 import Button from "@/components/ui/Button";
 import { DashboardPanel } from "@/components/ui/DashboardPanel";
@@ -83,7 +84,7 @@ export function StudentForm({ user }: { user: SessionUser }) {
             <option value="">Selecione a turma</option>
             {rooms.map((room) => (
               <option key={room.id} value={room.id}>
-                {room.name} · {room.period} ·{" "}
+                {classroomLabel(room)} · {room.period} ·{" "}
                 {schools.find((school) => school.id === room.schoolId)?.name}
               </option>
             ))}

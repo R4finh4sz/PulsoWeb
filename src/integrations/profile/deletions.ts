@@ -39,9 +39,9 @@ export const accountDeletionsApi = {
     );
     return [...items, ...pages.flat()];
   },
-  review: (id: number, status: "APPROVED" | "REJECTED") =>
+  review: (id: number, status: "APPROVED" | "REJECTED", reason: string) =>
     apiRequest<void>(`/account-deletion-requests/${id}`, {
       method: "PATCH",
-      body: { status },
+      body: { status, reason },
     }),
 };

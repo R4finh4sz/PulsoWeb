@@ -1,6 +1,7 @@
 import { apiRequest, queryString } from "@/api/client";
 import { useAuthState } from "@/integrations/auth/state";
 import { getDemoUser, mockAccessEnabled } from "@/mocks/access";
+import type { User } from "@/integrations/types";
 
 export type School = {
   teacherIds?: number[];
@@ -14,7 +15,14 @@ export type School = {
   coordinator?: { id: number; fullName: string; email: string } | null;
 };
 
-export type CreateSchool = Omit<School, "id">;
+export type CreateSchool = {
+  nome: string;
+  logradouro: string;
+  bairro: string;
+  cidade: string;
+  cep: string;
+  uf: string;
+};
 
 export type SchoolInvitation = {
   expiresAt?: string;
@@ -27,6 +35,14 @@ export type SchoolInvitation = {
 };
 
 export const schoolsApi = {
+  deactivate: (id: number) =>
+    apiRequest<void>(`/schools/${id}/deactivate`, { method: "PATCH" }),
+  assignUser: (id: number, userId: number) =>
+    apiRequest<User>(`/schools/${id}/users/${userId}`, { method: "PATCH" }),
+  assignCoordinator: (id: number, coordinatorId: number) =>
+    apiRequest<void>(`/schools/${id}/coordinator`, {
+      method: "PATCH", body: { coordinatorId },
+    }),
   searchByCep: (cep: string, page = 0, signal?: AbortSignal) =>
     apiRequest<{
       content: {

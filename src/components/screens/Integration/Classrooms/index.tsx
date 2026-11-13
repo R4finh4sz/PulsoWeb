@@ -1,11 +1,18 @@
 "use client";
+import { classroomLabel } from "@/utils/classroomLabel";
 import { useActiveSchool } from "@/integrations/auth/hooks";
 import { useAuthState } from "@/integrations/auth/state";
+import { getInitials } from "@/utils/text";
 import { useRouter } from "next/navigation";
 
 import { CoordinatorClassroom } from "@/components/screens/ClassroomDetails/CoordinatorClassroom";
 import { StudentList } from "@/components/screens/ClassroomDetails/StudentList";
 import { SubjectCard } from "@/components/screens/ClassroomDetails/SubjectCard";
+import {
+  ErrorMessage,
+  actionClass,
+  fieldClass,
+} from "@/components/screens/Integration/shared";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FeedbackModalContent } from "@/components/ui/FeedbackModal";
 import { classroomsApi } from "@/integrations/classrooms/api";
@@ -14,7 +21,6 @@ import { MAX_SUBJECTS, subjectsApi } from "@/integrations/subjects/api";
 import type { Classroom, CreateClassroom, User } from "@/integrations/types";
 import { useApiMutation } from "@/integrations/useApiMutation";
 import { usersApi } from "@/integrations/users/api";
-import { useUsers } from "@/integrations/users/hooks";
 import type { SessionUser, UserRole } from "@/interfaces/auth";
 import { homeRoutes } from "@/interfaces/auth";
 import {
@@ -27,11 +33,6 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, BookOpen, Plus, Search, Users } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
-import {
-  ErrorMessage,
-  actionClass,
-  fieldClass,
-} from "@/components/screens/Integration/shared";
 export const base = (role: UserRole) => homeRoutes[role];
 export function ClassroomList({
   user,
@@ -124,7 +125,7 @@ export function ClassroomList({
                   <BookOpen aria-hidden="true" size={29} strokeWidth={1.7} />
                 </div>
                 <h2 className="text-lg font-semibold leading-7 tracking-tight text-[var(--ink)]">
-                  {room.name}
+                  {classroomLabel(room)}
                 </h2>
                 <p className="mt-2 text-sm text-(--muted)">
                   {room.schoolName || "Escola não informada"}
@@ -208,7 +209,7 @@ export function ClassroomList({
                 </span>
                 <div className="min-w-0 flex-1">
                   <h3 className="truncate text-sm font-semibold text-[var(--ink)]">
-                    {room.name} · {room.identifier}
+                    {classroomLabel(room)}
                   </h3>
                   <p className="text-xs text-(--muted)">
                     {room.teacherIds.length}{" "}
@@ -241,41 +242,29 @@ export function ClassroomForm({
   const [success, setSuccess] = useState(false);
   const [selectionError, setSelectionError] = useState("");
   const mutation = useApiMutation(
-    (body: Partial<CreateClassroom> & Pick<CreateClassroom, "name">) =>
-      existing
-        ? classroomsApi.update(existing.id, body)
-        : classroomsApi.create({
-            name: body.name,
-            identifier: body.identifier!,
-          }),
+    (body: CreateClassroom) => classroomsApi.create(body),
     onSuccessClose,
   );
   async function submit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (mutation.isPending) return;
+    if (mutation.isPending || existing) return;
     const form = event.currentTarget;
     const data = new FormData(form);
     setSuccess(false);
     setSelectionError("");
     try {
-      const selection = existing
-        ? null
-        : ClassroomSelectionSchema.safeParse({
-            year: String(data.get("year") ?? ""),
-            identifier: String(data.get("identifier") ?? ""),
-            period: String(data.get("period") ?? ""),
-          });
-      if (selection && !selection.success) {
+      const selection = ClassroomSelectionSchema.safeParse({
+        year: String(data.get("year") ?? ""),
+        identifier: String(data.get("identifier") ?? ""),
+        period: String(data.get("period") ?? ""),
+      });
+      if (!selection.success) {
         setSelectionError(selection.error.issues[0].message);
         return;
       }
       const room = await mutation.mutateAsync({
-        name: selection?.success
-          ? `${selection.data.year}º ano · ${selection.data.period}`
-          : String(data.get("name")).trim(),
-        ...(selection?.success
-          ? { identifier: selection.data.identifier }
-          : {}),
+        name: `${selection.data.year}º ano · ${selection.data.period}`,
+        identifier: selection.data.identifier,
       });
       setSuccess(true);
       onCreated?.(room);
@@ -283,94 +272,76 @@ export function ClassroomForm({
       /* Render the server error. */
     }
   }
+  if (existing)
+    return (
+      <section
+        aria-label="Dados da turma"
+        className="space-y-4 rounded-xl bg-white p-6"
+      >
+        <p className="text-sm text-(--muted)">
+          O nome e o identificador da turma são definidos na criação e não podem
+          ser alterados.
+        </p>
+        <dl className="space-y-4">
+          <div>
+            <dt className="text-xs text-(--muted)">Nome da turma</dt>
+            <dd className="mt-1 break-words text-sm font-medium">{existing.name}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-(--muted)">Identificador</dt>
+            <dd className="mt-1 break-words text-sm font-medium">{existing.identifier}</dd>
+          </div>
+        </dl>
+      </section>
+    );
   return (
     <form onSubmit={submit} className="space-y-4 rounded-xl bg-white p-6">
-      {!existing ? (
-        <div className="grid gap-4 sm:grid-cols-3">
-          <label className="block text-sm">
-            Ano
-            <select name="year" required defaultValue="" className={fieldClass}>
-              <option value="" disabled>
-                Selecione o ano
+      <div className="grid gap-4 sm:grid-cols-3">
+        <label className="block text-sm">
+          Ano
+          <select name="year" required defaultValue="" className={fieldClass}>
+            <option value="" disabled>
+              Selecione o ano
+            </option>
+            {classroomYears.map((year) => (
+              <option key={year} value={year}>
+                {year}º ano
               </option>
-              {classroomYears.map((year) => (
-                <option key={year} value={year}>
-                  {year}º ano
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-sm">
-            Turma
-            <select
-              name="identifier"
-              required
-              defaultValue=""
-              className={fieldClass}
-            >
-              <option value="" disabled>
-                Selecione a turma
+            ))}
+          </select>
+        </label>
+        <label className="block text-sm">
+          Turma
+          <select
+            name="identifier"
+            required
+            defaultValue=""
+            className={fieldClass}
+          >
+            <option value="" disabled>
+              Selecione a turma
+            </option>
+            {classroomLetters.map((letter) => (
+              <option key={letter} value={letter}>
+                {letter}
               </option>
-              {classroomLetters.map((letter) => (
-                <option key={letter} value={letter}>
-                  {letter}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-sm">
-            Turno
-            <select
-              name="period"
-              required
-              defaultValue=""
-              className={fieldClass}
-            >
-              <option value="" disabled>
-                Selecione o turno
+            ))}
+          </select>
+        </label>
+        <label className="block text-sm">
+          Turno
+          <select name="period" required defaultValue="" className={fieldClass}>
+            <option value="" disabled>
+              Selecione o turno
+            </option>
+            {classroomPeriods.map((period) => (
+              <option key={period} value={period}>
+                {period}
               </option>
-              {classroomPeriods.map((period) => (
-                <option key={period} value={period}>
-                  {period}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      ) : (
-        <>
-          <label className="block text-sm">
-            Nome da turma
-            <input
-              name="name"
-              maxLength={100}
-              required
-              defaultValue={existing?.name}
-              placeholder="3º ano"
-              className={fieldClass}
-            />
-          </label>
-          <label className="block text-sm">
-            Identificador
-            <input
-              name="identifier"
-              pattern={existing ? undefined : "[A-Z]"}
-              maxLength={existing ? undefined : 1}
-              required={!existing}
-              readOnly={!!existing}
-              disabled={!!existing}
-              defaultValue={existing?.identifier}
-              placeholder="A"
-              title={
-                existing
-                  ? "Identificador definido pelo sistema"
-                  : "Uma letra maiúscula de A a Z"
-              }
-              className={`${fieldClass} read-only:bg-slate-50 read-only:text-(--muted)`}
-            />
-          </label>
-        </>
-      )}
+            ))}
+          </select>
+        </label>
+      </div>
       {selectionError && (
         <p role="alert" className="text-sm text-red-700">
           {selectionError}
@@ -393,162 +364,152 @@ export function Assignment({
 }) {
   const [q, setQ] = useState("");
   const [page, setPage] = useState(0);
-  const [selected, setSelected] = useState("");
-  const [success, setSuccess] = useState(false);
-  const students = useUsers(
-    resource,
-    { q, page, size: 20, schoolId: room.schoolId },
-    resource === "students",
-  );
-  const teachers = useQuery({
-    queryKey: ["users", "teachers", "assignment", room.schoolId],
-    enabled: resource === "teachers",
+  const [success, setSuccess] = useState("");
+  const isTeacher = resource === "teachers";
+  // Loads every page once; search and pagination happen on the client so
+  // people already in this classroom never leave empty pages behind.
+  const everyone = useQuery({
+    queryKey: ["users", resource, "assignment", room.schoolId],
     queryFn: async ({ signal }) => {
       // GET /teachers scopes results to the authenticated coordinator's school.
-      const filters = { size: 100 };
+      const filters = isTeacher
+        ? { size: 100 }
+        : { size: 100, schoolId: room.schoolId };
       const first = await usersApi.list(
-        "teachers",
+        resource,
         { ...filters, page: 0 },
         signal,
       );
       const remaining = await Promise.all(
         Array.from({ length: Math.max(0, first.totalPages - 1) }, (_, index) =>
-          usersApi.list("teachers", { ...filters, page: index + 1 }, signal),
+          usersApi.list(resource, { ...filters, page: index + 1 }, signal),
         ),
       );
       return [first, ...remaining].flatMap((result) => result.content);
     },
   });
-  const people = resource === "teachers" ? teachers : students;
+  const teachers = everyone;
+  const people = everyone;
   const mutation = useApiMutation(async (id: number) =>
-    resource === "students"
-      ? classroomsApi.enroll(room.id, id)
-      : classroomsApi.assign(room.id, id),
+    isTeacher
+      ? classroomsApi.assign(room.id, id)
+      : classroomsApi.enroll(room.id, id),
   );
   const normalize = (value: string) =>
-    value
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLocaleLowerCase("pt-BR");
-  const availableTeachers = (teachers.data ?? []).filter(
+    value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLocaleLowerCase("pt-BR");
+  const matches = (everyone.data ?? []).filter(
     (person) =>
-      !room.teacherIds.includes(person.id) &&
+      (isTeacher
+        ? !room.teacherIds.includes(person.id)
+        : person.classroomId !== room.id) &&
       normalize(
         `${person.fullName} ${person.email} ${person.matricula ?? person.ra ?? ""}`,
       ).includes(normalize(q.trim())),
   );
-  const available =
-    resource === "teachers"
-      ? availableTeachers.slice(page * 20, page * 20 + 20)
-      : (students.data?.content ?? []).filter(
-          (person) => person.classroomId !== room.id,
-        );
-  const totalPages =
-    resource === "teachers"
-      ? Math.ceil(availableTeachers.length / 20)
-      : (students.data?.totalPages ?? 0);
+  const available = matches.slice(page * 20, page * 20 + 20);
+  const totalPages = Math.ceil(matches.length / 20);
+  const label = isTeacher ? "professor" : "aluno";
+
+  async function link(person: User) {
+    if (mutation.isPending) return;
+    setSuccess("");
+    try {
+      await mutation.mutateAsync(person.id);
+      setSuccess(`${person.fullName} foi vinculado à turma.`);
+    } catch {
+      /* Rendered through ErrorMessage below. */
+    }
+  }
+
   return (
-    <form
-      className="space-y-3"
-      onSubmit={async (event) => {
-        event.preventDefault();
-        if (
-          !available.some((person) => String(person.id) === selected) ||
-          mutation.isPending
-        )
-          return;
-        setSuccess(false);
-        try {
-          await mutation.mutateAsync(Number(selected));
-          setSelected("");
-          setSuccess(true);
-        } catch {
-          /* Render below. */
-        }
-      }}
-    >
-      <h3 className="text-sm font-semibold">
-        {resource === "students" ? "Vincular aluno" : "Vincular professor"}
-      </h3>
-      <input
-        className={fieldClass}
-        aria-label={
-          resource === "teachers"
-            ? "Buscar professor da escola"
-            : "Buscar pessoa por nome ou RA"
-        }
-        placeholder={
-          resource === "teachers"
-            ? "Buscar professor por nome, e-mail ou matrícula"
-            : "Buscar por nome ou RA"
-        }
-        value={q}
-        onChange={(event) => {
-          setQ(event.target.value);
-          setPage(0);
-          setSelected("");
-        }}
-      />
-      {resource === "teachers" ? (
-        <fieldset disabled={mutation.isPending} className="space-y-2">
-          <legend className="text-sm text-(--muted)">
-            Escolha o professor da escola que deseja vincular à turma.
-          </legend>
-          {available.map((person) => (
-            <label
-              key={person.id}
-              className="flex cursor-pointer items-center gap-3 rounded-xl border border-(--line) bg-white p-4"
-            >
-              <input
-                type="radio"
-                name="teacher"
-                value={person.id}
-                checked={selected === String(person.id)}
-                onChange={(event) => setSelected(event.target.value)}
-              />
-              <span>
-                <span className="block text-sm font-medium">
-                  {person.fullName}
-                </span>
-                <span className="block text-xs text-(--muted)">
-                  {person.email}
-                  {(person.matricula ?? person.ra)
-                    ? ` · Matrícula: ${person.matricula ?? person.ra}`
-                    : ""}
-                </span>
-              </span>
-            </label>
-          ))}
-        </fieldset>
-      ) : (
-        <select
-          className={fieldClass}
-          aria-label="Selecionar pessoa"
-          required
-          value={selected}
-          onChange={(event) => setSelected(event.target.value)}
+    <section aria-label={`Vincular ${label}`} className="space-y-3">
+      <label className="flex min-h-11 items-center gap-2 rounded-lg border border-(--line) px-3 focus-within:ring-2 focus-within:ring-(--focus)">
+        <Search
+          size={17}
+          aria-hidden="true"
+          className="shrink-0 text-(--muted)"
+        />
+        <input
+          type="search"
+          aria-label={
+            isTeacher
+              ? "Buscar professor da escola"
+              : "Buscar aluno por nome ou RA"
+          }
+          placeholder={
+            isTeacher
+              ? "Buscar por nome, e-mail ou matrícula"
+              : "Buscar por nome ou RA"
+          }
+          value={q}
+          onChange={(event) => {
+            setQ(event.target.value);
+            setPage(0);
+            setSuccess("");
+          }}
+          className="min-w-0 w-full bg-transparent text-sm outline-none"
+        />
+      </label>
+      {people.isPending && (
+        <p role="status" className="text-sm text-(--muted)">
+          Carregando…
+        </p>
+      )}
+      {available.length > 0 && (
+        <ul
+          aria-label={`${isTeacher ? "Professores" : "Alunos"} disponíveis`}
+          className="max-h-96 divide-y divide-(--line) overflow-y-auto rounded-lg border border-(--line)"
         >
-          <option value="">Selecione o aluno para vincular</option>
-          {available.map((person) => (
-            <option key={person.id} value={person.id}>
-              {person.fullName} · {person.ra}
-              {resource === "students" && person.classroomId
-                ? " (transferir de outra turma)"
-                : ""}
-            </option>
-          ))}
-        </select>
+          {available.map((person) => {
+            const code = person.matricula ?? person.ra;
+            const linking =
+              mutation.isPending && mutation.variables === person.id;
+            return (
+              <li key={person.id} className="flex items-center gap-3 px-3 py-3">
+                <span
+                  aria-hidden="true"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e8f7fa] text-xs font-medium text-(--blue-dark)"
+                >
+                  {getInitials(person.fullName)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="break-words text-sm font-medium">
+                    {person.fullName}
+                  </p>
+                  <p className="break-all text-xs text-(--muted)">
+                    {isTeacher
+                      ? `${person.email}${code ? ` · Matrícula: ${code}` : ""}`
+                      : `RA: ${code || "Não informado"}${person.classroomId ? " · já está em outra turma" : ""}`}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  aria-label={`Vincular ${person.fullName}`}
+                  disabled={mutation.isPending}
+                  onClick={() => link(person)}
+                  className="min-h-10 shrink-0 rounded-lg border border-(--blue-dark) px-3 text-xs font-semibold text-(--blue-dark) enabled:hover:bg-cyan-50 disabled:opacity-50"
+                >
+                  {linking
+                    ? "Vinculando…"
+                    : person.classroomId && !isTeacher
+                      ? "Transferir"
+                      : "Vincular"}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       )}
       {people.isSuccess && !available.length && (
         <p role="status" className="text-sm text-(--muted)">
-          {resource === "teachers"
+          {isTeacher
             ? q.trim()
               ? "Nenhum professor disponível com esse nome, e-mail ou matrícula nesta escola."
               : "Nenhum professor disponível para vincular. Confira se o convite da escola foi aceito ou se o professor já está nesta turma."
             : "Nenhum aluno disponível para vincular."}
         </p>
       )}
-      {resource === "teachers" && teachers.isSuccess && !available.length && (
+      {isTeacher && teachers.isSuccess && !available.length && (
         <div className="space-y-2 text-sm text-(--muted)">
           <p>
             {teachers.data.length === 0
@@ -572,47 +533,36 @@ export function Assignment({
           </div>
         </div>
       )}
-      {resource === "students" && (
-        <p className="text-xs">
-          Se o aluno já tiver turma, este vínculo fará a transferência.
+      <ErrorMessage error={people.error || mutation.error} />
+      {success && (
+        <p role="status" className="text-sm text-(--blue-dark)">
+          {success}
         </p>
       )}
-      {people.isPending && <p role="status">Carregando…</p>}
-      <ErrorMessage error={people.error || mutation.error} />
-      {success && <p role="status">Vínculo salvo.</p>}
-      <div className="flex items-center gap-3">
-        {totalPages > 1 && (
-          <>
-            <button
-              type="button"
-              disabled={page === 0}
-              onClick={() => {
-                setPage(page - 1);
-                setSelected("");
-              }}
-            >
-              Anterior
-            </button>
-            <button
-              type="button"
-              disabled={page + 1 >= totalPages}
-              onClick={() => {
-                setPage(page + 1);
-                setSelected("");
-              }}
-            >
-              Próxima
-            </button>
-          </>
-        )}
-        <button
-          className={actionClass}
-          disabled={!selected || mutation.isPending}
-        >
-          {mutation.isPending ? "Vinculando…" : "Vincular"}
-        </button>
-      </div>
-    </form>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between gap-2 border-t border-(--line) pt-3 text-xs">
+          <button
+            type="button"
+            disabled={page === 0}
+            onClick={() => setPage(page - 1)}
+            className="min-h-10 px-2 text-(--blue-dark) disabled:opacity-40"
+          >
+            Anterior
+          </button>
+          <span className="tabular-nums text-(--muted)">
+            Página {page + 1} de {totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={page + 1 >= totalPages}
+            onClick={() => setPage(page + 1)}
+            className="min-h-10 px-2 text-(--blue-dark) disabled:opacity-40"
+          >
+            Próxima
+          </button>
+        </div>
+      )}
+    </section>
   );
 }
 function Roster({
@@ -897,9 +847,9 @@ export function Details({ id, user }: { id: number; user: SessionUser }) {
         </span>
         <div className="min-w-0 flex-1">
           {user.role === "professor" ? (
-            <h1 className="page-title break-words">{room.name}</h1>
+            <h1 className="page-title break-words">{classroomLabel(room)}</h1>
           ) : (
-            <h2 className="text-2xl font-semibold">{room.name}</h2>
+            <h2 className="text-2xl font-semibold">{classroomLabel(room)}</h2>
           )}
           {user.role !== "professor" && (
             <p className="mt-2 text-sm text-(--muted)">

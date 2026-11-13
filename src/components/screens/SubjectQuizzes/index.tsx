@@ -1,4 +1,5 @@
 "use client";
+import { classroomLabel } from "@/utils/classroomLabel";
 
 import {
   ErrorMessage,
@@ -117,7 +118,7 @@ export function Content({
         <div>
           <h1 className="page-title break-words">{subject.name}</h1>
           <p className="page-description mt-2">
-            {room.data?.name} · Quizzes da matéria
+            {classroomLabel(room.data)} · Quizzes da matéria
           </p>
         </div>
       </div>

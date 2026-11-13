@@ -180,7 +180,12 @@ test("escola consulta CEP, trava endereço encontrado e salva payload", async ()
     logradouro: "Praça da Sé",
     bairro: "Sé",
     cidade: "São Paulo",
+    cep: "01001-000",
+    uf: "SP",
   });
+  expect(router.back).not.toHaveBeenCalled();
+  useFeedbackStore.getState().closeFeedback();
+  expect(router.back).toHaveBeenCalledTimes(1);
 });
 test.each([null, new Error("CEP indisponível"), {}])(
   "CEP ausente ou incompleto habilita edição manual: %s",

@@ -10,6 +10,25 @@ beforeEach(() => {
 });
 afterEach(() => useAuthState.getState().setSession(null));
 
+test("foto usa PUT multipart autenticado e consulta como blob", async () => {
+  const file = new File(["image"], "foto.png", { type: "image/png" });
+  await expect(profileApi.updatePhoto(file)).resolves.toBeUndefined();
+  const [url, options] = jest.mocked(fetch).mock.calls[0];
+  expect(url).toMatch(/\/me\/photo$/);
+  expect(options?.method).toBe("PUT");
+  expect(new Headers(options?.headers).get("Authorization")).toBe("Bearer token");
+  expect(new Headers(options?.headers).get("Content-Type")).toBeNull();
+  expect((options?.body as FormData).get("photo")).toBe(file);
+  const blob = new Blob(["image"], { type: "image/png" });
+  jest.mocked(fetch).mockResolvedValueOnce({ ok: true, status: 200, blob: async () => blob } as Response);
+  await expect(profileApi.photo()).resolves.toBe(blob);
+  expect(new Headers(jest.mocked(fetch).mock.calls[1][1]?.headers).get("Accept")).toContain("image/png");
+  jest.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 404 } as Response);
+  await expect(profileApi.photo()).resolves.toBeUndefined();
+  await expect(profileApi.updatePhoto(new File(["text"], "text.txt", { type: "text/plain" }))).rejects.toThrow("Selecione uma imagem JPEG ou PNG.");
+  await expect(profileApi.updatePhoto(new File([new Uint8Array(2 * 1024 * 1024 + 1)], "foto.png", { type: "image/png" }))).rejects.toThrow("A foto deve ter no máximo 2 MB.");
+});
+
 test.each([
   [
     () => authApi.requestPasswordReset("ana@example.com"),

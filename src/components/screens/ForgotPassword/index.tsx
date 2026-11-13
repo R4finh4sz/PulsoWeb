@@ -9,6 +9,7 @@ import { authApi } from "@/integrations/auth/api";
 import { showRequestError } from "@/store/feedbackStore";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { PasswordRequirements } from "@/components/ui/PasswordRequirements";
 import { useEffect, useRef, useState, type SubmitEvent } from "react";
 
 type Step = "email" | "code" | "password";
@@ -24,14 +25,26 @@ export function PasswordRecovery() {
   const [email, setEmail] = useState("");
   const [digits, setDigits] = useState<string[]>(Array(6).fill(""));
   const [resetToken, setResetToken] = useState<string | null>(null);
+  const [password, setPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
   const [showSentModal, setShowSentModal] = useState(false);
   const [resetFeedback, setResetFeedback] = useState<ResetFeedback | null>(
     null,
   );
-  const [error, setError] = useState<string | null>(null);
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
   const code = digits.join("");
-  const request = useMutation({ mutationFn: authApi.requestPasswordReset });
+  const [resendAvailableAt, setResendAvailableAt] = useState(0);
+  const [now, setNow] = useState(0);
+  const resendIn = Math.max(0, Math.ceil((resendAvailableAt - now) / 1000));
+  const countdown = `${Math.floor(resendIn / 60).toString().padStart(2, "0")}:${(resendIn % 60).toString().padStart(2, "0")}`;
+  const request = useMutation({
+    mutationFn: authApi.requestPasswordReset,
+    onMutate: () => {
+      const requestedAt = Date.now();
+      setNow(requestedAt);
+      setResendAvailableAt(requestedAt + 180_000);
+    },
+  });
   const verify = useMutation({
     mutationFn: () => authApi.verifyPasswordReset(email, code),
   });
@@ -48,6 +61,12 @@ export function PasswordRecovery() {
       return authApi.resetPassword(email, resetToken, password, confirmation);
     },
   });
+
+  useEffect(() => {
+    if (!resendAvailableAt) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [resendAvailableAt]);
 
   useEffect(() => {
     if (step === "code")
@@ -73,36 +92,32 @@ export function PasswordRecovery() {
     if (incoming) inputs.current[Math.min(start + incoming.length, 5)]?.focus();
   }
 
-  async function submitEmail(event: SubmitEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
+  async function submitEmail(event?: SubmitEvent<HTMLFormElement>) {
+    event?.preventDefault();
+    if (busy || Date.now() < resendAvailableAt) return;
     try {
       const normalizedEmail = email.trim().toLowerCase();
       await request.mutateAsync(normalizedEmail);
       setEmail(normalizedEmail);
-      setShowSentModal(true);
+      if (step === "email") setShowSentModal(true);
+      else {
+        setDigits(Array(6).fill(""));
+        verify.reset();
+        inputs.current[0]?.focus();
+      }
     } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : "Não foi possível enviar o código.",
-      );
+      showRequestError(failure);
     }
   }
 
   async function submitCode(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
     try {
       const result = await verify.mutateAsync();
       setResetToken(result.resetToken);
       setStep("password");
     } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : "Não foi possível verificar o código.",
-      );
+      showRequestError(failure);
     }
   }
 
@@ -120,7 +135,6 @@ export function PasswordRecovery() {
       });
       return;
     }
-    setError(null);
     try {
       await reset.mutateAsync({ password, confirmation });
       setResetFeedback({
@@ -167,8 +181,8 @@ export function PasswordRecovery() {
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="Digite seu e-mail..."
               />
-              <Button type="submit" disabled={busy}>
-                {request.isPending ? "Enviando…" : "Enviar código"}
+              <Button type="submit" disabled={busy || resendIn > 0}>
+                {request.isPending ? "Enviando…" : resendIn > 0 ? `Reenviar em ${countdown}` : "Enviar código"}
               </Button>
             </form>
           )}
@@ -186,7 +200,7 @@ export function PasswordRecovery() {
                         inputs.current[index] = element;
                       }}
                       aria-label={`Dígito ${index + 1} de 6`}
-                      aria-invalid={!!error}
+                      aria-invalid={verify.isError}
                       type="text"
                       inputMode="numeric"
                       autoComplete={index === 0 ? "one-time-code" : "off"}
@@ -232,6 +246,21 @@ export function PasswordRecovery() {
               <Button type="submit" disabled={busy || code.length !== 6}>
                 {verify.isPending ? "Verificando…" : "Verificar código"}
               </Button>
+              <p className="text-center text-sm text-(--muted)">
+                Não recebeu o código?{" "}
+                <button
+                  type="button"
+                  disabled={busy || resendIn > 0}
+                  onClick={() => void submitEmail()}
+                  className="rounded font-semibold text-(--blue-dark) underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-3 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {request.isPending
+                    ? "Enviando…"
+                    : resendIn > 0
+                      ? `Reenviar em ${countdown}`
+                      : "Reenviar"}
+                </button>
+              </p>
             </form>
           )}
           {step === "password" && (
@@ -246,6 +275,9 @@ export function PasswordRecovery() {
                 maxLength={72}
                 required
                 placeholder="Digite sua nova senha..."
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                aria-describedby="password-requirements"
               />
               <Input
                 id="confirm-password"
@@ -257,16 +289,15 @@ export function PasswordRecovery() {
                 maxLength={72}
                 required
                 placeholder="Repita sua nova senha..."
+                value={confirmation}
+                onChange={(event) => setConfirmation(event.target.value)}
+                aria-describedby="password-requirements"
               />
+              <PasswordRequirements password={password} confirmation={confirmation} />
               <Button type="submit" disabled={busy}>
                 {reset.isPending ? "Salvando…" : "Redefinir senha"}
               </Button>
             </form>
-          )}
-          {error && (
-            <p role="alert" className="mt-4 text-center text-sm text-red-600">
-              {error}
-            </p>
           )}
           <div className="mt-8 text-center">
             <BackLink />

@@ -57,6 +57,11 @@ test("menu abre convite separado do link da matéria e registra o professor conv
     expect(subjectsApi.invite).toHaveBeenCalledWith(1, 1, "prof@escola.com"),
   );
   expect(await screen.findByRole("status")).toHaveTextContent("Convite criado");
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByLabelText("Opções de Matemática"));
+  fireEvent.click(screen.getByRole("button", { name: "Adicionar professor" }));
+  expect(screen.getByRole("dialog")).toBeVisible();
+  expect(screen.getByRole("textbox", { name: "E-mail do professor" })).toHaveValue("");
 });
 
 test("matéria de outro professor fica com cadeado e sem link ou menu", () => {

@@ -45,6 +45,7 @@ export function SchoolChoices() {
         <EmptyState
           icon={School}
           title="Nenhuma escola vinculada ao seu perfil."
+          description="Você está pendente de vínculo com uma escola ativa."
         />
       )}
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">

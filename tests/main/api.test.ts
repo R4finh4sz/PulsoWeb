@@ -18,6 +18,11 @@ jest.mock("@/api/client", () => ({
 const request = jest.mocked(apiRequest);
 beforeEach(() => request.mockResolvedValue({ id: 1 }));
 test.each([
+  [() => schoolsApi.deactivate(3), "/schools/3/deactivate", "PATCH", undefined],
+  [() => schoolsApi.assignUser(3, 7), "/schools/3/users/7", "PATCH", undefined],
+  [() => schoolsApi.assignCoordinator(3, 7), "/schools/3/coordinator", "PATCH", { coordinatorId: 7 }],
+  [() => registrationApi.review(123, "APPROVED", "", { type: "TRANSFER", classroomId: 789 }), "/registration-requests/123", "PATCH", { type: "TRANSFER", status: "APPROVED", classroomId: 789 }],
+  [() => registrationApi.review(123, "REJECTED", "", { type: "TRANSFER" }), "/registration-requests/123", "PATCH", { type: "TRANSFER", status: "REJECTED" }],
   [
     () => authApi.login({ email: "a@b.com", password: "x" }),
     "/auth/login",
@@ -140,10 +145,19 @@ test.each([
         cidade: "SP",
         logradouro: "Rua",
         bairro: "Sé",
+        cep: "50000-000",
+        uf: "SP",
       }),
     "/schools",
     "POST",
-    { nome: "Escola", cidade: "SP", logradouro: "Rua", bairro: "Sé" },
+    {
+      nome: "Escola",
+      cidade: "SP",
+      logradouro: "Rua",
+      bairro: "Sé",
+      cep: "50000-000",
+      uf: "SP",
+    },
   ],
   [
     () => registrationApi.invite("teachers", { email: "a@b.com" }),
@@ -186,7 +200,7 @@ test.each([
     () => registrationApi.review(2, "REJECTED", "Motivo"),
     "/registration-requests/2",
     "PATCH",
-    { status: "REJECTED", reason: "Motivo" },
+    { status: "REJECTED", reason: "Motivo", type: "REGISTRATION" },
   ],
   [() => authApi.revokeTerms(), "/terms/revoke", "POST", undefined],
   [
@@ -278,10 +292,14 @@ test("consultas paginadas preservam filtros", async () => {
     { signal: undefined },
   );
   await registrationApi.photo(1);
-  expect(request).toHaveBeenLastCalledWith("/registration-requests/1/photo", {
+  expect(request).toHaveBeenLastCalledWith("/registration-requests/1/photo?type=REGISTRATION", {
     responseType: "blob",
     signal: undefined,
     headers: { Accept: "image/png" },
+  });
+  await registrationApi.photo(1, undefined, "TRANSFER");
+  expect(request).toHaveBeenLastCalledWith("/registration-requests/1/photo?type=TRANSFER", {
+    responseType: "blob", signal: undefined, headers: { Accept: "image/png" },
   });
 });
 test("cadastro suporta JSON e foto multipart", async () => {
@@ -351,7 +369,7 @@ test("relatório envia filtros e cancelamento para a rota do professor", async (
   );
 });
 
-test("edição da ementa envia somente tópicos para a disciplina correta", async () => {
+test("edição da ementa envia o payload completo para a disciplina correta", async () => {
   const body = {
     name: "Matemática",
     syllabus: "Texto preservado",
@@ -366,7 +384,7 @@ test("edição da ementa envia somente tópicos para a disciplina correta", asyn
   await subjectsApi.updateSyllabus(2, 7, body);
   expect(request).toHaveBeenCalledWith("/classrooms/2/subjects/7/syllabus", {
     method: "PATCH",
-    body: { topics: body.topics },
+    body,
   });
 });
 
@@ -422,3 +440,9 @@ test("new password validation prevents invalid requests", async () => {
   ).rejects.toThrow("iguais");
   expect(request).not.toHaveBeenCalled();
 });
+
+ test("delibera??o envia o contrato completo para a rota do backend", async () => {
+ const body = { classroomId: 1, action: "GRADUATE" as const, students: [{ studentId: 10, result: "APPROVED" as const, destinationClassroomId: null }] };
+ await classroomsApi.deliberate(body);
+ expect(request).toHaveBeenCalledWith("/classroom-deliberations", { method: "POST", body });
+ });

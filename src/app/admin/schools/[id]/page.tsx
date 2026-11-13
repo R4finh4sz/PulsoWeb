@@ -3,6 +3,7 @@
 import { DashboardShell } from "@/components/screens/Dashboard/DashboardShell";
 import { BackLink } from "@/components/ui/BackLink";
 import { DashboardPanel } from "@/components/ui/DashboardPanel";
+import { SchoolManagement } from "@/components/screens/SchoolManagement";
 import { useSession } from "@/hooks/useSession";
 import { useSchools } from "@/integrations/schools/hooks";
 import { UserRound } from "lucide-react";
@@ -87,6 +88,7 @@ function PageContent({ id }: { id: string }) {
               </div>
             </DashboardPanel>
           </div>
+          <SchoolManagement schoolId={school.id} />
         </div>
       )}
     </DashboardShell>

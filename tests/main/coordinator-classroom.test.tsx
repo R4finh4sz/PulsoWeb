@@ -23,11 +23,12 @@ beforeEach(() => {
 });
 test("exclusão da sala exige o nome e retorna à home após excluir", async () => {
   show();
+  expect(screen.getByRole("heading", { name: "1º ano A · 1A" })).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "Dados da turma" }));
   fireEvent.click(screen.getByRole("button", { name: "Excluir sala" }));
   expect(screen.getByRole("button", { name: "Confirmar exclusão" })).toBeDisabled();
   expect(classroomsApi.remove).not.toHaveBeenCalled();
-  fireEvent.change(screen.getByRole("textbox", { name: "Nome da turma" }), { target: { value: room.name } });
+  fireEvent.change(screen.getByRole("textbox", { name: "Nome da turma" }), { target: { value: "1º ano A · 1A" } });
   fireEvent.click(screen.getByRole("button", { name: "Confirmar exclusão" }));
   await waitFor(() => expect(classroomsApi.remove).toHaveBeenCalledWith(1));
   await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/coordinator"));

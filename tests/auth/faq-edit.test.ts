@@ -29,6 +29,7 @@ test("FAQ de demonstração permite admin editar e respeita o destinatário", as
   });
   useAuthState.getState().setSession(createDemoSession(demoUsers[2]));
   expect(await faqsApi.list()).toEqual([]);
+  await expect(faqsApi.remove(faq.id!)).rejects.toThrow("Somente administradores");
   await expect(
     faqsApi.update(faq.id!, {
       title: "Negada",
@@ -38,4 +39,7 @@ test("FAQ de demonstração permite admin editar e respeita o destinatário", as
   ).rejects.toThrow("Somente administradores");
   useAuthState.getState().setSession(createDemoSession(demoUsers[1]));
   expect(await faqsApi.list()).toHaveLength(1);
+  useAuthState.getState().setSession(createDemoSession(demoUsers[0]));
+  await faqsApi.remove(faq.id!);
+  expect(await faqsApi.list()).not.toContainEqual(expect.objectContaining({ id: faq.id }));
 });

@@ -8,6 +8,8 @@ export type Faq = {
 };
 
 export const faqsApi = {
+  remove: (id: string | number) =>
+    apiRequest<void>("/faqs/" + encodeURIComponent(id), { method: "DELETE" }),
   list: (signal?: AbortSignal) => apiRequest<Faq[]>("/faqs", { signal }),
   create: (body: Pick<Faq, "title" | "targetRole" | "message">) =>
     apiRequest<Faq>("/faqs", { method: "POST", body }),

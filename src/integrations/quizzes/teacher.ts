@@ -1,4 +1,5 @@
 import { apiRequest } from "@/api/client";
+import { classroomLabel } from "@/utils/classroomLabel";
 import { classroomsApi } from "@/integrations/classrooms/api";
 import { subjectsApi } from "@/integrations/subjects/api";
 import { schoolsApi } from "@/integrations/schools/api";
@@ -7,6 +8,7 @@ import type { CreateQuiz } from "@/validation/Quiz.validation";
 import type { Quiz, QuizResults, TeacherActivity } from "./api";
 
 type Activity = {
+  year: number;
   id: number;
   subjectId: number;
   classroomId: number;
@@ -61,7 +63,7 @@ async function describe(
     ...quiz(activity),
     teacherId: subject?.teacherId ?? 0,
     subjectName: subject?.name ?? "Disciplina",
-    classroomName: room.name,
+    classroomName: classroomLabel(room),
     schoolName:
       schools.find((school) => school.id === activity.schoolId)?.nome ??
       "Escola",

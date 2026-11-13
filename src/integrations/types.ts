@@ -1,5 +1,7 @@
 export type Role = "ADMIN" | "PEDAGOGICAL_COORDINATOR" | "TEACHER" | "STUDENT";
 export type User = {
+  schoolUnavailable?: boolean;
+  schoolAccessStatus?: string | null;
   id: number;
   fullName: string;
   ra: string;

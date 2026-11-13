@@ -23,26 +23,25 @@ test("busca professor da escola em todas as páginas e permite selecioná-lo e v
   expect(usersApi.list).toHaveBeenCalledWith("teachers", { page: 1, size: 100 }, expect.any(AbortSignal));
   expect(screen.queryByText("Já vinculado")).not.toBeInTheDocument();
   expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
-  expect(container.querySelector("form")).not.toHaveClass("bg-slate-50");
-  fireEvent.change(screen.getByRole("textbox", { name: "Buscar professor da escola" }), { target: { value: "Ráfinhas" } });
-  fireEvent.click(screen.getByRole("radio"));
-  fireEvent.click(screen.getByRole("button", { name: "Vincular" }));
+  expect(container.querySelector("form")).toBeNull();
+  fireEvent.change(screen.getByRole("searchbox", { name: "Buscar professor da escola" }), { target: { value: "Ráfinhas" } });
+  fireEvent.click(screen.getByRole("button", { name: "Vincular Rafinhas Santana" }));
   await waitFor(() => expect(classroomsApi.assign).toHaveBeenCalledWith(1, 3));
 });
 
 test("busca sem resultado informa o motivo e impede vínculo", async () => {
   render(<Assignment room={room} resource="teachers" />, { wrapper: queryWrapper().wrapper });
   await screen.findByText("Rafinhas Santana");
-  fireEvent.change(screen.getByRole("textbox", { name: "Buscar professor da escola" }), { target: { value: "Ausente" } });
+  fireEvent.change(screen.getByRole("searchbox", { name: "Buscar professor da escola" }), { target: { value: "Ausente" } });
   expect(screen.getByRole("status")).toHaveTextContent("Nenhum professor disponível");
-  expect(screen.getByRole("button", { name: "Vincular" })).toBeDisabled();
+  expect(screen.queryByRole("button", { name: /^Vincular / })).not.toBeInTheDocument();
 });
 
 test("pesquisa por matrícula do contrato real e orienta quando a API retorna lista vazia", async () => {
   jest.mocked(usersApi.list).mockResolvedValue({ content: [{ ...teacher, ra: "", matricula: "1000" }], page: 0, size: 100, totalElements: 1, totalPages: 1 });
   const { unmount } = render(<Assignment room={room} resource="teachers" />, { wrapper: queryWrapper().wrapper });
   await screen.findByText("Rafinhas Santana");
-  fireEvent.change(screen.getByRole("textbox"), { target: { value: "1000" } });
+  fireEvent.change(screen.getByRole("searchbox"), { target: { value: "1000" } });
   expect(screen.getByText("Rafinhas Santana")).toBeVisible();
   unmount();
   jest.mocked(usersApi.list).mockResolvedValue({ content: [], page: 0, size: 100, totalElements: 0, totalPages: 0 });

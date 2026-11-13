@@ -13,6 +13,7 @@ import {
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useRef, useState } from "react";
 import { useUnsavedQuiz } from "@/components/screens/SubjectQuizzes/useUnsavedQuiz";
+import { parseQuizDeadline, quizDateTime } from "@/utils/quizDeadline";
 
 const hasContent = (question: QuizQuestion) =>
   question.question !== "" ||
@@ -41,11 +42,11 @@ export function QuizForm({
   );
   const [active, setActive] = useState(0);
   const [closesAt, setClosesAt] = useState(() => {
-    const date = new Date(Date.now() + 7 * 86400000);
-    return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-      .toISOString()
-      .slice(0, 16);
+    const year = quizDateTime(new Date()).slice(0, 4);
+    const suggested = quizDateTime(new Date(Date.now() + 7 * 86400000));
+    return suggested.slice(0, 4) === year ? suggested : `${year}-12-31T23:59`;
   });
+  const localNow = quizDateTime(new Date());
   const [deadlineChanged, setDeadlineChanged] = useState(false);
   const [error, setError] = useState("");
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -92,13 +93,17 @@ export function QuizForm({
     heading.current?.focus();
   }
   async function submit() {
-    const deadline = new Date(closesAt);
+    const deadline = parseQuizDeadline(closesAt);
     if (
       !closesAt ||
       !Number.isFinite(deadline.getTime()) ||
       deadline.getTime() <= Date.now()
     ) {
       setDeadlineError("Escolha uma data de encerramento no futuro.");
+      return;
+    }
+    if (quizDateTime(deadline).slice(0, 4) !== quizDateTime(new Date()).slice(0, 4)) {
+      setDeadlineError("O encerramento deve pertencer ao ano atual no horário de Brasília.");
       return;
     }
     const result = CreateQuizSchema.safeParse({
@@ -140,6 +145,8 @@ export function QuizForm({
         <input
           type="datetime-local"
           required
+          min={localNow}
+          max={`${localNow.slice(0, 4)}-12-31T23:59`}
           value={closesAt}
           disabled={pending}
           onChange={(event) => {
@@ -154,6 +161,7 @@ export function QuizForm({
         />
         {deadlineError && <span id="quiz-deadline-error" role="alert" className="mt-2 block text-sm font-normal text-red-700">{deadlineError}</span>}
       </label>
+      <p className="text-xs text-(--muted)">Prazo no horário de Brasília (America/Sao_Paulo), dentro do ano atual.</p>
       <p role="status" className="text-sm font-medium text-(--blue-dark)">
         {completed} de 10 questões concluídas
       </p>

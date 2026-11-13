@@ -1,7 +1,8 @@
 "use client";
 
 import { authApi } from "@/integrations/auth/api";
-import { refreshSession } from "@/api/client";
+import { recordSessionActivity } from "@/api/client";
+import { SessionExpiry } from "./SessionExpiry";
 import { toSessionUser } from "@/integrations/auth/session";
 import { useAuthState } from "@/integrations/auth/state";
 import { homeRoutes } from "@/interfaces/auth";
@@ -16,6 +17,7 @@ import {
 } from "react";
 
 import Button from "@/components/ui/Button";
+import Link from "next/link";
 import { TwoFactorScreen } from "@/components/screens/Login/TwoFactorScreen";
 import { RequestErrorModal } from "../RequestErrorModal";
 
@@ -44,6 +46,7 @@ function AuthorizedGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const client = useQueryClient();
   const [checkedVersion, setCheckedVersion] = useState<string | null>(null);
+  const [schoolNoticeAccepted, setSchoolNoticeAccepted] = useState(false);
 
   const terms = useQuery({
     queryKey: ["terms"],
@@ -104,6 +107,16 @@ function AuthorizedGate({ children }: { children: ReactNode }) {
     staleTime: 0,
   });
   const user = ready && me.data ? toSessionUser(me.data) : null;
+  const schoolUnavailable =
+    me.data?.schoolUnavailable ?? session?.schoolUnavailable ?? session?.user.schoolUnavailable ??
+    ((me.data?.schoolAccessStatus ??
+      session?.schoolAccessStatus ??
+      session?.user.schoolAccessStatus) === "SCHOOL_UNAVAILABLE");
+  const schoolDestination = user ? homeRoutes[user.role] : null;
+  const schoolRouteAllowed = pathname === schoolDestination ||
+    pathname === `${schoolDestination}/profile` ||
+    (user?.role === "professor" && /^\/teacher\/schools\/\d+$/.test(pathname));
+  if (!schoolUnavailable && schoolNoticeAccepted) setSchoolNoticeAccepted(false);
   useEffect(() => {
     if (
       user &&
@@ -113,6 +126,10 @@ function AuthorizedGate({ children }: { children: ReactNode }) {
     )
       router.replace(homeRoutes[user.role]);
   }, [user, pathname, router]);
+  useEffect(() => {
+    if (schoolUnavailable && schoolNoticeAccepted && schoolDestination && !schoolRouteAllowed)
+      router.replace(schoolDestination);
+  }, [schoolUnavailable, schoolNoticeAccepted, schoolDestination, schoolRouteAllowed, router]);
   if (terms.isPending || accepted.isPending)
     return (
       <p role="status" className="p-8">
@@ -199,6 +216,32 @@ function AuthorizedGate({ children }: { children: ReactNode }) {
         Carregando seu espaço…
       </p>
     );
+  if (schoolUnavailable && !schoolNoticeAccepted)
+    return (
+      <BlockingDialog>
+        <h1 id="auth-title" className="text-xl font-semibold">Escola indisponível</h1>
+        <p className="my-5 text-sm leading-6">
+          Sua escola foi desativada. Sua conta, notas e histórico foram preservados.
+          {user.role === "professor"
+            ? " Escolha outra escola vinculada ao seu perfil. Sem outra escola, você ficará pendente de vínculo."
+            : " Você ficará pendente de vínculo até ser vinculado a outra escola ativa pelo administrador."}
+        </p>
+        <Button onClick={() => {
+          setSchoolNoticeAccepted(true);
+          router.replace(homeRoutes[user.role]);
+        }}>Continuar</Button>
+      </BlockingDialog>
+    );
+  if (schoolUnavailable && !schoolRouteAllowed) return null;
+  if (schoolUnavailable && user.role === "coordenador" && pathname === schoolDestination)
+    return (
+      <main className="mx-auto max-w-2xl space-y-5 p-8">
+        <h1 className="text-xl font-semibold">Pendente de vínculo</h1>
+        <p>Sua escola foi desativada. Aguarde o vínculo com outra escola ativa para acessar as turmas.</p>
+        <Link href="/coordinator/profile" className="text-(--blue-dark) underline">Acessar meu perfil</Link>
+        <Button onClick={() => me.refetch()}>Verificar vínculo novamente</Button>
+      </main>
+    );
   return children;
 }
 const subscribe = () => () => {};
@@ -231,18 +274,36 @@ export function AuthGate({ children }: { children: ReactNode }) {
     }
     const remaining = Date.parse(session.expiresAt) - Date.now();
     if (!(remaining > 0)) {
-      void refreshSession().catch(() => undefined);
+      useAuthState.getState().setSession(null);
       return;
     }
     const timer = setTimeout(
       () => {
         if (Date.parse(session.expiresAt) <= Date.now())
-          void refreshSession().catch(() => undefined);
+          useAuthState.getState().setSession(null);
       },
       Math.min(remaining, 2147483647),
     );
     return () => clearTimeout(timer);
   }, [session, mounted, pathname, router, publicRegistration, client]);
+  useEffect(() => {
+    if (!session || session.twoFactorRequired) return;
+    recordSessionActivity();
+    const checkExpiry = () => {
+      if (Date.parse(session.expiresAt) <= Date.now())
+        useAuthState.getState().setSession(null);
+    };
+    document.addEventListener("pointerdown", recordSessionActivity);
+    document.addEventListener("keydown", recordSessionActivity);
+    window.addEventListener("focus", checkExpiry);
+    document.addEventListener("visibilitychange", checkExpiry);
+    return () => {
+      document.removeEventListener("pointerdown", recordSessionActivity);
+      document.removeEventListener("keydown", recordSessionActivity);
+      window.removeEventListener("focus", checkExpiry);
+      document.removeEventListener("visibilitychange", checkExpiry);
+    };
+  }, [session?.accessToken, session?.twoFactorRequired, session?.expiresAt]);
   if (!mounted)
     return (
       <p role="status" className="p-8">
@@ -265,5 +326,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
       </p>
     );
   if (session.twoFactorRequired) return <TwoFactorScreen session={session} />;
-  return <AuthorizedGate>{children}</AuthorizedGate>;
+  return (
+    <>
+      <AuthorizedGate>{children}</AuthorizedGate>
+      <SessionExpiry key={`${session.accessToken}:${session.expiresAt}`} expiresAt={session.expiresAt} expiring={session.sessionExpiring} />
+    </>
+  );
 }

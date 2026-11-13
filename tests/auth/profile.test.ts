@@ -17,6 +17,15 @@ beforeEach(async () => {
 });
 afterEach(() => useAuthState.getState().setSession(null));
 
+test("foto da demonstração fica vinculada ao usuário", async () => {
+  await expect(profileApi.photo()).resolves.toBeUndefined();
+  const file = new File(["image"], "foto.png", { type: "image/png" });
+  await profileApi.updatePhoto(file);
+  await expect(profileApi.photo()).resolves.toBe(file);
+  useAuthState.getState().setSession(createDemoSession(demoUsers[0]));
+  await expect(profileApi.photo()).resolves.toBeUndefined();
+});
+
 test("perfil e exportação retornam dados do professor sem credenciais", async () => {
   const profile = await profileApi.get();
   expect(profile.user).toEqual(demoUsers[2]);

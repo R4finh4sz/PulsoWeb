@@ -1,6 +1,7 @@
 "use client";
 
 import logo from "@/assets/images/LogoImageWhite.png";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { CoordinatorNotifications } from "@/components/screens/Dashboard/CoordinatorNotifications";
 import { TeacherNotifications } from "@/components/screens/Dashboard/TeacherNotifications";
 import { DemoAccess } from "@/components/screens/Login/DemoAccess";
@@ -136,16 +137,10 @@ export function TeacherShell({
               aria-label="Meu perfil"
               className="flex min-w-0 items-center gap-3 rounded-lg p-1 hover:bg-[#245362] focus-visible:outline-white"
             >
-              <span
+              <UserAvatar
+                user={user}
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cyan-50 text-sm font-semibold text-cyan-800"
-                aria-hidden="true"
-              >
-                {user.name
-                  .split(" ")
-                  .slice(0, 2)
-                  .map((part) => part[0])
-                  .join("")}
-              </span>
+              />
               <div className="hidden min-w-0 sm:block">
                 <p
                   className="max-w-40 truncate text-sm font-medium text-white"

@@ -1,6 +1,9 @@
 "use client";
 import { getInitials, normalizeText } from "@/utils/text";
+import { classroomLabel } from "@/utils/classroomLabel";
+import { StudentSchoolTransfer } from "../StudentSchoolTransfer";
 import { ClassroomDirectory } from "../ClassroomDirectory";
+import { Deliberation } from "../Deliberation";
 
 import {
   ErrorMessage,
@@ -27,7 +30,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
-function StudentProfile({ student, room }: { student: User; room: Classroom; }) {
+function StudentProfile({ student, room }: { student: User; room: Classroom }) {
   const [confirmRemove, setConfirmRemove] = useState(false);
   const remove = useApiMutation(() =>
     classroomsApi.unenroll(room.id, student.id),
@@ -87,7 +90,7 @@ function StudentProfile({ student, room }: { student: User; room: Classroom; }) 
             ["Nome completo", student.fullName],
             ["RA / matrícula", student.ra || "Não informado"],
             ["E-mail", student.email || "Não informado"],
-            ["Turma", room.name],
+            ["Turma", classroomLabel(room)],
           ].map(([label, value]) => (
             <div key={label} className="min-w-0">
               <dt className="text-xs text-(--muted)">{label}</dt>
@@ -98,6 +101,7 @@ function StudentProfile({ student, room }: { student: User; room: Classroom; }) 
           ))}
         </dl>
       </section>
+      <StudentSchoolTransfer student={student} currentSchoolId={room.schoolId} />
       <div className="mt-6 border-t border-(--line) pt-5">
         <ErrorMessage error={remove.error} />
         {confirmRemove ? (
@@ -140,7 +144,7 @@ function StudentProfile({ student, room }: { student: User; room: Classroom; }) 
   );
 }
 
-function ClassroomStudents({ room }: { room: Classroom; }) {
+function ClassroomStudents({ room }: { room: Classroom }) {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [page, setPage] = useState(0);
@@ -292,7 +296,7 @@ function ClassroomStudents({ room }: { room: Classroom; }) {
   );
 }
 
-function DeleteClassroom({ room }: { room: Classroom; }) {
+function DeleteClassroom({ room }: { room: Classroom }) {
   const [confirming, setConfirming] = useState(false);
   const [confirmation, setConfirmation] = useState("");
   const router = useRouter();
@@ -333,13 +337,13 @@ function DeleteClassroom({ room }: { room: Classroom; }) {
           className="mt-4 space-y-4"
           onSubmit={(event) => {
             event.preventDefault();
-            if (confirmation === room.name && !mutation.isPending)
+            if (confirmation === classroomLabel(room) && !mutation.isPending)
               mutation.mutate();
           }}
         >
           <p className="text-sm">
             Esta ação não pode ser desfeita. Para confirmar, digite{" "}
-            <strong>{room.name}</strong>.
+            <strong>{classroomLabel(room)}</strong>.
           </p>
           <label className="block text-sm">
             Nome da turma
@@ -366,7 +370,7 @@ function DeleteClassroom({ room }: { room: Classroom; }) {
             </button>
             <button
               type="submit"
-              disabled={confirmation !== room.name || mutation.isPending}
+              disabled={confirmation !== classroomLabel(room) || mutation.isPending}
               className="min-h-11 rounded-lg bg-[#e83e32] px-4 text-sm font-medium text-white hover:bg-[#cf3026] disabled:opacity-50"
             >
               {mutation.isPending ? "Excluindo…" : "Confirmar exclusão"}
@@ -417,7 +421,7 @@ export function CoordinatorClassroom({
           <BookOpen size={27} strokeWidth={1.7} />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="break-words text-xl font-semibold">{room.name}</h2>
+          <h2 className="break-words text-xl font-semibold">{classroomLabel(room)}</h2>
         </div>
         {(section === "students" || section === "teachers") && (
           <button
@@ -448,6 +452,7 @@ export function CoordinatorClassroom({
           { id: "teachers", label: "Professores", icon: UserRound },
           { id: "subjects", label: "Matérias", icon: BookOpen },
           { id: "settings", label: "Dados da turma", icon: Pencil },
+          { id: "deliberation", label: "Deliberação", icon: FileText },
         ].map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -493,6 +498,7 @@ export function CoordinatorClassroom({
       {section === "subjects" && (
         <ClassroomDirectory key="subjects" room={room} kind="subjects" />
       )}
+      {section === "deliberation" && <Deliberation key={room.id} room={room} />}
       {section === "settings" && (
         <div className="space-y-6">
           {edit}

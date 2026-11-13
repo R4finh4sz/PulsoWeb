@@ -98,7 +98,7 @@ test("exige tópico completo e salva referências, descartando o segundo tópico
   await waitFor(() =>
     expect(subjectsApi.create).toHaveBeenCalledWith(5, {
       name: "Matemática",
-      syllabus: "",
+      syllabus: topic.description,
       topics: [topic],
     }),
   );

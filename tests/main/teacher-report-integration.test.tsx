@@ -10,6 +10,9 @@ import { reportsApi, type TeacherReport } from "@/integrations/reports/api";
 import { quizzesApi } from "@/integrations/quizzes/api";
 import { useAuthState } from "@/integrations/auth/state";
 import { queryWrapper, session } from "../helpers";
+import { classroomsApi } from "@/integrations/classrooms/api";
+
+jest.mock("@/integrations/classrooms/api", () => ({ classroomsApi: { teacherList: jest.fn() } }));
 
 jest.mock("@/integrations/reports/api", () => ({
   reportsApi: { get: jest.fn() },
@@ -43,6 +46,7 @@ const data: TeacherReport = {
 };
 
 beforeEach(() => {
+  jest.mocked(classroomsApi.teacherList).mockResolvedValue([{ id: 2, name: "3º ano", identifier: "B", schoolId: 7, teacherIds: [] }]);
   useAuthState.getState().setSession(session);
   jest.mocked(reportsApi.get).mockReset().mockResolvedValue(data);
   jest.mocked(quizzesApi.reports).mockReset().mockResolvedValue([]);
@@ -58,6 +62,7 @@ test("resumo e turmas usam indicadores do backend sem recalcular ou dividir nota
   expect(summaryView.getByText("75%")).toBeVisible();
   expect(summaryView.getByText("30 de 40 entregas previstas")).toBeVisible();
   expect(screen.getByText("20 alunos · 2 atividades")).toBeVisible();
+  expect(await screen.findByRole("option", { name: "3º ano · B · Escola Central" })).toBeInTheDocument();
   expect(quizzesApi.reports).not.toHaveBeenCalled();
 });
 

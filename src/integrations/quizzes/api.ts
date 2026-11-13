@@ -9,6 +9,7 @@ const demo = () =>
   !!getDemoUser(useAuthState.getState().session?.accessToken);
 
 export type Quiz = CreateQuiz & {
+  year?: number;
   questionCount?: number;
   id: number;
   subjectId: number;

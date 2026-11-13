@@ -1,5 +1,7 @@
 "use client";
 import { normalizeText } from "@/utils/text";
+import { classroomLabel } from "@/utils/classroomLabel";
+import { useClassrooms } from "@/integrations/classrooms/hooks";
 
 import {
   ErrorMessage,
@@ -48,6 +50,8 @@ export function Reports({
 }) {
   const token = useAuthState((state) => state.session?.accessToken);
   const authenticated = !!token;
+  const classrooms = useClassrooms(authenticated, true);
+  const classroomNames = new Map(classrooms.data?.map((room) => [room.id, classroomLabel(room)]));
   const [school, setSchool] = useState("");
   const [classroom, setClassroom] = useState("");
   const [status, setStatus] = useState<string>(initialStatus);
@@ -83,7 +87,7 @@ export function Reports({
   });
   const reports = (query.data?.classrooms ?? []).map((room) => ({
     id: room.classroomId,
-    name: room.classroomName,
+    name: classroomNames.get(room.classroomId) ?? room.classroomName,
     schoolId: room.schoolId,
     school: room.schoolName ?? "Escola não informada",
     studentCount: room.studentCount,
@@ -96,7 +100,7 @@ export function Reports({
   }));
   const allReports = (options.data?.classrooms ?? []).map((room) => ({
     id: room.classroomId,
-    name: room.classroomName,
+    name: classroomNames.get(room.classroomId) ?? room.classroomName,
     schoolId: room.schoolId,
     school: room.schoolName ?? "Escola não informada",
   }));

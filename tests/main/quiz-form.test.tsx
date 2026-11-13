@@ -3,6 +3,7 @@ import { BackLink } from '@/components/ui/BackLink';
 import { CreateQuizSchema } from '@/validation/Quiz.validation';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { router } from '../helpers';
+import { ApiError } from '@/api/client';
 
 jest.mock('next/navigation', () => ({ useRouter: () => router }));
 
@@ -36,7 +37,7 @@ test('link Voltar pede confirmação antes de navegar', () => {
 });
 
 test('exige todas as 10 questões e conserva os dados ao navegar', async () => {
-  const onSubmit = jest.fn().mockResolvedValue(undefined);
+  const onSubmit = jest.fn().mockRejectedValueOnce(new ApiError(400, 'Prazo inválido no servidor.')).mockResolvedValue(undefined);
   render(<QuizForm themes={['Frações']} pending={false} onSubmit={onSubmit} onCancel={jest.fn()} />);
   fireEvent.click(screen.getByRole('button', { name: 'Questão 10, pendente' }));
   expect(screen.getByRole('button', { name: 'Questão 10, pendente' })).toBeDisabled();
@@ -56,10 +57,41 @@ test('exige todas as 10 questões e conserva os dados ao navegar', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Anterior' }));
   expect(screen.getByLabelText('Pergunta')).toHaveValue('Pergunta 9');
   fireEvent.click(screen.getByRole('button', { name: 'Próxima' }));
+  const deadline = screen.getByLabelText('Data de encerramento');
+  const validDeadline = (deadline as HTMLInputElement).value;
+  fireEvent.change(deadline, { target: { value: '' } });
   fireEvent.click(screen.getByRole('button', { name: 'Criar e abrir quiz' }));
+  expect(screen.getByRole('alert')).toHaveTextContent('no futuro');
+  const nextYear = Number((deadline as HTMLInputElement).max.slice(0, 4)) + 1;
+  fireEvent.change(deadline, { target: { value: `${nextYear}-01-01T12:00` } });
+  fireEvent.click(screen.getByRole('button', { name: 'Criar e abrir quiz' }));
+  expect(screen.getByRole('alert')).toHaveTextContent('ano atual');
+  expect(onSubmit).not.toHaveBeenCalled();
+  fireEvent.change(deadline, { target: { value: validDeadline } });
+  fireEvent.click(screen.getByRole('button', { name: 'Criar e abrir quiz' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Prazo inválido no servidor.');
+  expect(screen.getByLabelText('Pergunta')).toHaveValue('Pergunta 10');
   await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
   expect(onSubmit.mock.calls[0][0].questions).toHaveLength(10);
   expect(onSubmit.mock.calls[0][0].questions[0].correctOption).toBe(1);
+  expect(onSubmit.mock.calls[0][0]).not.toHaveProperty('year');
+  fireEvent.click(screen.getByRole('button', { name: 'Criar e abrir quiz' }));
+  await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(2));
+});
+
+test('seletor usa o ano de São Paulo na virada e limita a sugestão ao fim do ano', () => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date('2027-01-01T01:00:00Z'));
+  try {
+    render(<QuizForm themes={['Frações']} pending={false} onSubmit={jest.fn()} onCancel={jest.fn()} />);
+    const deadline = screen.getByLabelText('Data de encerramento');
+    expect(deadline).toBeRequired();
+    expect(deadline).toHaveAttribute('min', '2026-12-31T22:00');
+    expect(deadline).toHaveAttribute('max', '2026-12-31T23:59');
+    expect(deadline).toHaveValue('2026-12-31T23:59');
+  } finally {
+    jest.useRealTimers();
+  }
 });
 
 test('validação rejeita contagem incorreta, campos vazios e alternativas repetidas', () => {

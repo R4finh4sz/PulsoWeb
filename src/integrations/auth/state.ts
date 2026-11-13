@@ -4,9 +4,12 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import type { Role } from "../types";
 
 export type LoginResponse = {
+  schoolUnavailable?: boolean;
+  schoolAccessStatus?: string | null;
   accessToken: string;
   tokenType: string;
   expiresAt: string;
+  sessionExpiring?: boolean;
   refreshToken?: string | null;
   refreshExpiresAt?: string | null;
   twoFactorRequired: boolean;
@@ -14,6 +17,8 @@ export type LoginResponse = {
   codeExpiresAt: string | null;
   resendAvailableAt: string | null;
   user: {
+    schoolUnavailable?: boolean;
+    schoolAccessStatus?: string | null;
     role: Role;
     classroomId: number | null;
     schoolIds?: number[];
