@@ -15,6 +15,29 @@ test('GET utiliza Bearer, não usa cookies e desativa cache', async () => {
   expect(options.headers.get('Authorization')).toBe('Bearer token');
   expect(options.headers.get('Accept')).toBe('application/json');
 });
+
+test('sincroniza vencimento e aviso pelos headers inclusive em respostas sem corpo', async () => {
+  const expiresAt = new Date(Date.now() + 50_000).toISOString();
+  fetchMock.mockResolvedValueOnce({ ...response(204), headers: new Headers({
+    'X-Session-Expires-At': expiresAt,
+    'X-Session-Warning': 'expiring',
+  }) });
+  await apiRequest('/me');
+  expect(useAuthState.getState().session).toMatchObject({ expiresAt, sessionExpiring: true });
+});
+
+test('ignora headers de respostas públicas e de outra sessão', async () => {
+  const headers = new Headers({ 'X-Session-Expires-At': '2000-01-01', 'X-Session-Warning': 'expiring' });
+  fetchMock.mockResolvedValueOnce({ ...response(), headers });
+  await apiRequest('/auth/login', { method: 'POST' });
+  expect(useAuthState.getState().session).toEqual(session);
+  fetchMock.mockImplementationOnce(async () => {
+    useAuthState.getState().setSession({ ...session, accessToken: 'new' });
+    return { ...response(), headers };
+  });
+  await expect(apiRequest('/me')).rejects.toHaveProperty('name', 'AbortError');
+  expect(useAuthState.getState().session).toEqual({ ...session, accessToken: 'new' });
+});
 test('login não envia token anterior e serializa JSON', async () => {
   fetchMock.mockResolvedValueOnce(response());
   await apiRequest('/auth/login', { method: 'post', body: { email: 'a@b.com' } });

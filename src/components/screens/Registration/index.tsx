@@ -1,12 +1,12 @@
 "use client";
 
-import { passwordError } from "@/validation/password";
-import { BackLink } from "@/components/ui/BackLink";
+import { ArrowLeft } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import { authApi } from "@/integrations/auth/api";
 import { registrationApi } from "@/integrations/registration/api";
+import { passwordError } from "@/validation/password";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
@@ -138,7 +138,13 @@ export function RegistrationForm({ token }: { token?: string }) {
           </p>
         </div>
         {done ? (
-          <BackLink />
+          <Link
+            href="/"
+            className="inline-flex min-h-11 items-center gap-2 rounded text-sm font-medium text-(--blue-dark) hover:underline"
+          >
+            <ArrowLeft aria-hidden="true" size={16} />
+            Voltar
+          </Link>
         ) : token && invitation.isPending ? (
           <p role="status">Carregando convite…</p>
         ) : token && invitation.error ? (
@@ -334,7 +340,7 @@ export function RegistrationForm({ token }: { token?: string }) {
             />
             <p className="text-xs text-(--muted)">
               Use pelo menos 8 caracteres, uma letra maiúscula de A a Z e um
-              número, com no máximo 72 bytes UTF-8.
+              número.
             </p>
             <Input
               id="confirmPassword"

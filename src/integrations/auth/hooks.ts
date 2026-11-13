@@ -79,8 +79,12 @@ export function useActiveSchool() {
           .getState()
           .setSession({
             ...session,
+            schoolAccessStatus: user.schoolAccessStatus,
+            schoolUnavailable: user.schoolUnavailable,
             user: {
               ...session.user,
+              schoolAccessStatus: user.schoolAccessStatus,
+              schoolUnavailable: user.schoolUnavailable,
               schoolIds: user.schoolIds,
               activeSchoolId: user.activeSchoolId,
               schoolId: user.schoolId ?? null,

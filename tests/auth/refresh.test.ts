@@ -1,4 +1,4 @@
-import { apiRequest, refreshSession } from "@/api/client";
+import { apiRequest, refreshSession, recordSessionActivity } from "@/api/client";
 import { useAuthState } from "@/integrations/auth/state";
 import { session } from "../helpers";
 
@@ -10,11 +10,12 @@ const response = (data: unknown, status = 200) => ({
 });
 const renewable = {
   ...session,
-  expiresAt: "2000-01-01",
+  expiresAt: new Date(Date.now() + 4 * 60_000).toISOString(),
   refreshToken: "secret",
   refreshExpiresAt: "2099-01-01",
 };
 beforeEach(() => {
+  recordSessionActivity();
   global.fetch = fetchMock;
   fetchMock.mockReset();
   useAuthState.getState().setSession(renewable);
@@ -113,4 +114,34 @@ test("login publico inclui cookie e omite Authorization", async () => {
   expect(fetchMock).toHaveBeenCalledTimes(1);
   expect(fetchMock.mock.calls[0][1].credentials).toBe("include");
   expect(fetchMock.mock.calls[0][1].headers.get("Authorization")).toBeNull();
+});
+
+test("sessão vencida não renova por atividade tardia", async () => {
+  useAuthState.getState().setSession({ ...renewable, expiresAt: new Date(Date.now() - 1).toISOString() });
+  await expect(apiRequest("/me")).rejects.toHaveProperty("status", 401);
+  expect(fetchMock).not.toHaveBeenCalled();
+  expect(useAuthState.getState().session).toBeNull();
+});
+
+test("polling sem interação na janela final não renova", async () => {
+  jest.useFakeTimers();
+  const start = Date.now();
+  recordSessionActivity();
+  useAuthState.getState().setSession({ ...renewable, expiresAt: new Date(start + 6 * 60_000).toISOString() });
+  jest.setSystemTime(start + 2 * 60_000);
+  fetchMock.mockResolvedValue(response({ id: 1 }));
+  await apiRequest("/me");
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(fetchMock.mock.calls[0][0]).toMatch(/\/me$/);
+  recordSessionActivity();
+  fetchMock.mockResolvedValueOnce(response({ ...session, accessToken: "renewed" }));
+  await apiRequest("/me");
+  expect(fetchMock.mock.calls[1][0]).toMatch(/\/auth\/refresh$/);
+});
+
+test("logout não consome a renovação", async () => {
+  fetchMock.mockResolvedValue(response(null, 204));
+  await apiRequest("/auth/logout", { method: "POST" });
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(fetchMock.mock.calls[0][0]).toMatch(/\/auth\/logout$/);
 });

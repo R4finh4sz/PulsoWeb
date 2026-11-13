@@ -16,7 +16,7 @@ test("excluir uma conta exige confirmação e atualiza a fila", async () => {
   expect(accountDeletionsApi.review).not.toHaveBeenCalled();
   expect(screen.getByText(/Esta ação não pode ser desfeita/)).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "Confirmar exclusão da conta" }));
-  await waitFor(() => expect(accountDeletionsApi.review).toHaveBeenCalledWith(6, "APPROVED"));
+  await waitFor(() => expect(accountDeletionsApi.review).toHaveBeenCalledWith(6, "APPROVED", request.reason));
   expect(await screen.findByText("Nenhum pedido de exclusão nesta situação.")).toBeVisible();
 });
 
@@ -27,5 +27,5 @@ test("recusa o pedido sem excluir a conta e permite buscar por nome", async () =
   expect(screen.getByText("Nenhum pedido encontrado com estes filtros.")).toBeVisible();
   fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Ricardo" } });
   fireEvent.click(screen.getByRole("button", { name: "Recusar pedido de Ricardo Almeida" }));
-  await waitFor(() => expect(accountDeletionsApi.review).toHaveBeenCalledWith(6, "REJECTED"));
+  await waitFor(() => expect(accountDeletionsApi.review).toHaveBeenCalledWith(6, "REJECTED", request.reason));
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import logo from "@/assets/images/LogoImageWhite.png";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { DemoAccess } from "@/components/screens/Login/DemoAccess";
 import { DashboardIcon, type IconName } from "@/components/ui/DashboardIcon";
 import { useLogout } from "@/integrations/auth/hooks";
@@ -148,13 +149,7 @@ export function DashboardShell({
             <DemoAccess />
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e8f5f8] text-xs font-semibold text-(--blue)">
-              {user.name
-                .split(" ")
-                .map((part) => part[0])
-                .slice(0, 2)
-                .join("")}
-            </div>
+            <UserAvatar user={user} className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e8f5f8] text-xs font-semibold text-(--blue)" />
             <div>
               <p className="text-xs font-semibold">
                 {user.name.trim().split(/\s+/)[0]}

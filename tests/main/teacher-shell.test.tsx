@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { TeacherShell } from "@/components/screens/Dashboard/TeacherShell";
-import { teacher, router } from "../helpers";
+import { teacher, router, queryWrapper } from "../helpers";
+jest.mock("@/integrations/profile/api", () => ({ profileApi: { photo: jest.fn().mockResolvedValue(null) } }));
 
 let mockPathname = "/teacher";
 jest.mock("next/navigation", () => ({
@@ -30,6 +31,7 @@ test.each([
     <TeacherShell user={teacher}>
       <p>Conteúdo da página</p>
     </TeacherShell>,
+    { wrapper: queryWrapper().wrapper },
   );
   const navigation = within(
     screen.getByRole("navigation", { name: "Navegação principal" }),

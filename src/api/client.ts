@@ -16,6 +16,7 @@ export class ApiError extends Error {
 type Options = Omit<RequestInit, "body"> & {
   body?: unknown;
   responseType?: "blob";
+  allowNotFound?: boolean;
 };
 const publicAuthPaths = new Set([
   "/auth/login",
@@ -38,12 +39,27 @@ async function send<T>(
   path: string,
   options: RequestInit,
   responseType?: "blob",
+  allowNotFound = false,
 ): Promise<T> {
   const response = await fetch(API_BASE_URL + path, {
     ...options,
     credentials: isPublicPath(path) ? "include" : "omit",
     cache: "no-store",
   });
+  const current = useAuthState.getState().session;
+  if (
+    !isPublicPath(path) &&
+    current &&
+    new Headers(options.headers).get("Authorization") === `Bearer ${current.accessToken}`
+  ) {
+    const expiry = response.headers?.get("X-Session-Expires-At");
+    const warning = response.headers?.get("X-Session-Warning");
+    const expiresAt = expiry && Number.isFinite(Date.parse(expiry)) ? expiry : current.expiresAt;
+    const sessionExpiring = warning === "expiring" || (!expiry && current.sessionExpiring === true);
+    if (expiresAt !== current.expiresAt || sessionExpiring !== (current.sessionExpiring === true))
+      useAuthState.getState().setSession({ ...current, expiresAt, sessionExpiring });
+  }
+  if (allowNotFound && response.status === 404) return undefined as T;
   if (!response.ok) {
     const problem = await response.json().catch(() => null);
     throw new ApiError(
@@ -59,6 +75,10 @@ async function send<T>(
   if (responseType === "blob") return (await response.blob()) as T;
   return response.json() as Promise<T>;
 }
+let lastActivityAt = 0;
+export function recordSessionActivity() {
+  lastActivityAt = Date.now();
+}
 let refreshing: { token: string; promise: Promise<void> } | null = null;
 
 export function refreshSession(): Promise<void> {
@@ -68,6 +88,7 @@ export function refreshSession(): Promise<void> {
   if (
     !session ||
     session.twoFactorRequired ||
+    !(Date.parse(session.expiresAt) > Date.now()) ||
     !session.refreshToken ||
     !(Date.parse(session.refreshExpiresAt ?? "") > Date.now())
   ) {
@@ -100,6 +121,7 @@ export function refreshSession(): Promise<void> {
           accessToken: renewed.accessToken,
           tokenType: renewed.tokenType,
           expiresAt: renewed.expiresAt,
+          sessionExpiring: false,
           refreshToken: null,
           refreshExpiresAt: null,
         });
@@ -118,7 +140,7 @@ export function refreshSession(): Promise<void> {
 }
 async function request<T>(
   path: string,
-  { body, responseType, ...options }: Options = {},
+  { body, responseType, allowNotFound, ...options }: Options = {},
 ): Promise<T> {
   const method = (options.method || "GET").toUpperCase();
   const headers = new Headers(options.headers);
@@ -137,6 +159,20 @@ async function request<T>(
     session &&
     Date.parse(session.expiresAt) <= Date.now()
   ) {
+    useAuthState.getState().setSession(null);
+    throw new ApiError(401, "Sua sessão expirou. Entre novamente.");
+  }
+  if (
+    !isPublicAuthPath &&
+    path !== "/auth/logout" &&
+    session &&
+    !session.twoFactorRequired &&
+    session.refreshToken &&
+    Date.parse(session.refreshExpiresAt ?? "") > Date.now() &&
+    Date.parse(session.expiresAt) - Date.now() <= 5 * 60_000 &&
+    lastActivityAt >= Date.parse(session.expiresAt) - 5 * 60_000
+  ) {
+    options.signal?.throwIfAborted();
     await refreshSession();
     options.signal?.throwIfAborted();
     session = useAuthState.getState().session;
@@ -158,6 +194,7 @@ async function request<T>(
             : JSON.stringify(body),
       },
       responseType,
+      allowNotFound,
     );
     if (
       session !== useAuthState.getState().session &&
@@ -180,7 +217,7 @@ async function request<T>(
       session.accessToken === useAuthState.getState().session?.accessToken
     ) {
       await refreshSession();
-      return request<T>(path, { ...options, body, responseType });
+      return request<T>(path, { ...options, body, responseType, allowNotFound });
     }
     if (
       error instanceof ApiError &&

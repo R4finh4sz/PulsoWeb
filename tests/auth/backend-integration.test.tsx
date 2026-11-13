@@ -88,6 +88,8 @@ test("resposta inválida da fila de exclusões vira erro da consulta", async () 
 });
 
 test("troca escola pelo backend, sincroniza sessão e descarta dados da escola anterior", async () => {
+  const previousSession = useAuthState.getState().session!;
+  useAuthState.getState().setSession({ ...previousSession, schoolUnavailable: true, user: { ...previousSession.user, schoolUnavailable: true } });
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -95,7 +97,7 @@ test("troca escola pelo backend, sincroniza sessão e descarta dados da escola a
   for (const key of ["classrooms", "subjects", "quizzes", "teacher-activities"])
     client.setQueryData([key], ["previous-school"]);
   respond(undefined, 204);
-  respond({ ...user, activeSchoolId: 2, schoolId: 2 });
+  respond({ ...user, activeSchoolId: 2, schoolId: 2, schoolUnavailable: false });
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   );
@@ -115,6 +117,8 @@ test("troca escola pelo backend, sincroniza sessão e descarta dados da escola a
     expect(useAuthState.getState().session?.user.schoolId).toBe(2),
   );
   expect(client.getQueryData(["session"])).toMatchObject({ schoolId: 2 });
+  expect(useAuthState.getState().session?.schoolUnavailable).toBe(false);
+  expect(useAuthState.getState().session?.user.schoolUnavailable).toBe(false);
   for (const key of ["classrooms", "subjects", "quizzes", "teacher-activities"])
     expect(client.getQueryData([key])).toBeUndefined();
   client.clear();

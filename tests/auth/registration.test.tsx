@@ -134,6 +134,7 @@ test("convite validado envia dados e valida complexidade da senha", async () => 
     });
   fireEvent.submit(container.querySelector("form")!);
   await screen.findByText("Cadastro enviado");
+  expect(screen.getByRole("link", { name: "Voltar" })).toHaveAttribute("href", "/");
   expect(registrationApi.complete).toHaveBeenCalledWith("token", {
     name: "Ana Silva",
     ra: "123",

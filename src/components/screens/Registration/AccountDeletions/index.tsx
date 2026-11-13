@@ -1,5 +1,5 @@
 "use client";
-import { normalizeText } from "@/utils/text";
+import { getInitials, normalizeText } from "@/utils/text";
 
 import {
   EmptyState,
@@ -35,10 +35,12 @@ export function AccountDeletions() {
     mutationFn: ({
       id,
       decision,
+      reason,
     }: {
       id: number;
       decision: "APPROVED" | "REJECTED";
-    }) => accountDeletionsApi.review(id, decision),
+      reason: string;
+    }) => accountDeletionsApi.review(id, decision, reason),
     onSuccess: async () => {
       setSelected(null);
       await Promise.all(
@@ -141,30 +143,38 @@ export function AccountDeletions() {
       {query.isSuccess && (
         <ul className="divide-y divide-(--line)">
           {requests.map((request) => (
-            <li key={request.id} className="py-6">
-              <div className="flex flex-wrap items-start justify-between gap-5">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="break-words font-semibold">
-                      {request.name}
-                    </h3>
-                    <span className="rounded-lg bg-cyan-50 px-2 py-1 text-xs text-(--blue-dark)">
-                      {request.role === "TEACHER" ? "Professor" : "Aluno"}
-                    </span>
+            <li key={request.id} className="py-5">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="flex min-w-0 flex-1 basis-80 gap-4">
+                  <span
+                    aria-hidden="true"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#e8f7fa] text-sm font-semibold text-(--blue-dark)"
+                  >
+                    {getInitials(request.name)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <h3 className="break-words text-base font-semibold">
+                        {request.name}
+                      </h3>
+                      <span className="rounded-full bg-cyan-50 px-2.5 py-0.5 text-xs font-medium text-(--blue-dark)">
+                        {request.role === "TEACHER" ? "Professor" : "Aluno"}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 break-all text-sm text-(--muted)">
+                      {request.email}
+                    </p>
+                    <p className="mt-3 whitespace-pre-wrap break-words border-l-2 border-(--line) pl-3 text-sm leading-6">
+                      <span className="text-(--muted)">Motivo: </span>
+                      {request.reason}
+                    </p>
+                    <p className="mt-2 text-xs text-(--muted)">
+                      Solicitado em{" "}
+                      {new Date(request.createdAt).toLocaleDateString("pt-BR", {
+                        timeZone: "America/Sao_Paulo",
+                      })}
+                    </p>
                   </div>
-                  <p className="mt-1 break-all text-sm text-(--muted)">
-                    {request.email}
-                  </p>
-                  <p className="mt-3 whitespace-pre-wrap break-words text-sm">
-                    <span className="font-medium">Motivo: </span>
-                    {request.reason}
-                  </p>
-                  <p className="mt-2 text-xs text-(--muted)">
-                    Solicitado em{" "}
-                    {new Date(request.createdAt).toLocaleDateString("pt-BR", {
-                      timeZone: "America/Sao_Paulo",
-                    })}
-                  </p>
                 </div>
                 {status === "PENDING" && (
                   <div className="flex flex-wrap gap-3">
@@ -175,6 +185,7 @@ export function AccountDeletions() {
                         mutation.mutate({
                           id: request.id,
                           decision: "REJECTED",
+                          reason: request.reason,
                         })
                       }
                       className="min-h-11 rounded-lg border border-(--line) px-4 text-sm font-medium disabled:opacity-50"
@@ -247,8 +258,13 @@ export function AccountDeletions() {
             type="button"
             disabled={mutation.isPending || selected === null}
             onClick={() => {
-              if (selected !== null)
-                mutation.mutate({ id: selected, decision: "APPROVED" });
+              const request = query.data?.find((item) => item.id === selected);
+              if (request)
+                mutation.mutate({
+                  id: request.id,
+                  decision: "APPROVED",
+                  reason: request.reason,
+                });
             }}
             className="min-h-11 rounded-lg bg-[#e83e32] px-5 text-sm font-medium text-white hover:bg-[#cf3026] disabled:opacity-50"
           >

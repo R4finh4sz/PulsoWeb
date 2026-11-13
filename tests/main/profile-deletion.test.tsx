@@ -25,6 +25,8 @@ jest.mock("@/integrations/auth/api", () => ({
 }));
 jest.mock("@/integrations/profile/api", () => ({
   profileApi: {
+    photo: jest.fn().mockResolvedValue(undefined),
+    updatePhoto: jest.fn(),
     get: jest.fn(),
     changePassword: jest.fn(),
     requestDeletion: jest.fn(),
