@@ -12,10 +12,21 @@ export const QuizQuestionSchema = z
     correctOption: z.number().int().min(0, "Marque a resposta correta.").max(3),
   })
   .superRefine((value, context) => {
-    const options = value.options.map((option) => option.toLocaleLowerCase("pt-BR"));
+    const options = value.options.map((option) =>
+      option.toLocaleLowerCase("pt-BR"),
+    );
     options.forEach((option, index) => {
-      if (option && options.some((other, otherIndex) => otherIndex !== index && other === option))
-        context.addIssue({ code: "custom", message: "As quatro alternativas devem ser diferentes.", path: ["options", index] });
+      if (
+        option &&
+        options.some(
+          (other, otherIndex) => otherIndex !== index && other === option,
+        )
+      )
+        context.addIssue({
+          code: "custom",
+          message: "As quatro alternativas devem ser diferentes.",
+          path: ["options", index],
+        });
     });
   });
 
