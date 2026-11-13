@@ -345,19 +345,19 @@ export function UserList({
       </div>
       {query.data && query.data.totalElements >= 10 && (
         <>
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4">
             <button
-              className={actionClass}
+              className={`${actionClass} justify-self-start`}
               disabled={page === 0}
               onClick={() => setPage(page - 1)}
             >
               Anterior
             </button>
-            <span>
+            <span className="text-center text-sm tabular-nums">
               Página {page + 1} de {query.data.totalPages}
             </span>
             <button
-              className={actionClass}
+              className={`${actionClass} justify-self-end`}
               disabled={page + 1 >= query.data.totalPages}
               onClick={() => setPage(page + 1)}
             >

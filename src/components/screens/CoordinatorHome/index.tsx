@@ -1,5 +1,6 @@
 "use client";
 import { normalizeText } from "@/utils/text";
+import { classroomLabel } from "@/utils/classroomLabel";
 
 import {
   ErrorMessage,
@@ -110,7 +111,7 @@ export function CoordinatorWork() {
                     <BookOpen aria-hidden="true" size={29} strokeWidth={1.7} />
                   </div>
                   <h3 className="break-words text-lg font-semibold leading-7 tracking-tight text-(--ink)">
-                    {room.name}
+                    {classroomLabel(room)}
                   </h3>
                   <span className="mt-5 inline-flex w-fit items-center gap-2 rounded-lg bg-[#e8f7fa] px-3 py-2 text-sm font-medium text-[#087e9b]">
                     <Users size={17} aria-hidden="true" />

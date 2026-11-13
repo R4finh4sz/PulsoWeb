@@ -1,4 +1,5 @@
 "use client";
+import { classroomLabel } from "@/utils/classroomLabel";
 
 import {
   actionClass,
@@ -87,7 +88,8 @@ export function SubjectForm({
           description,
           references,
         })),
-      ) !== JSON.stringify(initialTopics)
+      ) !==
+        JSON.stringify(initialTopics)
     : !!(
         name ||
         topics.some(
@@ -154,7 +156,7 @@ export function SubjectForm({
     );
     const parsed = CreateSubjectSchema.safeParse({
       name,
-      syllabus: existing?.syllabus ?? "",
+      syllabus: filledTopics.map((topic) => topic.description).join("\n\n"),
       topics: filledTopics,
     });
     if (!parsed.success) {
@@ -164,7 +166,7 @@ export function SubjectForm({
         const field =
           issue.path[0] === "topics"
             ? `topic-${topic.id}-${String(issue.path[2] ?? "title")}`
-            : "subject-name";
+            : `subject-${String(issue.path[0])}`;
         nextErrors[field] ??= issue.message;
       }
       setErrors(nextErrors);
@@ -225,7 +227,7 @@ export function SubjectForm({
           {existing ? `Editar ementa · ${existing.name}` : "Nova disciplina"}
         </h1>
         <p className="page-description mt-2 break-words">
-          {room.data.name} · Organize a ementa e os temas das atividades.
+          {classroomLabel(room.data)} · Organize a ementa e os temas das atividades.
         </p>
       </header>
       {!canSave && (

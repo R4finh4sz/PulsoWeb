@@ -4,6 +4,9 @@ import type { Role } from "../types";
 
 export type RegistrationStatus = "PENDING" | "APPROVED" | "REJECTED";
 export type Registration = {
+  type?: "REGISTRATION" | "TRANSFER";
+  originSchoolId?: number | null;
+  userId?: number;
   id: number;
   name: string;
   email: string;
@@ -35,8 +38,10 @@ export type Invitation = {
   resendAvailableAt: string;
 };
 export const registrationApi = {
-  photo: (id: number, signal?: AbortSignal) =>
-    apiRequest<Blob>(`/registration-requests/${id}/photo`, {
+  transferStudent: (body: { fullName: string; ra: string; schoolId: number }) =>
+    apiRequest<{ id: number; status: RegistrationStatus }>("/students/transfer", { method: "POST", body }),
+  photo: (id: number, signal?: AbortSignal, type: "REGISTRATION" | "TRANSFER" = "REGISTRATION") =>
+    apiRequest<Blob>(`/registration-requests/${id}/photo` + queryString({ type }), {
       signal,
       responseType: "blob",
       headers: { Accept: "image/png" },
@@ -117,9 +122,9 @@ export const registrationApi = {
       "/registration-requests" + queryString({ status, page, size: 20 }),
       { signal },
     ),
-  review: (id: number, status: RegistrationStatus, reason: string) =>
+  review: (id: number, status: RegistrationStatus, reason: string, options?: { type: "REGISTRATION" | "TRANSFER"; classroomId?: number }) =>
     apiRequest<Registration>(`/registration-requests/${id}`, {
       method: "PATCH",
-      body: { status, reason },
+      body: { status, ...(reason ? { reason } : {}), type: options?.type ?? "REGISTRATION", ...options },
     }),
 };

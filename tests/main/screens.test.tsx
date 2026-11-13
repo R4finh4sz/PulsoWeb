@@ -526,7 +526,7 @@ test.each(["coordenador", "professor"] as const)(
     );
     show(<ClassroomList user={{ ...admin, role }} />);
     expect(
-      await screen.findByText(role === "professor" ? "3º ano" : "3º ano · A"),
+      await screen.findByText("3º ano · A"),
     ).toBeVisible();
   },
 );

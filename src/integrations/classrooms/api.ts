@@ -1,7 +1,19 @@
 import { apiRequest } from "@/api/client";
 import type { Classroom, CreateClassroom, User } from "../types";
 const path = (id: number) => "/classrooms/" + id;
+export type ClassroomDeliberation = {
+  classroomId: number;
+  action: "TRANSFER" | "GRADUATE";
+  students: { studentId: number; result: "APPROVED" | "FAILED"; destinationClassroomId: number | null }[];
+};
+export type ClassroomDeliberationResponse = ClassroomDeliberation & {
+  id: number;
+  performedById: number;
+  performedAt: string;
+};
 export const classroomsApi = {
+  deliberate: (body: ClassroomDeliberation) =>
+    apiRequest<ClassroomDeliberationResponse>("/classroom-deliberations", { method: "POST", body }),
   teacherList: (signal?: AbortSignal) =>
     apiRequest<Classroom[]>("/teacher/classrooms", { signal }),
   remove: (id: number) => apiRequest<void>(path(id), { method: "DELETE" }),

@@ -8,7 +8,7 @@ import { rankingApi } from "@/integrations/ranking/api";
 import { rankEntries, type RankingCategory } from "@/utils/ranking";
 
 function classroomIdentifier(name?: string | null) {
-  return name?.trim().match(/[A-Za-z]+$/)?.[0] ?? "—";
+  return name?.trim().match(/([A-Z])$/)?.[1] ?? "—";
 }
 
 export function RankingContent() {
@@ -84,7 +84,7 @@ export function RankingContent() {
               <thead className="border-y border-(--line) bg-slate-50 text-xs text-(--muted)"><tr>{["Posição", "Aluno", "Escola", ...(canSeeGrades ? ["Série"] : []), ...(school ? ["Turma"] : []), label].map((heading) => <th key={heading} scope="col" className="whitespace-nowrap px-5 py-4">{heading}</th>)}</tr></thead>
               <tbody className="divide-y divide-slate-100">{rows.slice(current * 10, current * 10 + 10).map((entry) => <tr key={entry.studentId} className="hover:bg-slate-50">
                 <td className="px-5 py-4"><span className={`inline-flex h-9 min-w-9 items-center justify-center rounded-full px-2 font-semibold ${entry.position <= 3 ? "bg-amber-50 text-amber-800" : "bg-slate-100 text-slate-600"}`}>{entry.position}º</span></td>
-                <th scope="row" className="min-w-40 px-5 py-4 font-medium">{entry.name}</th><td className="min-w-48 px-5 py-4 text-(--muted)">{entry.schoolName}</td>{canSeeGrades && <td className="whitespace-nowrap px-5 py-4">{entry.grade}</td>}{school && <td className="whitespace-nowrap px-5 py-4">{classroomIdentifier(entry.classroomName)}</td>}<td className="px-5 py-4 font-semibold tabular-nums text-cyan-800">{entry[category].toLocaleString("pt-BR")}</td>
+                <th scope="row" className="min-w-40 px-5 py-4 font-medium">{entry.name}</th><td className="min-w-48 px-5 py-4 text-(--muted)">{entry.schoolName}</td>{canSeeGrades && <td className="whitespace-nowrap px-5 py-4">{entry.grade}</td>}{school && <td className="whitespace-nowrap px-5 py-4">{entry.classroomIdentifier ?? classroomIdentifier(entry.classroomName)}</td>}<td className="px-5 py-4 font-semibold tabular-nums text-cyan-800">{entry[category].toLocaleString("pt-BR")}</td>
               </tr>)}</tbody>
             </table>
           </div>

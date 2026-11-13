@@ -20,12 +20,12 @@ export const subjectsApi = {
     subjectId: number,
     input: CreateSubject,
   ) => {
-    const { topics } = CreateSubjectSchema.parse(input);
+    const body = CreateSubjectSchema.parse(input);
     return apiRequest<Subject>(
       `/classrooms/${classroomId}/subjects/${subjectId}/syllabus`,
       {
         method: "PATCH",
-        body: { topics },
+        body,
       },
     );
   },

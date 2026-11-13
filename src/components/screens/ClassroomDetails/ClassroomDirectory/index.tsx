@@ -1,5 +1,6 @@
 "use client";
 import { getInitials, normalizeText } from "@/utils/text";
+import { classroomLabel } from "@/utils/classroomLabel";
 
 import { ErrorMessage } from "@/components/screens/Integration/shared";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -11,7 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, BookOpen, Search, Trash2, UserRound } from "lucide-react";
 import { useState } from "react";
 
-function TeacherActions({ teacher, room }: { teacher: User; room: Classroom; }) {
+function TeacherActions({ teacher, room }: { teacher: User; room: Classroom }) {
   const [confirm, setConfirm] = useState(false);
   const remove = useApiMutation(() =>
     classroomsApi.unassign(room.id, teacher.id),
@@ -82,17 +83,17 @@ export function ClassroomDirectory({
   const Icon = isTeacher ? UserRound : BookOpen;
   const items = isTeacher
     ? (teachers.data ?? []).map((teacher) => ({
-      id: teacher.id,
-      name: teacher.fullName,
-      detail: teacher.email,
-      search: `${teacher.fullName} ${teacher.email} ${teacher.ra}`,
-    }))
+        id: teacher.id,
+        name: teacher.fullName,
+        detail: teacher.email,
+        search: `${teacher.fullName} ${teacher.email} ${teacher.ra}`,
+      }))
     : (subjects.data ?? []).map((subject) => ({
-      id: subject.id,
-      name: subject.name,
-      detail: room.name,
-      search: subject.name,
-    }));
+        id: subject.id,
+        name: subject.name,
+        detail: classroomLabel(room),
+        search: subject.name,
+      }));
   const filtered = items
     .filter((item) =>
       normalizeText(item.search).includes(normalizeText(search.trim())),
@@ -296,13 +297,13 @@ export function ClassroomDirectory({
               <ul className="mt-3 space-y-3">
                 {(isTeacher
                   ? linkedSubjects.map((item) => ({
-                    id: item.id,
-                    name: item.name,
-                  }))
+                      id: item.id,
+                      name: item.name,
+                    }))
                   : linkedTeachers.map((item) => ({
-                    id: item.id,
-                    name: item.fullName,
-                  }))
+                      id: item.id,
+                      name: item.fullName,
+                    }))
                 ).map((item) => (
                   <li
                     key={item.id}
@@ -319,12 +320,12 @@ export function ClassroomDirectory({
                 {(isTeacher
                   ? !linkedSubjects.length
                   : !linkedTeachers.length) && (
-                    <li className="text-sm text-(--muted)">
-                      {isTeacher
-                        ? "Nenhuma matéria vinculada a este professor nesta turma."
-                        : "Nenhum professor vinculado à matéria nesta turma."}
-                    </li>
-                  )}
+                  <li className="text-sm text-(--muted)">
+                    {isTeacher
+                      ? "Nenhuma matéria vinculada a este professor nesta turma."
+                      : "Nenhum professor vinculado à matéria nesta turma."}
+                  </li>
+                )}
               </ul>
             )}
           </div>

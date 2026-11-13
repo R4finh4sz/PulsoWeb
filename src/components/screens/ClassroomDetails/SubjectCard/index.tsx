@@ -46,6 +46,7 @@ export function SubjectCard({
         subject.id,
         email.trim().toLowerCase(),
       ),
+    onSuccess: () => dialog.current?.close(),
   });
   useEffect(() => {
     function close(event: MouseEvent) {
@@ -150,6 +151,11 @@ export function SubjectCard({
           </p>
         </Link>
       </div>
+      {invitation.isSuccess && (
+        <p role="status" className="mt-3 break-words text-sm text-emerald-800">
+          Convite criado para {invitation.data.email}.
+        </p>
+      )}
       <dialog
         ref={dialog}
         aria-labelledby={`subject-invite-${subject.id}`}
@@ -170,20 +176,6 @@ export function SubjectCard({
         <p className="mt-3 break-words text-sm leading-6 text-(--muted)">
           Convide um professor para participar de {subject.name}.
         </p>
-        {invitation.isSuccess ? (
-          <div className="mt-6 space-y-5">
-            <p role="status" className="break-words text-sm text-emerald-800">
-              Convite criado para {invitation.data.email}.
-            </p>
-            <button
-              type="button"
-              onClick={closeDialog}
-              className={`${actionClass} w-full`}
-            >
-              Fechar
-            </button>
-          </div>
-        ) : (
           <form
             className="mt-6 space-y-5 text-left"
             onSubmit={(event) => {
@@ -230,7 +222,6 @@ export function SubjectCard({
               </button>
             </div>
           </form>
-        )}
       </dialog>
     </>
   );

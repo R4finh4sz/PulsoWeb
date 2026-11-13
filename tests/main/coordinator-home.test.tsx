@@ -71,6 +71,8 @@ beforeEach(() => {
 test("início do coordenador preserva acessos e filtra turmas da sua escola", async () => {
   render(<CoordinatorHome />, { wrapper: queryWrapper().wrapper });
   expect(await screen.findByRole("link", { name: /6º ano/ })).toBeVisible();
+  expect(screen.getByRole("heading", { name: "6º ano · A" })).toBeVisible();
+  expect(screen.getByRole("heading", { name: "7º ano · B" })).toBeVisible();
   expect(
     screen.queryByRole("link", { name: /Outra escola/ }),
   ).not.toBeInTheDocument();
@@ -142,7 +144,7 @@ test("sino leva às solicitações pendentes e fecha com Escape devolvendo foco"
   fireEvent.click(trigger);
   expect(screen.getByRole("link", { name: /Ana Silva/ })).toHaveAttribute(
     "href",
-    "/coordinator/registration-requests",
+    "/coordinator/registration-requests?type=student",
   );
   fireEvent.keyDown(document, { key: "Escape" });
   expect(

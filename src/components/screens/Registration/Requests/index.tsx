@@ -1,5 +1,6 @@
 "use client";
 import Button from "@/components/ui/Button";
+import { classroomsApi } from "@/integrations/classrooms/api";
 import Select from "@/components/ui/Select";
 import {
   registrationApi,
@@ -7,6 +8,7 @@ import {
 } from "@/integrations/registration/api";
 import { useApiMutation } from "@/integrations/useApiMutation";
 import { normalizeText } from "@/utils/text";
+import { classroomLabel } from "@/utils/classroomLabel";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { GraduationCap, Search, Trash2, Users } from "lucide-react";
 import Image from "next/image";
@@ -28,14 +30,14 @@ const roleLabels = {
   PEDAGOGICAL_COORDINATOR: "Coordenador",
   ADMIN: "Administrador",
 };
-function RegistrationPhoto({ id }: { id: number; }) {
+function RegistrationPhoto({ id, type = "REGISTRATION" }: { id: number; type?: "REGISTRATION" | "TRANSFER" }) {
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<Error | null>(null);
   useEffect(() => {
     const controller = new AbortController();
     let objectUrl: string | undefined;
     registrationApi
-      .photo(id, controller.signal)
+      .photo(id, controller.signal, type)
       .then((blob) => {
         if (controller.signal.aborted) return;
         objectUrl = URL.createObjectURL(blob);
@@ -48,7 +50,7 @@ function RegistrationPhoto({ id }: { id: number; }) {
       controller.abort();
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [id]);
+  }, [id, type]);
   return (
     <>
       <ErrorMessage error={error} />
@@ -69,7 +71,7 @@ function RegistrationPhoto({ id }: { id: number; }) {
 export function CoordinatorRequests({
   initialType,
 }: {
-  initialType: "TEACHER" | "DELETION";
+  initialType: "TEACHER" | "STUDENT" | "DELETION";
 }) {
   const [kind, setKind] = useState<"TEACHER" | "STUDENT" | "DELETION">(
     initialType,
@@ -78,6 +80,8 @@ export function CoordinatorRequests({
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const client = useQueryClient();
+  const [selectedClassrooms, setSelectedClassrooms] = useState<Record<string, string>>({});
+  const [requestType, setRequestType] = useState<"ALL" | "REGISTRATION" | "TRANSFER">("ALL");
   const query = useQuery({
     queryKey: ["registration-requests", "coordinator", status],
     enabled: kind !== "DELETION",
@@ -91,24 +95,44 @@ export function CoordinatorRequests({
       return [first, ...rest].flatMap((result) => result.content);
     },
   });
+  const rooms = useQuery({
+    queryKey: ["classrooms", "transfer-requests"],
+    queryFn: ({ signal }) => classroomsApi.list(signal),
+    enabled: kind === "STUDENT" && status === "PENDING" && (query.data ?? []).some((request) => request.type === "TRANSFER"),
+  });
   const review = useApiMutation(
     async ({
       id,
       decision,
+      type,
+      classroomId,
     }: {
       id: number;
       decision: "APPROVED" | "REJECTED";
+      type?: "REGISTRATION" | "TRANSFER";
+      classroomId?: number;
     }) => {
-      await registrationApi.review(id, decision, "");
+      if (type === "TRANSFER") {
+        if (decision === "APPROVED" && !rooms.data?.some((room) => room.id === classroomId))
+          throw new Error("Selecione uma turma de destino válida.");
+        await registrationApi.review(id, decision, "", {
+          type,
+          ...(decision === "APPROVED" ? { classroomId } : {}),
+        });
+      } else {
+        await registrationApi.review(id, decision, "");
+      }
       await Promise.all([
         client.invalidateQueries({ queryKey: ["registration-requests"] }),
         client.invalidateQueries({ queryKey: ["users"] }),
+        client.invalidateQueries({ queryKey: ["classrooms"] }),
       ]);
     },
   );
   const filtered = (query.data ?? []).filter(
     (request) =>
       request.role === kind &&
+      (kind !== "STUDENT" || requestType === "ALL" || (request.type ?? "REGISTRATION") === requestType) &&
       normalizeText(
         `${request.name} ${request.email} ${request.ra} ${request.schoolName}`,
       ).includes(normalizeText(search.trim())),
@@ -177,6 +201,18 @@ export function CoordinatorRequests({
               ))}
             </select>
           </div>
+          {kind === "STUDENT" && (
+            <label className="mb-4 block text-sm">Tipo de pedido
+              <select aria-label="Filtrar por tipo de pedido" value={requestType} onChange={(event) => {
+                setRequestType(event.target.value as typeof requestType);
+                setPage(0);
+              }} className="ml-3 min-h-11 rounded-lg border border-(--line) bg-white px-3 text-sm">
+                <option value="ALL">Cadastros e transferências</option>
+                <option value="REGISTRATION">Cadastros</option>
+                <option value="TRANSFER">Transferências</option>
+              </select>
+            </label>
+          )}
           <label className="flex min-h-12 items-center gap-3 rounded-lg border border-(--line) px-4 focus-within:ring-2 focus-within:ring-(--focus)">
             <Search
               size={19}
@@ -196,7 +232,8 @@ export function CoordinatorRequests({
             />
           </label>
           <div className="mt-4">
-            <ErrorMessage error={review.error || query.error} />
+            <ErrorMessage error={review.error || query.error || (kind === "STUDENT" ? rooms.error : null)} />
+            {kind === "STUDENT" && rooms.isError && <Button onClick={() => rooms.refetch()}>Carregar turmas novamente</Button>}
           </div>
           {query.isPending && (
             <p role="status" className="py-6 text-sm text-(--muted)">
@@ -222,8 +259,8 @@ export function CoordinatorRequests({
                 .slice(current * 10, current * 10 + 10)
                 .map((request) => (
                   <li
-                    key={request.id}
-                    className="flex flex-wrap items-center gap-4 py-6 sm:flex-nowrap"
+                    key={`${request.type ?? "REGISTRATION"}:${request.id}`}
+                    className="flex flex-wrap items-center gap-4 py-6"
                   >
                     <span
                       aria-hidden="true"
@@ -243,41 +280,64 @@ export function CoordinatorRequests({
                       <p className="mt-1 break-all text-sm text-(--muted)">
                         {request.email}
                       </p>
+                      <p className="mt-1 text-sm font-medium text-(--blue-dark)">{request.type === "TRANSFER" ? "Transferência de escola · Histórico preservado" : "Cadastro"}</p>
+                      {request.hasPhoto && <RegistrationPhoto id={request.id} type={request.type} />}
                     </div>
+                    {status === "PENDING" && request.type === "TRANSFER" && (
+                      <div className="w-full sm:w-56">
+                        <Select
+                          id={"transfer-classroom-" + request.id}
+                          label={"Turma de destino de " + request.name}
+                          value={selectedClassrooms["TRANSFER:" + request.id] ?? ""}
+                          disabled={rooms.isPending || rooms.isError || review.isPending}
+                          onChange={(event) => setSelectedClassrooms((current) => ({ ...current, ["TRANSFER:" + request.id]: event.target.value }))}
+                        >
+                          <option value="">Selecione uma turma</option>
+                          {(rooms.data ?? []).map((room) => <option key={room.id} value={room.id}>{classroomLabel(room)}</option>)}
+                        </Select>
+                        {rooms.isPending && <p role="status" className="mt-2 text-sm text-(--muted)">Carregando turmas…</p>}
+                        {rooms.isSuccess && !rooms.data.length && <p className="mt-2 text-sm text-(--muted)">Cadastre uma turma de destino para aprovar a transferência.</p>}
+                      </div>
+                    )}
                     {status === "PENDING" ? (
                       <div className="flex w-full shrink-0 gap-3 sm:w-auto">
                         <button
                           type="button"
                           disabled={review.isPending}
-                          aria-label={`Recusar cadastro de ${request.name}`}
+                          aria-label={`Recusar ${request.type === "TRANSFER" ? "transferência" : "cadastro"} de ${request.name}`}
                           onClick={() => {
                             review.mutate({
                               id: request.id,
                               decision: "REJECTED",
+                              type: request.type,
                             });
                           }}
                           className="min-h-11 flex-1 rounded-lg bg-[#e83e32] px-5 text-sm font-medium text-white hover:bg-[#cf3026] disabled:opacity-50 sm:min-w-28"
                         >
                           {review.isPending &&
                             review.variables?.id === request.id &&
+                            review.variables.type === request.type &&
                             review.variables.decision === "REJECTED"
                             ? "Recusando…"
                             : "Recusar"}
                         </button>
                         <button
                           type="button"
-                          disabled={review.isPending}
-                          aria-label={`Aprovar cadastro de ${request.name}`}
+                          disabled={review.isPending || (request.type === "TRANSFER" && (rooms.isPending || rooms.isError || !selectedClassrooms[`TRANSFER:${request.id}`]))}
+                          aria-label={`Aprovar ${request.type === "TRANSFER" ? "transferência" : "cadastro"} de ${request.name}`}
                           onClick={() => {
                             review.mutate({
                               id: request.id,
                               decision: "APPROVED",
+                              type: request.type,
+                              classroomId: request.type === "TRANSFER" ? Number(selectedClassrooms[`TRANSFER:${request.id}`]) : undefined,
                             });
                           }}
                           className="min-h-11 flex-1 rounded-lg bg-(--blue-dark) px-5 text-sm font-medium text-white hover:bg-[#076a83] disabled:opacity-50 sm:min-w-28"
                         >
                           {review.isPending &&
                             review.variables?.id === request.id &&
+                            review.variables.type === request.type &&
                             review.variables.decision === "APPROVED"
                             ? "Aprovando…"
                             : "Aprovar"}
@@ -324,7 +384,10 @@ export function Requests() {
   const client = useQueryClient();
   const query = useQuery({
     queryKey: ["registration-requests", status, page],
-    queryFn: ({ signal }) => registrationApi.list(status, page, signal),
+    queryFn: async ({ signal }) => {
+      const result = await registrationApi.list(status, page, signal);
+      return { ...result, content: result.content.filter((request) => request.role === "PEDAGOGICAL_COORDINATOR" && request.type !== "TRANSFER") };
+    },
   });
   const review = useApiMutation(
     async ({ id, decision }: { id: number; decision: RegistrationStatus; }) => {

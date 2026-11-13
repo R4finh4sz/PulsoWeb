@@ -1,3 +1,5 @@
+import { classroomsApi } from "@/integrations/classrooms/api";
+jest.mock("@/integrations/classrooms/api", () => ({ classroomsApi: { list: jest.fn() } }));
 import AdminRequestsRoute from "@/app/admin/registration-requests/page";
 import CoordinatorRequestsRoute from "@/app/coordinator/registration-requests/page";
 import {
@@ -101,7 +103,7 @@ test("coordenação separa professores e alunos, busca e aprova sem transferênc
   expect(
     screen.getByText("Nenhuma solicitação encontrada para esta busca."),
   ).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: "Alunos" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Alunos" }));
   fireEvent.click(
     await screen.findByRole("button", {
       name: "Aprovar cadastro de Ana Silva",
@@ -120,7 +122,7 @@ beforeEach(() => {
   } as Awaited<ReturnType<typeof authApi.me>>);
   jest
     .mocked(registrationApi.list)
-    .mockResolvedValue({ content: [request], totalPages: 2 });
+    .mockResolvedValue({ content: [{ ...request, role: "PEDAGOGICAL_COORDINATOR" }], totalPages: 2 });
   jest.mocked(registrationApi.photo).mockResolvedValue(new Blob(["photo"]));
   jest.mocked(registrationApi.review).mockResolvedValue(request);
   jest.mocked(schoolsApi.list).mockResolvedValue([school]);
@@ -299,3 +301,65 @@ const RegistrationRequests = routeFixture<{
     />
   ),
 );
+
+test("coordenação aceita transferência na mesma fila após escolher a turma", async () => {
+  jest.mocked(authApi.me).mockResolvedValue({ id: 2, role: "PEDAGOGICAL_COORDINATOR", fullName: "Coord", email: "c@b.com" } as Awaited<ReturnType<typeof authApi.me>>);
+  jest.mocked(registrationApi.list).mockResolvedValue({ content: [
+    { ...request, type: "REGISTRATION", hasPhoto: false },
+    { ...request, type: "TRANSFER", name: "Aluno Transferido", hasPhoto: false },
+  ], totalPages: 1 });
+  jest.mocked(classroomsApi.list).mockResolvedValue([{ id: 9, name: "2 ano", identifier: "A", teacherIds: [] }]);
+  render(<RegistrationRequests role="coordenador" />, { wrapper: queryWrapper().wrapper });
+  fireEvent.click(await screen.findByRole("button", { name: "Alunos" }));
+  const approve = await screen.findByRole("button", { name: "Aprovar transferência de Aluno Transferido" });
+  expect(approve).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Aprovar cadastro de Ana Silva" })).toBeEnabled();
+  await screen.findByRole("option", { name: "2 ano · A" });
+  fireEvent.change(screen.getByRole("combobox", { name: "Turma de destino de Aluno Transferido" }), { target: { value: "9" } });
+  fireEvent.click(approve);
+  await waitFor(() => expect(registrationApi.review).toHaveBeenCalledWith(1, "APPROVED", "", { type: "TRANSFER", classroomId: 9 }));
+});
+
+test("coordenação pode recusar transferência sem escolher turma", async () => {
+  jest.mocked(authApi.me).mockResolvedValue({ id: 2, role: "PEDAGOGICAL_COORDINATOR", fullName: "Coord", email: "c@b.com" } as Awaited<ReturnType<typeof authApi.me>>);
+  jest.mocked(registrationApi.list).mockResolvedValue({ content: [{ ...request, type: "TRANSFER", hasPhoto: false }], totalPages: 1 });
+  jest.mocked(classroomsApi.list).mockResolvedValue([]);
+  render(<RegistrationRequests role="coordenador" />, { wrapper: queryWrapper().wrapper });
+  fireEvent.click(await screen.findByRole("button", { name: "Alunos" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Recusar transferência de Ana Silva" }));
+  await waitFor(() => expect(registrationApi.review).toHaveBeenCalledWith(1, "REJECTED", "", { type: "TRANSFER" }));
+});
+
+test("filtro e fotos distinguem cadastro e transferência com o mesmo ID", async () => {
+  jest.mocked(authApi.me).mockResolvedValue({ id: 2, role: "PEDAGOGICAL_COORDINATOR", fullName: "Coord", email: "c@b.com" } as Awaited<ReturnType<typeof authApi.me>>);
+  jest.mocked(classroomsApi.list).mockResolvedValue([]);
+  jest.mocked(registrationApi.list).mockResolvedValue({ content: [
+    { ...request, type: "REGISTRATION" },
+    { ...request, type: "TRANSFER", name: "Aluno Transferido", userId: 456, originSchoolId: 10 },
+  ], totalPages: 1 });
+  render(<RegistrationRequests role="coordenador" />, { wrapper: queryWrapper().wrapper });
+  fireEvent.click(await screen.findByRole("button", { name: "Alunos" }));
+  await screen.findByRole("button", { name: "Aprovar cadastro de Ana Silva" });
+  await waitFor(() => {
+    expect(registrationApi.photo).toHaveBeenCalledWith(1, expect.any(AbortSignal), "REGISTRATION");
+    expect(registrationApi.photo).toHaveBeenCalledWith(1, expect.any(AbortSignal), "TRANSFER");
+  });
+  fireEvent.change(screen.getByLabelText("Filtrar por tipo de pedido"), { target: { value: "TRANSFER" } });
+  expect(screen.getByRole("button", { name: "Recusar transferência de Aluno Transferido" })).toBeVisible();
+  expect(screen.queryByText("Ana Silva")).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Filtrar por tipo de pedido"), { target: { value: "REGISTRATION" } });
+  expect(screen.getByText("Ana Silva")).toBeVisible();
+  expect(screen.queryByText("Aluno Transferido")).not.toBeInTheDocument();
+});
+
+test("admin exibe somente cadastros de coordenadores", async () => {
+  jest.mocked(registrationApi.list).mockResolvedValue({ content: [
+    { ...request, role: "PEDAGOGICAL_COORDINATOR", type: "REGISTRATION", name: "Coordenador novo", hasPhoto: false },
+    { ...request, type: "TRANSFER", name: "Transferência de aluno" },
+    { ...request, type: "REGISTRATION", name: "Cadastro de aluno" },
+  ], totalPages: 1 });
+  render(<RegistrationRequests role="admin" />, { wrapper: queryWrapper().wrapper });
+  expect(await screen.findByText("Coordenador novo")).toBeVisible();
+  expect(screen.queryByText("Transferência de aluno")).not.toBeInTheDocument();
+  expect(screen.queryByText("Cadastro de aluno")).not.toBeInTheDocument();
+});

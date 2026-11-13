@@ -1,3 +1,4 @@
+import { classroomLabel } from "@/utils/classroomLabel";
 import { buildClassroomReports, reportMetrics } from "@/utils/teacherReports";
 import type { Faq } from "@/integrations/faqs/api";
 import type { AccountDeletion } from "@/integrations/profile/deletions";
@@ -237,6 +238,7 @@ for (const id of [6, 100]) {
 }
 
 // Dados mantidos apenas na memória da aba; recarregar restaura os exemplos.
+const profilePhotos = new Map<string | number, Blob>();
 export function mockRequest(
   path: string,
   method: string,
@@ -246,6 +248,16 @@ export function mockRequest(
   const current = getDemoUser(token);
   if (!current || deletedAccountIds.has(current.id))
     throw new Error("Sessão de demonstração inválida.");
+  if (path === "/me/photo") {
+    if (method === "GET") return profilePhotos.get(current.id);
+    if (method === "PUT") {
+      const photo = body instanceof FormData ? body.get("photo") : null;
+      if (!(photo instanceof Blob) || !photo.type.startsWith("image/"))
+        throw new Error("Selecione um arquivo de imagem.");
+      profilePhotos.set(current.id, photo);
+      return;
+    }
+  }
   const url = new URL(path, "http://mock.local");
   const parts = url.pathname.split("/").filter(Boolean);
   const data = (body ?? {}) as Record<string, unknown>;
@@ -267,6 +279,12 @@ export function mockRequest(
       );
     if (current.role !== "ADMIN")
       throw new Error("Somente administradores podem editar o FAQ.");
+    if (method === "DELETE" && parts[1]) {
+      const index = faqs.findIndex((faq) => String(faq.id) === decodeURIComponent(parts[1]));
+      if (index < 0) throw new Error("Pergunta não encontrada.");
+      faqs.splice(index, 1);
+      return;
+    }
     if (method === "POST" || method === "PUT") {
       const input = z
         .object({
@@ -452,6 +470,7 @@ export function mockRequest(
             schoolName: school.nome,
             grade: admin || schoolId ? gradeOf(room.name) : null,
             classroomName: schoolId ? room.name : null,
+            classroomIdentifier: schoolId ? room.identifier : null,
             ...total,
           },
         ];
@@ -686,7 +705,7 @@ export function mockRequest(
       quiz: {
         ...quiz,
         subjectName: subject?.name ?? "Matéria",
-        classroomName: room?.name ?? "Turma",
+        classroomName: classroomLabel(room) || "Turma",
         schoolName:
           schools.find((school) => school.id === room?.schoolId)?.nome ??
           "Escola",
@@ -728,7 +747,7 @@ export function mockRequest(
             subjectName:
               subjects.find((subject) => subject.id === quiz.subjectId)?.name ??
               "Disciplina",
-            classroomName: room?.name ?? "Turma",
+            classroomName: classroomLabel(room) || "Turma",
             schoolName:
               schools.find((school) => school.id === room?.schoolId)?.nome ??
               "Escola",
@@ -755,7 +774,7 @@ export function mockRequest(
       },
       classrooms: reports.map((room) => ({
         classroomId: room.id,
-        classroomName: room.name,
+        classroomName: classroomLabel(room),
         schoolId: rooms.find((item) => item.id === room.id)?.schoolId ?? null,
         schoolName: room.school,
         studentCount: room.students.length,
@@ -779,7 +798,7 @@ export function mockRequest(
         return {
           ...quiz,
           subjectName: subject?.name ?? "Matéria",
-          classroomName: room?.name ?? "Turma",
+          classroomName: classroomLabel(room) || "Turma",
           schoolName:
             schools.find((school) => school.id === room?.schoolId)?.nome ??
             "Escola",
@@ -1077,11 +1096,9 @@ export function mockRequest(
             throw new Error(
               "Somente professores da disciplina podem editar a ementa.",
             );
-          const parsed = CreateSubjectSchema.parse({
-            topics: data.topics,
-            name: subject.name,
-            syllabus: subject.syllabus ?? "",
-          });
+          const parsed = CreateSubjectSchema.parse(data);
+          subject.name = parsed.name;
+          subject.syllabus = parsed.syllabus;
           subject.topics = parsed.topics;
           return clone(subject);
         }

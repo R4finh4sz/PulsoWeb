@@ -25,7 +25,7 @@ test("atividades incluem contexto, status e prazo e isolam o autor", async () =>
   expect(activities[0]).toMatchObject({
     teacherId: 3,
     subjectName: "Matemática",
-    classroomName: "1º ano A",
+    classroomName: "1º ano A · 1A",
     schoolName: "Escola Estadual Monte Serrat",
   });
   expect(
