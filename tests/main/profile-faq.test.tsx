@@ -1,13 +1,29 @@
 import { FaqContent } from "@/components/screens/Faq";
 import { faqsApi } from "@/integrations/faqs/api";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { admin, coordinator, queryWrapper, router, teacher } from "../helpers";
 
 jest.mock("next/navigation", () => ({ useRouter: () => router }));
 
-jest.mock("@/integrations/faqs/api", () => ({ faqsApi: { list: jest.fn() } }));
+jest.mock("@/integrations/faqs/api", () => ({ faqsApi: { list: jest.fn(), remove: jest.fn() } }));
 
 beforeEach(() => jest.mocked(faqsApi.list).mockReset());
+
+test("admin confirma exclusão pela lixeira ao lado da edição", async () => {
+  jest.mocked(faqsApi.list).mockResolvedValue([{ id: 1, title: "Pergunta", message: "Resposta", targetRole: "TEACHER" }]);
+  jest.mocked(faqsApi.remove).mockResolvedValue();
+    render(<FaqContent user={admin} />, { wrapper: queryWrapper().wrapper });
+    const trash = await screen.findByRole("button", { name: "Excluir pergunta: Pergunta" });
+    fireEvent.click(trash);
+    expect(screen.getByRole("dialog", { name: "Excluir pergunta?" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(faqsApi.remove).not.toHaveBeenCalled();
+    jest.mocked(faqsApi.list).mockResolvedValue([]);
+    fireEvent.click(trash);
+    fireEvent.click(screen.getByRole("button", { name: "Excluir" }));
+    await waitFor(() => expect(faqsApi.remove).toHaveBeenCalledWith(1, expect.anything()));
+    expect(await screen.findByText("Nenhuma pergunta disponível para seu perfil.")).toBeVisible();
+});
 
 test("admin filtra por perfil e tem edição ao lado de cada pergunta", async () => {
   jest.mocked(faqsApi.list).mockResolvedValue([
