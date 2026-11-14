@@ -16,14 +16,15 @@ beforeEach(() => {
   jest.mocked(usersApi.list).mockResolvedValue({ content: [{ id: 7, fullName: "Ana", email: "ana@escola.com", ra: "7", role: "STUDENT", classroomId: null }], page: 0, size: 10, totalElements: 1, totalPages: 1 });
 });
 
-test.each(["students", "teachers", "coordinators"] as const)("admin vincula %s sem recriar a conta", async (resource) => {
+test("admin troca o coordenador sem recriar a conta", async () => {
   render(<SchoolManagement schoolId={3} />, { wrapper: queryWrapper().wrapper });
-  fireEvent.change(screen.getByLabelText("Tipo de usuário"), { target: { value: resource } });
-  await screen.findByRole("option", { name: "Ana · ana@escola.com" });
-  fireEvent.change(screen.getByLabelText("Usuário"), { target: { value: "7" } });
-  fireEvent.click(screen.getByRole("button", { name: "Vincular à escola" }));
-  await waitFor(() => expect(resource === "coordinators" ? schoolsApi.assignCoordinator : schoolsApi.assignUser).toHaveBeenCalledWith(3, 7));
-  await waitFor(() => expect(screen.getByLabelText("Usuário")).toHaveValue(""));
+  const option = await screen.findByRole("radio", { name: /Ana/ });
+  expect(usersApi.list).toHaveBeenCalledWith("coordinators", expect.objectContaining({ page: 0, size: 10 }), expect.anything());
+  fireEvent.click(option);
+  fireEvent.click(screen.getByRole("button", { name: "Trocar coordenador" }));
+  await waitFor(() => expect(schoolsApi.assignCoordinator).toHaveBeenCalledWith(3, 7));
+  expect(schoolsApi.assignUser).not.toHaveBeenCalled();
+  await waitFor(() => expect(screen.getByRole("radio", { name: /Ana/ })).not.toBeChecked());
 });
 
 test("desativação exige confirmação e volta à lista após sucesso", async () => {
