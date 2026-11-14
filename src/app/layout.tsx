@@ -1,8 +1,11 @@
-import type { Metadata } from "next";
+import { QueryProvider } from "@/api/QueryProvider";
+import { AuthGate } from "@/components/screens/Login/AuthGate";
+import { FeedbackModalHost } from "@/components/ui/FeedbackModalHost";
 import "@fontsource/poppins/latin-400.css";
 import "@fontsource/poppins/latin-500.css";
 import "@fontsource/poppins/latin-600.css";
 import "@fontsource/poppins/latin-700.css";
+import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,7 +16,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="pt-BR">
-      <body>{children}</body>
+      <body>
+        <QueryProvider>
+          <AuthGate>{children}</AuthGate>
+        </QueryProvider>
+        <FeedbackModalHost />
+      </body>
     </html>
   );
 }

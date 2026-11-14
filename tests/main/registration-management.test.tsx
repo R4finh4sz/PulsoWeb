@@ -1,0 +1,365 @@
+import { classroomsApi } from "@/integrations/classrooms/api";
+jest.mock("@/integrations/classrooms/api", () => ({ classroomsApi: { list: jest.fn() } }));
+import AdminRequestsRoute from "@/app/admin/registration-requests/page";
+import CoordinatorRequestsRoute from "@/app/coordinator/registration-requests/page";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { routeFixture, routeParams } from "../route-fixture";
+
+import NewCoordinatorPage from "@/app/admin/coordinators/new/page";
+import NewTeacherPage from "@/app/coordinator/teachers/new/page";
+import { authApi } from "@/integrations/auth/api";
+import { registrationApi } from "@/integrations/registration/api";
+import { schoolsApi } from "@/integrations/schools/api";
+import { findAddressByCep } from "@/utils/viacep";
+import { queryWrapper, router } from "../helpers";
+jest.mock("next/navigation", () => ({
+  useRouter: () => router,
+  usePathname: () => "/admin",
+}));
+jest.mock("@/integrations/auth/api", () => ({
+  authApi: { me: jest.fn(), logout: jest.fn() },
+}));
+jest.mock("@/integrations/registration/api", () => ({
+  registrationApi: {
+    list: jest.fn(),
+    photo: jest.fn(),
+    review: jest.fn(),
+    invite: jest.fn(),
+  },
+}));
+jest.mock("@/integrations/schools/api", () => ({
+  schoolsApi: { list: jest.fn(), searchByCep: jest.fn() },
+}));
+jest.mock("@/utils/viacep", () => ({
+  ...jest.requireActual("@/utils/viacep"),
+  findAddressByCep: jest.fn(),
+}));
+const request = {
+  id: 1,
+  name: "Ana Silva",
+  email: "a@b.com",
+  ra: "123",
+  birthDate: "2000-01-01",
+  role: "STUDENT" as const,
+  schoolName: "Escola",
+  status: "PENDING" as const,
+  reviewReason: "Parecer",
+  hasPhoto: true,
+};
+const school = {
+  id: 1,
+  nome: "Escola São Paulo",
+
+  cidade: "São Paulo",
+  bairro: "Centro",
+  logradouro: "Rua Teste",
+};
+const InvitationPage = ({
+  resource,
+}: {
+  resource: "teachers" | "coordinators";
+}) =>
+  resource === "coordinators" ? <NewCoordinatorPage /> : <NewTeacherPage />;
+test("coordenação separa professores e alunos, busca e aprova sem transferências", async () => {
+  jest.mocked(authApi.me).mockResolvedValue({
+    id: 2,
+    role: "PEDAGOGICAL_COORDINATOR",
+    fullName: "Coord",
+    email: "c@b.com",
+  } as Awaited<ReturnType<typeof authApi.me>>);
+  jest.mocked(registrationApi.list).mockResolvedValue({
+    content: [
+      { ...request, hasPhoto: false },
+      {
+        ...request,
+        id: 2,
+        name: "Paula Mendes",
+        email: "paula@exemplo.com",
+        role: "TEACHER",
+        hasPhoto: false,
+      },
+    ],
+    totalPages: 1,
+  });
+  render(<RegistrationRequests role="coordenador" />, {
+    wrapper: queryWrapper().wrapper,
+  });
+  expect(
+    await screen.findByRole("button", {
+      name: "Aprovar cadastro de Paula Mendes",
+    }),
+  ).toBeVisible();
+  expect(screen.queryByText("Ana Silva")).not.toBeInTheDocument();
+  expect(screen.queryByText("Transferências")).not.toBeInTheDocument();
+  fireEvent.change(screen.getByRole("searchbox"), {
+    target: { value: "ausente" },
+  });
+  expect(
+    screen.getByText("Nenhuma solicitação encontrada para esta busca."),
+  ).toBeVisible();
+  fireEvent.click(await screen.findByRole("button", { name: "Alunos" }));
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: "Aprovar cadastro de Ana Silva",
+    }),
+  );
+  await waitFor(() =>
+    expect(registrationApi.review).toHaveBeenCalledWith(1, "APPROVED", ""),
+  );
+});
+beforeEach(() => {
+  jest.mocked(authApi.me).mockResolvedValue({
+    id: 1,
+    role: "ADMIN",
+    fullName: "Admin",
+    email: "admin@b.com",
+  } as Awaited<ReturnType<typeof authApi.me>>);
+  jest
+    .mocked(registrationApi.list)
+    .mockResolvedValue({ content: [{ ...request, role: "PEDAGOGICAL_COORDINATOR" }], totalPages: 2 });
+  jest.mocked(registrationApi.photo).mockResolvedValue(new Blob(["photo"]));
+  jest.mocked(registrationApi.review).mockResolvedValue(request);
+  jest.mocked(schoolsApi.list).mockResolvedValue([school]);
+  jest
+    .mocked(schoolsApi.searchByCep)
+    .mockResolvedValue({
+      content: [
+        {
+          id: "1",
+          name: school.nome,
+          city: school.cidade,
+          state: "SP",
+          cep: "01001000",
+        },
+      ],
+      totalPages: 1,
+    });
+  jest.mocked(registrationApi.invite).mockResolvedValue({ delivery: "EMAIL" });
+});
+test("solicitações exibem foto, aprovam/recusam e paginam", async () => {
+  render(<RegistrationRequests role="admin" />, {
+    wrapper: queryWrapper().wrapper,
+  });
+  await screen.findByText("Ana Silva");
+  expect(
+    await screen.findByAltText("Foto enviada no cadastro"),
+  ).toHaveAttribute("src", "blob:test");
+  fireEvent.click(screen.getByRole("button", { name: "Aprovar" }));
+  await waitFor(() =>
+    expect(registrationApi.review).toHaveBeenCalledWith(1, "APPROVED", ""),
+  );
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Recusar" })).toBeEnabled(),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Recusar" }));
+  await waitFor(() =>
+    expect(registrationApi.review).toHaveBeenCalledWith(1, "REJECTED", ""),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Próxima" }));
+  await waitFor(() =>
+    expect(registrationApi.list).toHaveBeenLastCalledWith(
+      "PENDING",
+      1,
+      expect.any(AbortSignal),
+    ),
+  );
+  fireEvent.click(await screen.findByRole("button", { name: "Anterior" }));
+  fireEvent.change(screen.getByLabelText("Situação"), {
+    target: { value: "APPROVED" },
+  });
+  await screen.findByText("Cadastros aprovados");
+  await screen.findByText("Ana Silva");
+  expect(screen.queryByRole("button", { name: "Aprovar" })).toBeNull();
+  fireEvent.change(screen.getByLabelText("Situação"), {
+    target: { value: "REJECTED" },
+  });
+  await screen.findByText("Parecer: Parecer");
+  cleanup();
+  expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:test");
+});
+test("solicitações vazias e falhas podem ser consultadas novamente", async () => {
+  jest
+    .mocked(registrationApi.list)
+    .mockRejectedValueOnce(new Error("Consulta indisponível"))
+    .mockResolvedValue({ content: [], totalPages: 0 });
+  render(<RegistrationRequests role="admin" />, {
+    wrapper: queryWrapper().wrapper,
+  });
+  await screen.findByRole("alert");
+  fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
+  await screen.findByText("Nenhum cadastro encontrado.");
+});
+test("foto indisponível mostra erro e é cancelada no unmount", async () => {
+  jest
+    .mocked(registrationApi.photo)
+    .mockRejectedValue(new Error("Foto indisponível"));
+  const { unmount } = render(<RegistrationRequests role="admin" />, {
+    wrapper: queryWrapper().wrapper,
+  });
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Foto indisponível",
+  );
+  const signal = jest.mocked(registrationApi.photo).mock.calls[0][1]!;
+  unmount();
+  expect(signal.aborted).toBe(true);
+});
+test.each(["teachers", "coordinators"] as const)(
+  "convite para %s envia email e escola quando exigida",
+  async (resource) => {
+    if (resource === "teachers")
+      jest.mocked(authApi.me).mockResolvedValue({
+        id: 1,
+        role: "PEDAGOGICAL_COORDINATOR",
+        fullName: "Coord",
+        email: "c@b.com",
+      } as Awaited<ReturnType<typeof authApi.me>>);
+    const { container } = render(<InvitationPage resource={resource} />, {
+      wrapper: queryWrapper().wrapper,
+    });
+    await screen.findByLabelText("E-mail");
+    fireEvent.change(screen.getByLabelText("E-mail"), {
+      target: { value: "a@b.com" },
+    });
+    if (resource === "coordinators") {
+      fireEvent.change(screen.getByLabelText("CEP da escola"), {
+        target: { value: "01001000" },
+      });
+      await screen.findByRole("option", { name: /Escola/ });
+      fireEvent.change(screen.getByLabelText("Escola"), {
+        target: { value: "1" },
+      });
+    }
+    fireEvent.submit(container.querySelector("form")!);
+    expect(
+      await screen.findByText(
+        "Convite enviado por e-mail com link de cadastro.",
+      ),
+    ).toBeVisible();
+    expect(registrationApi.invite).toHaveBeenCalledWith(
+      resource,
+      resource === "coordinators"
+        ? { email: "a@b.com", schoolId: 1 }
+        : { email: "a@b.com" },
+    );
+  },
+);
+test("invitation searches registered schools by CEP without external address lookup", async () => {
+  render(<InvitationPage resource="coordinators" />, {
+    wrapper: queryWrapper().wrapper,
+  });
+  fireEvent.change(await screen.findByLabelText("CEP da escola"), {
+    target: { value: "01001000" },
+  });
+  await screen.findByRole("option", { name: /Escola/ });
+  expect(schoolsApi.searchByCep).toHaveBeenCalledWith(
+    "01001000",
+    0,
+    expect.any(AbortSignal),
+  );
+  expect(findAddressByCep).not.toHaveBeenCalled();
+});
+test("erro ao convidar mantém email para tentar novamente", async () => {
+  jest.mocked(authApi.me).mockResolvedValue({
+    id: 1,
+    role: "PEDAGOGICAL_COORDINATOR",
+    fullName: "Coord",
+    email: "c@b.com",
+  } as Awaited<ReturnType<typeof authApi.me>>);
+  jest.mocked(registrationApi.invite).mockRejectedValue(new Error("Falha"));
+  const { container } = render(<InvitationPage resource="teachers" />, {
+    wrapper: queryWrapper().wrapper,
+  });
+  fireEvent.change(await screen.findByLabelText("E-mail"), {
+    target: { value: "a@b.com" },
+  });
+  fireEvent.submit(container.querySelector("form")!);
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Enviar convite" }),
+    ).toBeEnabled(),
+  );
+  expect(screen.getByLabelText("E-mail")).toHaveValue("a@b.com");
+});
+
+const RegistrationRequests = routeFixture<{
+  role: import("@/interfaces/auth").UserRole;
+  initialType?: "TEACHER" | "DELETION";
+}>((props) =>
+  props.role === "admin" ? (
+    <AdminRequestsRoute />
+  ) : (
+    <CoordinatorRequestsRoute
+      searchParams={routeParams({
+        type: props.initialType === "DELETION" ? "deletion" : "teacher",
+      })}
+    />
+  ),
+);
+
+test("coordenação aceita transferência na mesma fila após escolher a turma", async () => {
+  jest.mocked(authApi.me).mockResolvedValue({ id: 2, role: "PEDAGOGICAL_COORDINATOR", fullName: "Coord", email: "c@b.com" } as Awaited<ReturnType<typeof authApi.me>>);
+  jest.mocked(registrationApi.list).mockResolvedValue({ content: [
+    { ...request, type: "REGISTRATION", hasPhoto: false },
+    { ...request, type: "TRANSFER", name: "Aluno Transferido", hasPhoto: false },
+  ], totalPages: 1 });
+  jest.mocked(classroomsApi.list).mockResolvedValue([{ id: 9, name: "2 ano", identifier: "A", teacherIds: [] }]);
+  render(<RegistrationRequests role="coordenador" />, { wrapper: queryWrapper().wrapper });
+  fireEvent.click(await screen.findByRole("button", { name: "Alunos" }));
+  const approve = await screen.findByRole("button", { name: "Aprovar transferência de Aluno Transferido" });
+  expect(approve).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Aprovar cadastro de Ana Silva" })).toBeEnabled();
+  await screen.findByRole("option", { name: "2 ano · A" });
+  fireEvent.change(screen.getByRole("combobox", { name: "Turma de destino de Aluno Transferido" }), { target: { value: "9" } });
+  fireEvent.click(approve);
+  await waitFor(() => expect(registrationApi.review).toHaveBeenCalledWith(1, "APPROVED", "", { type: "TRANSFER", classroomId: 9 }));
+});
+
+test("coordenação pode recusar transferência sem escolher turma", async () => {
+  jest.mocked(authApi.me).mockResolvedValue({ id: 2, role: "PEDAGOGICAL_COORDINATOR", fullName: "Coord", email: "c@b.com" } as Awaited<ReturnType<typeof authApi.me>>);
+  jest.mocked(registrationApi.list).mockResolvedValue({ content: [{ ...request, type: "TRANSFER", hasPhoto: false }], totalPages: 1 });
+  jest.mocked(classroomsApi.list).mockResolvedValue([]);
+  render(<RegistrationRequests role="coordenador" />, { wrapper: queryWrapper().wrapper });
+  fireEvent.click(await screen.findByRole("button", { name: "Alunos" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Recusar transferência de Ana Silva" }));
+  await waitFor(() => expect(registrationApi.review).toHaveBeenCalledWith(1, "REJECTED", "", { type: "TRANSFER" }));
+});
+
+test("filtro e fotos distinguem cadastro e transferência com o mesmo ID", async () => {
+  jest.mocked(authApi.me).mockResolvedValue({ id: 2, role: "PEDAGOGICAL_COORDINATOR", fullName: "Coord", email: "c@b.com" } as Awaited<ReturnType<typeof authApi.me>>);
+  jest.mocked(classroomsApi.list).mockResolvedValue([]);
+  jest.mocked(registrationApi.list).mockResolvedValue({ content: [
+    { ...request, type: "REGISTRATION" },
+    { ...request, type: "TRANSFER", name: "Aluno Transferido", userId: 456, originSchoolId: 10 },
+  ], totalPages: 1 });
+  render(<RegistrationRequests role="coordenador" />, { wrapper: queryWrapper().wrapper });
+  fireEvent.click(await screen.findByRole("button", { name: "Alunos" }));
+  await screen.findByRole("button", { name: "Aprovar cadastro de Ana Silva" });
+  await waitFor(() => {
+    expect(registrationApi.photo).toHaveBeenCalledWith(1, expect.any(AbortSignal), "REGISTRATION");
+    expect(registrationApi.photo).toHaveBeenCalledWith(1, expect.any(AbortSignal), "TRANSFER");
+  });
+  fireEvent.change(screen.getByLabelText("Filtrar por tipo de pedido"), { target: { value: "TRANSFER" } });
+  expect(screen.getByRole("button", { name: "Recusar transferência de Aluno Transferido" })).toBeVisible();
+  expect(screen.queryByText("Ana Silva")).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Filtrar por tipo de pedido"), { target: { value: "REGISTRATION" } });
+  expect(screen.getByText("Ana Silva")).toBeVisible();
+  expect(screen.queryByText("Aluno Transferido")).not.toBeInTheDocument();
+});
+
+test("admin exibe somente cadastros de coordenadores", async () => {
+  jest.mocked(registrationApi.list).mockResolvedValue({ content: [
+    { ...request, role: "PEDAGOGICAL_COORDINATOR", type: "REGISTRATION", name: "Coordenador novo", hasPhoto: false },
+    { ...request, type: "TRANSFER", name: "Transferência de aluno" },
+    { ...request, type: "REGISTRATION", name: "Cadastro de aluno" },
+  ], totalPages: 1 });
+  render(<RegistrationRequests role="admin" />, { wrapper: queryWrapper().wrapper });
+  expect(await screen.findByText("Coordenador novo")).toBeVisible();
+  expect(screen.queryByText("Transferência de aluno")).not.toBeInTheDocument();
+  expect(screen.queryByText("Cadastro de aluno")).not.toBeInTheDocument();
+});

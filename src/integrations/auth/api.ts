@@ -1,0 +1,80 @@
+import { passwordError } from "@/validation/password";
+import { ApiError, apiRequest } from "@/api/client";
+import type { User } from "../types";
+import type { LoginResponse } from "./state";
+export type Terms = { title: string; version: string; content: string };
+export type PasswordResetVerification = { resetToken: string };
+export const authApi = {
+  activeSchool: (schoolId: number) =>
+    apiRequest<void>("/me/active-school", {
+      method: "PATCH",
+      body: { schoolId },
+    }),
+  me: async (signal?: AbortSignal) => {
+    try {
+      return await apiRequest<User>("/me", { signal });
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) return null;
+      throw error;
+    }
+  },
+  login: (body: { email: string; password: string }) =>
+    apiRequest<LoginResponse>("/auth/login", { method: "POST", body }),
+  requestPasswordReset: (email: string) =>
+    apiRequest<void>("/auth/password-recovery/request", {
+      method: "POST",
+      body: { email },
+    }),
+  verifyPasswordReset: (email: string, code: string) =>
+    apiRequest<PasswordResetVerification>("/auth/password-recovery/verify", {
+      method: "POST",
+      body: { email, code },
+    }),
+  resetPassword: async (
+    email: string,
+    resetToken: string,
+    newPassword: string,
+    confirmPassword: string,
+  ) => {
+    const invalidPassword = passwordError(newPassword);
+    if (invalidPassword) throw new Error(invalidPassword);
+    if (newPassword !== confirmPassword)
+      throw new Error("As senhas precisam ser iguais.");
+    return apiRequest<void>("/auth/password-recovery/reset", {
+      method: "POST",
+      body: { email, resetToken, newPassword, confirmPassword },
+    });
+  },
+  updateTwoFactor: (body: { enabled: boolean; currentPassword: string }) =>
+    apiRequest<void>("/auth/2fa", { method: "PATCH", body }),
+  verify: (code: string) =>
+    apiRequest<void>("/auth/2fa/verify", { method: "POST", body: { code } }),
+  resend: () =>
+    apiRequest<
+      Pick<
+        LoginResponse,
+        "twoFactorRequired" | "codeExpiresAt" | "resendAvailableAt"
+      >
+    >("/auth/2fa/resend", { method: "POST" }),
+  terms: async (signal?: AbortSignal) => {
+    try {
+      return await apiRequest<Terms>("/terms", { signal });
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) return null;
+      throw error;
+    }
+  },
+  createTerms: (body: Pick<Terms, "title" | "content">) =>
+    apiRequest<Terms>("/terms", { method: "POST", body }),
+  updateTerms: (body: Pick<Terms, "title" | "content">) =>
+    apiRequest<Terms>("/terms", { method: "PUT", body }),
+  accepted: (signal?: AbortSignal) =>
+    apiRequest<string[]>("/terms/accepted", { signal }),
+  revokeTerms: () => apiRequest<void>("/terms/revoke", { method: "POST" }),
+  accept: (version: string) =>
+    apiRequest<void>("/terms/accept", {
+      method: "POST",
+      body: { version, termsAccepted: true },
+    }),
+  logout: () => apiRequest<void>("/auth/logout", { method: "POST" }),
+};

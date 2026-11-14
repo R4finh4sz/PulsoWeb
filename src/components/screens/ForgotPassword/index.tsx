@@ -1,0 +1,338 @@
+"use client";
+
+import { LoginHeader } from "@/components/screens/Login/LoginHeader";
+import { BackLink } from "@/components/ui/BackLink";
+import Button from "@/components/ui/Button";
+import { FeedbackModal } from "@/components/ui/FeedbackModal";
+import Input from "@/components/ui/Input";
+import { authApi } from "@/integrations/auth/api";
+import { showRequestError } from "@/store/feedbackStore";
+import { useMutation } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { PasswordRequirements } from "@/components/ui/PasswordRequirements";
+import { useEffect, useRef, useState, type SubmitEvent } from "react";
+
+type Step = "email" | "code" | "password";
+type ResetFeedback = {
+  type: "error" | "success";
+  title: string;
+  message: string;
+};
+
+export function PasswordRecovery() {
+  const router = useRouter();
+  const [step, setStep] = useState<Step>("email");
+  const [email, setEmail] = useState("");
+  const [digits, setDigits] = useState<string[]>(Array(6).fill(""));
+  const [resetToken, setResetToken] = useState<string | null>(null);
+  const [password, setPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [showSentModal, setShowSentModal] = useState(false);
+  const [resetFeedback, setResetFeedback] = useState<ResetFeedback | null>(
+    null,
+  );
+  const inputs = useRef<(HTMLInputElement | null)[]>([]);
+  const code = digits.join("");
+  const [resendAvailableAt, setResendAvailableAt] = useState(0);
+  const [now, setNow] = useState(0);
+  const resendIn = Math.max(0, Math.ceil((resendAvailableAt - now) / 1000));
+  const countdown = `${Math.floor(resendIn / 60).toString().padStart(2, "0")}:${(resendIn % 60).toString().padStart(2, "0")}`;
+  const request = useMutation({
+    mutationFn: authApi.requestPasswordReset,
+    onMutate: () => {
+      const requestedAt = Date.now();
+      setNow(requestedAt);
+      setResendAvailableAt(requestedAt + 180_000);
+    },
+  });
+  const verify = useMutation({
+    mutationFn: () => authApi.verifyPasswordReset(email, code),
+  });
+  const reset = useMutation({
+    mutationFn: ({
+      password,
+      confirmation,
+    }: {
+      password: string;
+      confirmation: string;
+    }) => {
+      if (!resetToken)
+        throw new Error("O token de recuperação não está disponível.");
+      return authApi.resetPassword(email, resetToken, password, confirmation);
+    },
+  });
+
+  useEffect(() => {
+    if (!resendAvailableAt) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [resendAvailableAt]);
+
+  useEffect(() => {
+    if (step === "code")
+      requestAnimationFrame(() => inputs.current[0]?.focus());
+  }, [step]);
+
+  function enterDigits(index: number, value: string) {
+    const incoming = value.replace(/\D/g, "").slice(0, 6);
+    const start = incoming.length === 6 ? 0 : index;
+    setDigits((current) => {
+      const next = [...current];
+      if (!incoming) next[index] = "";
+      else
+        for (
+          let offset = 0;
+          offset < incoming.length && start + offset < 6;
+          offset++
+        )
+          next[start + offset] = incoming[offset];
+      return next;
+    });
+    verify.reset();
+    if (incoming) inputs.current[Math.min(start + incoming.length, 5)]?.focus();
+  }
+
+  async function submitEmail(event?: SubmitEvent<HTMLFormElement>) {
+    event?.preventDefault();
+    if (busy || Date.now() < resendAvailableAt) return;
+    try {
+      const normalizedEmail = email.trim().toLowerCase();
+      await request.mutateAsync(normalizedEmail);
+      setEmail(normalizedEmail);
+      if (step === "email") setShowSentModal(true);
+      else {
+        setDigits(Array(6).fill(""));
+        verify.reset();
+        inputs.current[0]?.focus();
+      }
+    } catch (failure) {
+      showRequestError(failure);
+    }
+  }
+
+  async function submitCode(event: SubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+    try {
+      const result = await verify.mutateAsync();
+      setResetToken(result.resetToken);
+      setStep("password");
+    } catch (failure) {
+      showRequestError(failure);
+    }
+  }
+
+  async function submitPassword(event: SubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const password = String(form.get("password"));
+    const confirmation = String(form.get("confirmPassword"));
+    setResetFeedback(null);
+    if (password !== confirmation) {
+      setResetFeedback({
+        type: "error",
+        title: "Não foi possível alterar a senha",
+        message: "As senhas precisam ser iguais.",
+      });
+      return;
+    }
+    try {
+      await reset.mutateAsync({ password, confirmation });
+      setResetFeedback({
+        type: "success",
+        title: "Senha alterada com sucesso",
+        message:
+          "Sua senha foi alterada. Volte ao login para acessar sua conta.",
+      });
+    } catch (failure) {
+      showRequestError(failure);
+    }
+  }
+
+  const busy = request.isPending || verify.isPending || reset.isPending;
+  const titles = {
+    email: "Esqueceu sua senha?",
+    code: "Verifique seu e-mail",
+    password: "Crie uma nova senha",
+  };
+  const descriptions = {
+    email: "Informe seu e-mail para recuperar o acesso à plataforma.",
+    code: `Digite o código enviado para ${email}.`,
+    password: "Escolha uma senha segura para acessar sua conta.",
+  };
+
+  return (
+    <>
+      <section
+        aria-labelledby="forgot-password-title"
+        className="flex min-h-screen items-center justify-center px-6 py-14 sm:px-12 lg:px-20"
+      >
+        <div className="w-full max-w-[480px] rise-in rise-in-delay">
+          <LoginHeader title={titles[step]} description={descriptions[step]} />
+          {step === "email" && (
+            <form onSubmit={submitEmail} className="space-y-6">
+              <Input
+                id="recovery-email"
+                name="email"
+                label="E-mail"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="Digite seu e-mail..."
+              />
+              <Button type="submit" disabled={busy || resendIn > 0}>
+                {request.isPending ? "Enviando…" : resendIn > 0 ? `Reenviar em ${countdown}` : "Enviar código"}
+              </Button>
+            </form>
+          )}
+          {step === "code" && (
+            <form onSubmit={submitCode} className="space-y-6">
+              <fieldset disabled={busy} className="space-y-3">
+                <legend className="block text-xs font-bold text-(--ink)">
+                  Código de verificação
+                </legend>
+                <div className="flex justify-center gap-2 sm:gap-2.5">
+                  {digits.map((digit, index) => (
+                    <input
+                      key={index}
+                      ref={(element) => {
+                        inputs.current[index] = element;
+                      }}
+                      aria-label={`Dígito ${index + 1} de 6`}
+                      aria-invalid={verify.isError}
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete={index === 0 ? "one-time-code" : "off"}
+                      name={`code-${index + 1}`}
+                      pattern="[0-9]"
+                      required
+                      value={digit}
+                      placeholder="0"
+                      onFocus={(event) => event.target.select()}
+                      onChange={(event) =>
+                        enterDigits(index, event.target.value)
+                      }
+                      onPaste={(event) => {
+                        event.preventDefault();
+                        enterDigits(index, event.clipboardData.getData("text"));
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Backspace" && !digit && index > 0) {
+                          event.preventDefault();
+                          enterDigits(index - 1, "");
+                          inputs.current[index - 1]?.focus();
+                        } else if (
+                          event.key === "ArrowLeft" ||
+                          event.key === "ArrowRight"
+                        ) {
+                          event.preventDefault();
+                          inputs.current[
+                            Math.max(
+                              0,
+                              Math.min(
+                                5,
+                                index + (event.key === "ArrowLeft" ? -1 : 1),
+                              ),
+                            )
+                          ]?.focus();
+                        }
+                      }}
+                      className={`h-14 w-10 rounded-lg border text-center text-xl font-semibold text-[#283b40] outline-none transition placeholder:text-[#9da5a8] focus:border-[#00a2cb] focus:bg-[#e7f5f8] focus:ring-2 focus:ring-[#00a2cb]/20 disabled:opacity-60 sm:w-12 ${digit ? "border-[#00a2cb] bg-[#d0e4e9]" : "border-transparent bg-[#d1dfe3]"}`}
+                    />
+                  ))}
+                </div>
+              </fieldset>
+              <Button type="submit" disabled={busy || code.length !== 6}>
+                {verify.isPending ? "Verificando…" : "Verificar código"}
+              </Button>
+              <p className="text-center text-sm text-(--muted)">
+                Não recebeu o código?{" "}
+                <button
+                  type="button"
+                  disabled={busy || resendIn > 0}
+                  onClick={() => void submitEmail()}
+                  className="rounded font-semibold text-(--blue-dark) underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-3 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {request.isPending
+                    ? "Enviando…"
+                    : resendIn > 0
+                      ? `Reenviar em ${countdown}`
+                      : "Reenviar"}
+                </button>
+              </p>
+            </form>
+          )}
+          {step === "password" && (
+            <form onSubmit={submitPassword} className="space-y-6">
+              <Input
+                id="new-password"
+                name="password"
+                label="Nova senha"
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                maxLength={72}
+                required
+                placeholder="Digite sua nova senha..."
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                aria-describedby="password-requirements"
+              />
+              <Input
+                id="confirm-password"
+                name="confirmPassword"
+                label="Repita a nova senha"
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                maxLength={72}
+                required
+                placeholder="Repita sua nova senha..."
+                value={confirmation}
+                onChange={(event) => setConfirmation(event.target.value)}
+                aria-describedby="password-requirements"
+              />
+              <PasswordRequirements password={password} confirmation={confirmation} />
+              <Button type="submit" disabled={busy}>
+                {reset.isPending ? "Salvando…" : "Redefinir senha"}
+              </Button>
+            </form>
+          )}
+          <div className="mt-8 text-center">
+            <BackLink />
+          </div>
+        </div>
+      </section>
+      {showSentModal && (
+        <FeedbackModal
+          type="success"
+          title="Verifique seu e-mail"
+          message="Se este e-mail estiver cadastrado, enviaremos um código para continuar a recuperação da sua senha."
+          actionLabel="Continuar"
+          onClose={() => {
+            setShowSentModal(false);
+            setStep("code");
+          }}
+        />
+      )}
+      {resetFeedback && (
+        <FeedbackModal
+          type={resetFeedback.type}
+          title={resetFeedback.title}
+          message={resetFeedback.message}
+          actionLabel={
+            resetFeedback.type === "success" ? "Voltar" : "Tentar novamente"
+          }
+          onClose={() => {
+            if (resetFeedback.type === "success") {
+              router.back();
+              return;
+            }
+            setResetFeedback(null);
+          }}
+        />
+      )}
+    </>
+  );
+}

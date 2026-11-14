@@ -1,0 +1,194 @@
+"use client";
+
+import logo from "@/assets/images/LogoImageWhite.png";
+import { UserAvatar } from "@/components/ui/UserAvatar";
+import { DemoAccess } from "@/components/screens/Login/DemoAccess";
+import { DashboardIcon, type IconName } from "@/components/ui/DashboardIcon";
+import { useLogout } from "@/integrations/auth/hooks";
+import { homeRoutes, roleLabels, type SessionUser } from "@/interfaces/auth";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useSyncExternalStore, type ReactNode } from "react";
+import { TeacherShell } from "../TeacherShell";
+
+type Props = {
+  user: SessionUser;
+  title: string;
+  description: string;
+  navigation: { label: string; href: string; icon: IconName }[];
+  children: ReactNode;
+};
+
+const subscribeToHash = (callback: () => void) => {
+  window.addEventListener("hashchange", callback);
+  return () => window.removeEventListener("hashchange", callback);
+};
+
+export function DashboardShell({
+  user,
+  title,
+  description,
+  navigation,
+  children,
+}: Props) {
+  const logout = useLogout();
+  const router = useRouter();
+  const pathname = usePathname();
+  const activeSection = useSyncExternalStore(
+    subscribeToHash,
+    () => window.location.hash || "#overview",
+    () => "#overview",
+  );
+  const home = homeRoutes[user.role];
+  const sidebarNavigation =
+    user.role === "coordenador"
+      ? [
+          ...navigation.filter(
+            (item) =>
+              item.label !== "Professores" &&
+              item.href !== "/coordinator/students/new",
+          ),
+          {
+            label: "Professores",
+            href: "/coordinator/teachers",
+            icon: "school" as const,
+          },
+        ]
+      : [...navigation];
+  if (user.role === "admin" || user.role === "coordenador")
+    sidebarNavigation.push({
+      label: "Solicitações de cadastro",
+      href: `${home}/registration-requests`,
+      icon: "users",
+    });
+  sidebarNavigation.push({
+    label: "Termos de uso",
+    href: `${home}/terms`,
+    icon: "book",
+  });
+  const links = [
+    {
+      label: "Início",
+      href: home,
+      icon: "home" as const,
+    },
+    ...(user.role !== "aluno"
+      ? [{ label: "Ranking", href: `${home}/ranking`, icon: "trophy" as const }]
+      : []),
+    ...sidebarNavigation,
+    ...(user.role === "admin"
+      ? [{ label: "FAQ", href: "/admin/faq", icon: "help" as const }]
+      : []),
+  ];
+  const isActive = (href: string) => {
+    if (href.startsWith("#")) return activeSection === href;
+    if (href.includes("#")) return pathname + activeSection === href;
+    return (
+      pathname === href || (href !== home && pathname.startsWith(href + "/"))
+    );
+  };
+
+  if (
+    user.role === "admin" ||
+    user.role === "professor" ||
+    user.role === "coordenador"
+  )
+    return (
+      <TeacherShell user={user}>
+        <div className="space-y-7">
+          <div>
+            <h1 className="text-3xl font-semibold text-slate-900">{title}</h1>
+            <p className="mt-2 text-sm text-slate-500">{description}</p>
+          </div>
+          {children}
+        </div>
+      </TeacherShell>
+    );
+
+  return (
+    <div className="min-h-screen bg-[#eef5f7] lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
+      <aside className="flex flex-col bg-[#163e4b] text-white lg:sticky lg:top-0 lg:h-dvh lg:overflow-y-auto">
+        <div className="border-b border-white/20 px-6 py-5">
+          <Image
+            src={logo}
+            alt="Pulso Escolar"
+            className="h-auto w-[180px]"
+            sizes="180px"
+          />
+        </div>
+        <nav
+          aria-label="Navegação principal"
+          className="flex gap-2 overflow-x-auto px-4 py-5 lg:flex-col"
+        >
+          {links.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={isActive(item.href) ? "location" : undefined}
+              className={`flex shrink-0 items-center gap-3 rounded-xl px-3 py-3 text-sm transition-colors hover:bg-[#245362] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${isActive(item.href) ? "bg-[#dff3f7] font-medium text-[#164b5b] hover:bg-[#dff3f7]" : "text-[#d8e9ee]"}`}
+            >
+              <DashboardIcon name={item.icon} className="h-[18px] w-[18px]" />
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="mx-6 mb-6 mt-auto hidden rounded-xl bg-[#245362] p-4 lg:block">
+          <DashboardIcon name="help" className="mb-3 h-5 w-5" />
+          <p className="text-xs font-semibold">Central de ajuda</p>
+          <p className="mt-2 text-xs leading-5 text-white">
+            Precisa de suporte? Fale com o responsável pela plataforma na sua
+            escola.
+          </p>
+        </div>
+      </aside>
+
+      <div className="min-w-0">
+        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-(--line) bg-white px-6 py-4 lg:px-10">
+          <div className="flex items-center gap-2 text-xs text-(--muted)">
+            <DemoAccess />
+          </div>
+          <div className="flex items-center gap-3">
+            <UserAvatar user={user} className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e8f5f8] text-xs font-semibold text-(--blue)" />
+            <div>
+              <p className="text-xs font-semibold">
+                {user.name.trim().split(/\s+/)[0]}
+              </p>
+              <p className="text-xs leading-5 text-(--muted)">
+                {roleLabels[user.role]}
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={logout.isPending}
+              onClick={() => {
+                logout.mutate(undefined, {
+                  onSuccess: () => router.replace("/"),
+                });
+              }}
+              className="ml-2 flex items-center gap-2 rounded-lg border border-(--line) px-3 py-2 text-xs hover:bg-slate-50"
+            >
+              <DashboardIcon name="logout" className="h-4 w-4" />
+              Sair
+            </button>
+          </div>
+        </header>
+        <main
+          id="overview"
+          className="mx-auto max-w-[1440px] space-y-7 px-5 py-8 sm:px-8 lg:px-10"
+        >
+          <div>
+            <h1 className="page-title">{title}</h1>
+            <p className="page-description mt-3">{description}</p>
+          </div>
+          {logout.error && (
+            <p role="alert" className="text-sm text-red-700">
+              {logout.error.message}
+            </p>
+          )}
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}

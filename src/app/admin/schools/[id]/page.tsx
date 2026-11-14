@@ -1,0 +1,105 @@
+"use client";
+
+import { DashboardShell } from "@/components/screens/Dashboard/DashboardShell";
+import { BackLink } from "@/components/ui/BackLink";
+import { DashboardPanel } from "@/components/ui/DashboardPanel";
+import { SchoolManagement } from "@/components/screens/SchoolManagement";
+import { useSession } from "@/hooks/useSession";
+import { useSchools } from "@/integrations/schools/hooks";
+import { UserRound } from "lucide-react";
+import { use } from "react";
+
+function PageContent({ id }: { id: string }) {
+  const user = useSession("admin");
+  const query = useSchools();
+  if (!user)
+    return (
+      <p role="status" className="p-8 text-sm">
+        Carregando escola…
+      </p>
+    );
+  const school = query.data?.find((item) => String(item.id) === id);
+  return (
+    <DashboardShell
+      user={user}
+      title={school?.nome ?? "Escola não encontrada"}
+      description={
+        school
+          ? "Dados da instituição e coordenação responsável."
+          : "Esta escola não está disponível."
+      }
+      navigation={[
+        { label: "Escolas", href: "/admin/schools", icon: "school" },
+        { label: "Coordenadores", href: "/admin/coordinators", icon: "users" },
+      ]}
+    >
+      <BackLink />
+      {query.isPending && (
+        <p role="status" className="mt-6">
+          Carregando dados da escola…
+        </p>
+      )}
+      {query.error && (
+        <p
+          role="alert"
+          className="mt-6 rounded-xl bg-red-50 p-4 text-sm text-red-700"
+        >
+          Não foi possível carregar a escola.
+        </p>
+      )}
+      {school && (
+        <div className="mt-6 space-y-6">
+          <div className="grid items-start gap-6 lg:grid-cols-[1.5fr_1fr]">
+            <DashboardPanel
+              id="school-information"
+              title="Informações da escola"
+            >
+              <dl className="grid gap-5 text-sm sm:grid-cols-2">
+                {[
+                  ["Nome", school.nome],
+                  ["Logradouro", school.logradouro],
+                  ["Bairro", school.bairro],
+                  ["Cidade", school.cidade],
+                ].map(([label, value]) => (
+                  <div key={label}>
+                    <dt className="text-xs text-(--muted)">{label}</dt>
+                    <dd className="mt-1 wrap-break-word font-medium">
+                      {value || "--"}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </DashboardPanel>
+            <DashboardPanel id="coordinator" title="Coordenador vinculado">
+              <div className="flex gap-3 rounded-xl bg-[#e8f5f8] p-4">
+                <UserRound
+                  aria-hidden="true"
+                  className="h-6 w-6 shrink-0 text-(--blue)"
+                />
+                <div>
+                  <h2 className="text-sm font-semibold">
+                    {school.coordinator?.fullName || "Não informado"}
+                  </h2>
+                  <p className="mt-1 text-xs text-(--muted)">
+                    {school.coordinator?.email ||
+                      "Nenhum coordenador vinculado."}
+                  </p>
+                </div>
+              </div>
+            </DashboardPanel>
+          </div>
+          <SchoolManagement schoolId={school.id} />
+        </div>
+      )}
+    </DashboardShell>
+  );
+}
+
+export default function SchoolPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
+  return <PageContent id={id} />;
+}

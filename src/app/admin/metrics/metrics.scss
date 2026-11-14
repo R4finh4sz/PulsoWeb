@@ -1,0 +1,18 @@
+@use "sass:meta";
+
+.adminMetrics {
+  --cui-body-color: var(--ink);
+  --cui-body-color-rgb: 18, 51, 67;
+  --cui-body-bg: #fff;
+  --cui-emphasis-color: var(--ink);
+  --cui-emphasis-color-rgb: 18, 51, 67;
+  --cui-border-color: var(--line);
+  --cui-border-color-translucent: var(--line);
+  --cui-secondary-color: var(--muted);
+  --cui-tertiary-bg: var(--canvas);
+  --cui-border-width: 1px;
+  --cui-border-radius: 0.75rem;
+
+  @include meta.load-css("@coreui/coreui/scss/card");
+  @include meta.load-css("@coreui/coreui/scss/tables");
+}

@@ -1,49 +1,189 @@
 @import "tailwindcss";
 
 @theme inline {
-	--font-sans: var(--font-poppins), Arial, sans-serif;
+  --font-sans: var(--font-poppins), Arial, sans-serif;
 }
 
 :root {
-	--font-poppins: "Poppins";
-	--ink: #123343;
-	--muted: #60737d;
-	--blue: #078eac;
-	--blue-dark: #087d99;
-	--yellow: #e3c600;
-	--line: #dbe4e7;
-	--paper: #fbfcfc;
+  --font-poppins: "Poppins";
+  --ink: #123343;
+  --muted: #60737d;
+  --blue: #078eac;
+  --blue-dark: #087d99;
+  --yellow: #e3c600;
+  --line: #dbe4e7;
+  --paper: #fbfcfc;
+  --surface: #ffffff;
+  --canvas: #f3f7f9;
+  --focus: #087d99;
+  --ease-ui: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 * {
-	box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 body {
-	margin: 0;
-	background: var(--paper);
-	color: var(--ink);
-	font-family: var(--font-poppins), Arial, sans-serif;
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-poppins), Arial, sans-serif;
+  font-size: 1rem;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
 }
 
 button,
-input {
-	font: inherit;
+input,
+select,
+textarea {
+  font-family: inherit;
+  letter-spacing: inherit;
 }
 
-button {
-	cursor: pointer;
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  text-wrap: balance;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+a {
+  text-underline-offset: 0.2em;
+}
+
+input,
+textarea {
+  caret-color: var(--blue-dark);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #687b86;
+  opacity: 1;
+}
+
+::selection {
+  background: #ccecf3;
+  color: #123343;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
+/* Search fields share their focus indicator with the surrounding control. */
+input[type="search"] {
+  appearance: none;
+  border: 0;
+  outline: none;
+  box-shadow: none;
+}
+
+label:has(> input[type="search"]):focus-within {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 20%, transparent);
+}
+
+.page-title {
+  font-size: clamp(1.75rem, 1.25rem + 1.6vw, 2.5rem);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+.page-description {
+  max-width: 65ch;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.choice-card {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--surface);
+  padding: 1.75rem;
+  transition:
+    border-color 180ms var(--ease-ui),
+    transform 180ms var(--ease-ui);
+}
+
+.choice-card h2 {
+  overflow-wrap: anywhere;
+}
+
+.choice-card:active {
+  transform: scale(0.99);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .choice-card:hover {
+    border-color: var(--blue);
+    transform: translateY(-2px);
+  }
+}
+
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 1rem;
+  }
+  .choice-card {
+    padding: 1.5rem;
+  }
 }
 
 @keyframes rise-in {
-	from { opacity: 0; transform: translateY(14px); }
-	to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0.65;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .rise-in {
-	animation: rise-in 650ms ease-out both;
+  animation: rise-in 240ms var(--ease-ui) both;
 }
 
 .rise-in-delay {
-	animation-delay: 130ms;
+  animation-delay: 40ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise-in {
+    animation: none;
+  }
+  .choice-card,
+  .choice-card:hover,
+  .choice-card:active {
+    transform: none;
+    transition: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
 }
