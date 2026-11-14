@@ -1,17 +1,19 @@
-name: Vercel Preview
+name: Vercel Production
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: vercel-preview-${{ github.ref }}
-  cancel-in-progress: true
+  group: vercel-production
+  cancel-in-progress: false
 
 jobs:
-  preview:
+  production:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -40,13 +42,13 @@ jobs:
       - name: Run tests
         run: yarn test --runInBand
 
-      - name: Pull Preview configuration
-        run: vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
+      - name: Pull Production configuration
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
 
-      - name: Build Preview
-        run: vercel build --token="$VERCEL_TOKEN"
+      - name: Build Production
+        run: vercel build --prod --token="$VERCEL_TOKEN"
 
-      - name: Deploy Preview
+      - name: Deploy Production
         run: |
-          url=$(vercel deploy --prebuilt --token="$VERCEL_TOKEN")
-          printf 'Preview: %s\n' "$url" >> "$GITHUB_STEP_SUMMARY"
+          url=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          printf 'Production: %s\n' "$url" >> "$GITHUB_STEP_SUMMARY"
