@@ -6,6 +6,7 @@ import { DashboardPanel } from "@/components/ui/DashboardPanel";
 import { SchoolManagement } from "@/components/screens/SchoolManagement";
 import { useSession } from "@/hooks/useSession";
 import { useSchools } from "@/integrations/schools/hooks";
+import { formatCep } from "@/utils/viacep";
 import { UserRound } from "lucide-react";
 import { use } from "react";
 
@@ -60,6 +61,7 @@ function PageContent({ id }: { id: string }) {
                   ["Logradouro", school.logradouro],
                   ["Bairro", school.bairro],
                   ["Cidade", school.cidade],
+                  ["CEP", school.cep ? formatCep(school.cep) : ""],
                 ].map(([label, value]) => (
                   <div key={label}>
                     <dt className="text-xs text-(--muted)">{label}</dt>
