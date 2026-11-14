@@ -1,0 +1,52 @@
+name: Vercel Preview
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vercel-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Validate Vercel secrets
+        run: |
+          : "${VERCEL_TOKEN:?Configure o secret VERCEL_TOKEN no GitHub.}"
+          : "${VERCEL_ORG_ID:?Configure o secret VERCEL_ORG_ID no GitHub.}"
+          : "${VERCEL_PROJECT_ID:?Configure o secret VERCEL_PROJECT_ID no GitHub.}"
+
+      - name: Install Yarn and Vercel CLI
+        run: npm install --global yarn@1.22.22 vercel@65.16.0
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run tests
+        run: yarn test --runInBand
+
+      - name: Pull Preview configuration
+        run: vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
+
+      - name: Build Preview
+        run: vercel build --token="$VERCEL_TOKEN"
+
+      - name: Deploy Preview
+        run: |
+          url=$(vercel deploy --prebuilt --token="$VERCEL_TOKEN")
+          printf 'Preview: %s\n' "$url" >> "$GITHUB_STEP_SUMMARY"
