@@ -541,24 +541,22 @@ test("listagem vazia e erro de turmas", async () => {
   show(<ClassroomList user={coordinator} />);
   expect(await screen.findByRole("alert")).toHaveTextContent("Turmas offline");
 });
-test("edição da turma mantém identificador do backend somente para leitura e não o envia", async () => {
+test("dados da turma exibem nome e identificador sem permitir edição", async () => {
   identity("PEDAGOGICAL_COORDINATOR");
-  const { container } = show(
+  show(
     <ClassroomDetailsPage role="coordenador" id="1" />,
   );
   fireEvent.click(
     await screen.findByRole("button", { name: "Dados da turma" }),
   );
-  expect(screen.getByLabelText("Identificador")).toHaveAttribute("readonly");
-  expect(screen.getByLabelText("Identificador")).toBeDisabled();
-  expect(screen.getByLabelText("Identificador")).toHaveValue("A");
-  fireEvent.change(screen.getByLabelText("Nome da turma"), {
-    target: { value: "1º ano A" },
-  });
-  fireEvent.submit(container.querySelector("form")!);
-  await waitFor(() =>
-    expect(classroomsApi.update).toHaveBeenCalledWith(1, { name: "1º ano A" }),
-  );
+  const data = within(screen.getByRole("region", { name: "Dados da turma" }));
+  expect(data.getByText("Nome da turma")).toBeVisible();
+  expect(data.getByText("3º ano")).toBeVisible();
+  expect(data.getByText("Identificador")).toBeVisible();
+  expect(data.getByText("A")).toBeVisible();
+  expect(data.queryByRole("textbox")).not.toBeInTheDocument();
+  expect(data.queryByRole("button", { name: "Salvar" })).not.toBeInTheDocument();
+  expect(classroomsApi.update).not.toHaveBeenCalled();
 });
 test("linked coordinator can create a classroom", async () => {
   identity("PEDAGOGICAL_COORDINATOR");
