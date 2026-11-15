@@ -63,6 +63,11 @@ async function send<T>(
   if (allowNotFound && response.status === 404) return undefined as T;
   if (!response.ok) {
     const problem = await response.json().catch(() => null);
+    if (
+      response.status === 409 && path === "/classrooms" && options.method === "POST" &&
+      problem?.detail === "Já existe um cadastro com esse RA, e-mail ou nome, ou o vínculo informado é inválido."
+    )
+      problem.detail = "Não foi possível criar a turma. Verifique se o ano e o identificador já estão cadastrados nesta escola e se os vínculos informados são válidos.";
     throw new ApiError(
       response.status,
       problem?.detail ||
