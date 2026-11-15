@@ -311,28 +311,6 @@ export function Profile({ user }: { user: SessionUser }) {
             Termos de uso
             <ArrowRight size={18} className="ml-auto" aria-hidden="true" />
           </Link>
-          {admin ? (
-            <Link href="/admin/contracts" className={optionClass}>
-              <FileText size={21} aria-hidden="true" />
-              Contratos
-              <ArrowRight size={18} className="ml-auto" aria-hidden="true" />
-            </Link>
-          ) : (
-            <>
-            {user.role === "coordenador" && (
-              <Link href="/coordinator/data-agreement" className={optionClass}>
-                <FileText size={21} aria-hidden="true" />
-                Termo de adesão institucional e tratamento de dados
-                <ArrowRight size={18} className="ml-auto" aria-hidden="true" />
-              </Link>
-            )}
-            <Link href={`${homeRoutes[user.role]}/privacy`} className={optionClass}>
-              <FileText size={21} aria-hidden="true" />
-              Política de privacidade
-              <ArrowRight size={18} className="ml-auto" aria-hidden="true" />
-            </Link>
-            </>
-          )}
           {!admin && (
             <button
               type="button"

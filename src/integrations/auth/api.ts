@@ -71,14 +71,10 @@ export const authApi = {
   accepted: (signal?: AbortSignal) =>
     apiRequest<string[]>("/terms/accepted", { signal }),
   revokeTerms: () => apiRequest<void>("/terms/revoke", { method: "POST" }),
-  accept: (version: string, privacyVersion?: string) =>
+  accept: (version: string) =>
     apiRequest<void>("/terms/accept", {
       method: "POST",
-      body: {
-        version,
-        termsAccepted: true,
-        ...(privacyVersion ? { privacyAccepted: true, privacyVersion } : {}),
-      },
+      body: { version, termsAccepted: true },
     }),
   logout: () => apiRequest<void>("/auth/logout", { method: "POST" }),
 };
