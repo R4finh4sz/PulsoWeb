@@ -33,7 +33,7 @@ test("busca sem resultado informa o motivo e impede vínculo", async () => {
   render(<Assignment room={room} resource="teachers" />, { wrapper: queryWrapper().wrapper });
   await screen.findByText("Rafinhas Santana");
   fireEvent.change(screen.getByRole("searchbox", { name: "Buscar professor da escola" }), { target: { value: "Ausente" } });
-  expect(screen.getByRole("status")).toHaveTextContent("Nenhum professor disponível");
+  expect(screen.getByRole("status")).toHaveTextContent("Nenhum professor encontrado.");
   expect(screen.queryByRole("button", { name: /^Vincular / })).not.toBeInTheDocument();
 });
 
@@ -46,6 +46,6 @@ test("pesquisa por matrícula do contrato real e orienta quando a API retorna li
   unmount();
   jest.mocked(usersApi.list).mockResolvedValue({ content: [], page: 0, size: 100, totalElements: 0, totalPages: 0 });
   render(<Assignment room={room} resource="teachers" />, { wrapper: queryWrapper().wrapper });
-  expect(await screen.findByText(/A API não retornou professores/)).toBeVisible();
-  expect(screen.getByRole("link", { name: "Ver solicitações de professores" })).toHaveAttribute("href", "/coordinator/registration-requests");
+  expect(await screen.findByText("Nenhum professor disponível.")).toBeVisible();
+  expect(screen.getByRole("link", { name: "Ver solicitações" })).toHaveAttribute("href", "/coordinator/registration-requests");
 });
