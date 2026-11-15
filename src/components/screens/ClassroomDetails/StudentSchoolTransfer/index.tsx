@@ -7,6 +7,7 @@ import { registrationApi } from "@/integrations/registration/api";
 import type { User } from "@/integrations/types";
 import { useApiMutation } from "@/integrations/useApiMutation";
 import { useState } from "react";
+import { ChevronRight } from "lucide-react";
 
 export function StudentSchoolTransfer({ student, currentSchoolId }: { student: User; currentSchoolId?: number }) {
   const [schoolId, setSchoolId] = useState("");
@@ -19,7 +20,8 @@ export function StudentSchoolTransfer({ student, currentSchoolId }: { student: U
 
   return (
     <details className="mt-6 border-t border-(--line) pt-5">
-      <summary className="min-h-11 cursor-pointer text-sm font-medium text-(--blue-dark)">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-medium text-(--blue-dark) [&::-webkit-details-marker]:hidden [[open]>&>svg]:rotate-90">
+        <ChevronRight size={16} aria-hidden="true" className="shrink-0" />
         Transferir para outra escola
       </summary>
       {transfer.isSuccess ? (

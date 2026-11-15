@@ -68,6 +68,16 @@ test('401 expira a sessão atual e preserva erros do servidor', async () => {
   await expect(apiRequest('/write', { method: 'POST' })).rejects.toMatchObject({ message: 'Inválido', errors: ['code'] });
   expect(fetchMock).toHaveBeenCalledTimes(2);
 });
+test.each([
+  ['/classrooms', 'POST', 'Não foi possível criar a turma. Verifique se o ano e o identificador já estão cadastrados nesta escola e se os vínculos informados são válidos.'],
+  ['/users', 'POST', 'Já existe um cadastro com esse RA, e-mail ou nome, ou o vínculo informado é inválido.'],
+  ['/classrooms', 'POST', 'A escola está inativa.'],
+])('conflito em %s preserva o contexto da operação: %s', async (path, method, expected) => {
+  const detail = expected === 'A escola está inativa.' ? expected : 'Já existe um cadastro com esse RA, e-mail ou nome, ou o vínculo informado é inválido.';
+  fetchMock.mockResolvedValueOnce(response(409, { detail }));
+  await expect(apiRequest(path, { method })).rejects.toMatchObject({ status: 409, message: expected });
+});
+
 test('erros sem JSON e erros de rede são propagados', async () => {
   fetchMock.mockResolvedValueOnce({ ...response(500), json: async () => { throw new Error('not json'); } });
   await expect(apiRequest('/me')).rejects.toBeInstanceOf(ApiError);
