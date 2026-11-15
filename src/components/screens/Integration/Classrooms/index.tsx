@@ -501,41 +501,39 @@ export function Assignment({
         </ul>
       )}
       {people.isSuccess && !available.length && (
-        <p role="status" className="text-sm text-(--muted)">
-          {isTeacher
-            ? q.trim()
-              ? "Nenhum professor disponível com esse nome, e-mail ou matrícula nesta escola."
-              : "Nenhum professor disponível para vincular. Confira se o convite da escola foi aceito ou se o professor já está nesta turma."
-            : "Nenhum aluno disponível para vincular."}
+        <p
+          role="status"
+          className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-(--muted)"
+        >
+          <span>
+            {isTeacher
+              ? q.trim()
+                ? "Nenhum professor encontrado."
+                : "Nenhum professor disponível."
+              : "Nenhum aluno disponível."}
+          </span>
+          {isTeacher && teachers.isSuccess && (
+            <>
+              <Link
+                href="/coordinator/registration-requests"
+                className="text-(--blue-dark) underline"
+              >
+                Ver solicitações
+              </Link>
+              <button
+                type="button"
+                onClick={() => teachers.refetch()}
+                className="text-(--blue-dark) underline"
+              >
+                Atualizar
+              </button>
+            </>
+          )}
         </p>
-      )}
-      {isTeacher && teachers.isSuccess && !available.length && (
-        <div className="space-y-2 text-sm text-(--muted)">
-          <p>
-            {teachers.data.length === 0
-              ? "A API não retornou professores para a escola do coordenador. Cadastros concluídos por convite precisam ser aprovados em Solicitações; professores já cadastrados precisam aceitar o convite da escola."
-              : `A API retornou ${teachers.data.length} professor(es) da escola. Professores já vinculados a esta turma não aparecem nesta seleção.`}
-          </p>
-          <div className="flex flex-wrap gap-4">
-            <Link
-              href="/coordinator/registration-requests"
-              className="text-(--blue-dark) underline"
-            >
-              Ver solicitações de professores
-            </Link>
-            <button
-              type="button"
-              onClick={() => teachers.refetch()}
-              className="text-(--blue-dark) underline"
-            >
-              Atualizar professores
-            </button>
-          </div>
-        </div>
       )}
       <ErrorMessage error={people.error || mutation.error} />
       {success && (
-        <p role="status" className="text-sm text-(--blue-dark)">
+        <p role="status" className="text-xs text-(--blue-dark)">
           {success}
         </p>
       )}

@@ -88,7 +88,7 @@ function StudentProfile({ student, room }: { student: User; room: Classroom }) {
         <dl className="mt-4 grid gap-x-6 gap-y-5 sm:grid-cols-2">
           {[
             ["Nome completo", student.fullName],
-            ["RA / matrícula", student.ra || "Não informado"],
+            ["RA", student.ra || "Não informado"],
             ["E-mail", student.email || "Não informado"],
             ["Turma", classroomLabel(room)],
           ].map(([label, value]) => (

@@ -23,6 +23,11 @@
   box-sizing: border-box;
 }
 
+/* O componente Input já oferece o botão de mostrar senha. */
+input[type="password"]::-ms-reveal {
+  display: none;
+}
+
 body {
   margin: 0;
   background: var(--paper);
