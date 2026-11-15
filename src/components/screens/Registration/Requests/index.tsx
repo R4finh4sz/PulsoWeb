@@ -10,14 +10,24 @@ import { useApiMutation } from "@/integrations/useApiMutation";
 import { normalizeText } from "@/utils/text";
 import { classroomLabel } from "@/utils/classroomLabel";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { GraduationCap, Search, Trash2, Users } from "lucide-react";
+import { GraduationCap, Search, Trash2, UserCheck, Users } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   EmptyState,
   ErrorMessage
 } from "@/components/screens/Integration/shared";
 import { AccountDeletions } from "@/components/screens/Registration/AccountDeletions";
+import {
+  BirthDateForm,
+  GuardianBadge,
+  GuardianQueue,
+  guardianKey,
+  useGuardianByRegistration,
+} from "@/components/screens/Registration/Guardian";
+import { agreementQueryKey } from "@/components/screens/DataAgreement";
+import { ApiError } from "@/api/client";
 
 const statusLabels = {
   PENDING: "Pendentes",
@@ -71,9 +81,9 @@ function RegistrationPhoto({ id, type = "REGISTRATION" }: { id: number; type?: "
 export function CoordinatorRequests({
   initialType,
 }: {
-  initialType: "TEACHER" | "STUDENT" | "DELETION";
+  initialType: "TEACHER" | "STUDENT" | "DELETION" | "GUARDIAN";
 }) {
-  const [kind, setKind] = useState<"TEACHER" | "STUDENT" | "DELETION">(
+  const [kind, setKind] = useState<"TEACHER" | "STUDENT" | "DELETION" | "GUARDIAN">(
     initialType,
   );
   const [status, setStatus] = useState<RegistrationStatus>("PENDING");
@@ -82,9 +92,12 @@ export function CoordinatorRequests({
   const client = useQueryClient();
   const [selectedClassrooms, setSelectedClassrooms] = useState<Record<string, string>>({});
   const [requestType, setRequestType] = useState<"ALL" | "REGISTRATION" | "TRANSFER">("ALL");
+  const [identityChecked, setIdentityChecked] = useState<Record<number, boolean>>({});
+  const [editingBirthDate, setEditingBirthDate] = useState<number | null>(null);
+  const guardians = useGuardianByRegistration(kind === "STUDENT");
   const query = useQuery({
     queryKey: ["registration-requests", "coordinator", status],
-    enabled: kind !== "DELETION",
+    enabled: kind === "TEACHER" || kind === "STUDENT",
     queryFn: async ({ signal }) => {
       const first = await registrationApi.list(status, 0, signal);
       const rest = await Promise.all(
@@ -106,25 +119,39 @@ export function CoordinatorRequests({
       decision,
       type,
       classroomId,
+      identityChecked,
     }: {
       id: number;
       decision: "APPROVED" | "REJECTED";
       type?: "REGISTRATION" | "TRANSFER";
       classroomId?: number;
+      identityChecked?: boolean;
     }) => {
-      if (type === "TRANSFER") {
-        if (decision === "APPROVED" && !rooms.data?.some((room) => room.id === classroomId))
-          throw new Error("Selecione uma turma de destino válida.");
-        await registrationApi.review(id, decision, "", {
-          type,
-          ...(decision === "APPROVED" ? { classroomId } : {}),
-        });
-      } else {
-        await registrationApi.review(id, decision, "");
+      try {
+        if (type === "TRANSFER") {
+          if (decision === "APPROVED" && !rooms.data?.some((room) => room.id === classroomId))
+            throw new Error("Selecione uma turma de destino válida.");
+          await registrationApi.review(id, decision, "", {
+            type,
+            ...(decision === "APPROVED" ? { classroomId } : {}),
+          });
+        } else if (identityChecked !== undefined) {
+          await registrationApi.review(id, decision, "", {
+            type: "REGISTRATION",
+            ...(decision === "APPROVED" ? { identityChecked } : {}),
+          });
+        } else {
+          await registrationApi.review(id, decision, "");
+        }
+      } catch (failure) {
+        if (failure instanceof ApiError && failure.status === 409 && /contrato|termo de adesão/i.test(failure.message))
+          await client.invalidateQueries({ queryKey: agreementQueryKey });
+        throw failure;
       }
       await Promise.all([
         client.invalidateQueries({ queryKey: ["registration-requests"] }),
         client.invalidateQueries({ queryKey: ["users"] }),
+        client.invalidateQueries({ queryKey: guardianKey }),
         client.invalidateQueries({ queryKey: ["classrooms"] }),
       ]);
     },
@@ -150,6 +177,7 @@ export function CoordinatorRequests({
           [
             { value: "TEACHER", label: "Professores", icon: Users },
             { value: "STUDENT", label: "Alunos", icon: GraduationCap },
+            { value: "GUARDIAN", label: "Responsáveis", icon: UserCheck },
             { value: "DELETION", label: "Exclusões de conta", icon: Trash2 },
           ] as const
         ).map(({ value, label, icon: Icon }) => (
@@ -171,6 +199,8 @@ export function CoordinatorRequests({
       </nav>
       {kind === "DELETION" ? (
         <AccountDeletions />
+      ) : kind === "GUARDIAN" ? (
+        <GuardianQueue />
       ) : (
         <section
           aria-label={`Solicitações de ${kind === "TEACHER" ? "professores" : "alunos"}`}
@@ -233,6 +263,11 @@ export function CoordinatorRequests({
           </label>
           <div className="mt-4">
             <ErrorMessage error={review.error || query.error || (kind === "STUDENT" ? rooms.error : null)} />
+            {review.error instanceof ApiError && review.error.status === 409 && /contrato|termo de adesão/i.test(review.error.message) && (
+              <Link href="/coordinator/data-agreement" className="mt-2 inline-block text-sm font-medium text-(--blue-dark) underline">
+                Ir para o termo de adesão
+              </Link>
+            )}
             {kind === "STUDENT" && rooms.isError && <Button onClick={() => rooms.refetch()}>Carregar turmas novamente</Button>}
           </div>
           {query.isPending && (
@@ -254,37 +289,94 @@ export function CoordinatorRequests({
             />
           )}
           {query.isSuccess && (
-            <ul className="divide-y divide-(--line)">
+            <ul className="space-y-4">
               {filtered
                 .slice(current * 10, current * 10 + 10)
                 .map((request) => (
                   <li
                     key={`${request.type ?? "REGISTRATION"}:${request.id}`}
-                    className="flex flex-wrap items-center gap-4 py-6"
+                    className="rounded-xl border border-(--line) bg-white p-5 sm:p-6"
                   >
-                    <span
-                      aria-hidden="true"
-                      className="flex h-13 w-13 shrink-0 items-center justify-center rounded-full bg-cyan-50 text-sm font-semibold text-(--blue-dark)"
-                    >
-                      {request.name
-                        .trim()
-                        .split(/\s+/)
-                        .slice(0, 2)
-                        .map((part) => part[0])
-                        .join("")}
-                    </span>
-                    <div className="min-w-0 flex-1 basis-[calc(100%-5rem)] sm:basis-auto">
-                      <h3 className="break-words text-base font-semibold">
-                        {request.name}
-                      </h3>
-                      <p className="mt-1 break-all text-sm text-(--muted)">
-                        {request.email}
-                      </p>
-                      <p className="mt-1 text-sm font-medium text-(--blue-dark)">{request.type === "TRANSFER" ? "Transferência de escola · Histórico preservado" : "Cadastro"}</p>
-                      {request.hasPhoto && <RegistrationPhoto id={request.id} type={request.type} />}
+                    <div className="flex flex-wrap items-start gap-4">
+                      <span
+                        aria-hidden="true"
+                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-cyan-50 text-sm font-semibold text-(--blue-dark)"
+                      >
+                        {request.name
+                          .trim()
+                          .split(/\s+/)
+                          .slice(0, 2)
+                          .map((part) => part[0])
+                          .join("")}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="break-words text-base font-semibold">
+                          {request.name}
+                        </h3>
+                        <p className="mt-0.5 break-all text-sm text-(--muted)">
+                          {request.email}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-cyan-50 px-3 py-1 text-xs font-medium text-(--blue-dark)">
+                          {request.type === "TRANSFER" ? "Transferência de escola · Histórico preservado" : "Cadastro"}
+                        </span>
+                        {kind === "STUDENT" && request.type !== "TRANSFER" && guardians.data?.get(request.id) && (
+                          <GuardianBadge status={guardians.data.get(request.id)!.status} />
+                        )}
+                      </div>
                     </div>
+                    {kind === "STUDENT" && request.type !== "TRANSFER" && (
+                      <dl className="mt-4 grid grid-cols-2 gap-4 text-sm sm:ml-16 sm:max-w-md">
+                        <div>
+                          <dt className="text-xs text-(--muted)">RA</dt>
+                          <dd className="font-medium">{request.ra || "não informado"}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs text-(--muted)">Nascimento</dt>
+                          <dd className="font-medium">
+                            {request.birthDate ? request.birthDate.split("-").reverse().join("/") : "não informado"}
+                          </dd>
+                        </div>
+                      </dl>
+                    )}
+                    {request.hasPhoto && (
+                      <div className="mt-4 sm:ml-16">
+                        <RegistrationPhoto id={request.id} type={request.type} />
+                      </div>
+                    )}
+                    {status === "PENDING" && kind === "STUDENT" && request.type !== "TRANSFER" && (
+                      <div className="mt-4 space-y-3 sm:ml-16">
+                        <label className="flex items-center gap-3 text-sm leading-5">
+                          <input
+                            type="checkbox"
+                            checked={!!identityChecked[request.id]}
+                            onChange={(event) =>
+                              setIdentityChecked((current) => ({ ...current, [request.id]: event.target.checked }))
+                            }
+                            className="h-5 w-5 shrink-0"
+                          />
+                          Conferi nome, RA e data de nascimento com os registros da escola
+                        </label>
+                        {editingBirthDate === request.id ? (
+                          <BirthDateForm
+                            id={request.id}
+                            current={request.birthDate}
+                            onDone={() => setEditingBirthDate(null)}
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setEditingBirthDate(request.id)}
+                            className="text-sm font-medium text-(--blue-dark) underline"
+                          >
+                            Corrigir data de nascimento
+                          </button>
+                        )}
+                      </div>
+                    )}
                     {status === "PENDING" && request.type === "TRANSFER" && (
-                      <div className="w-full sm:w-56">
+                      <div className="mt-4 w-full sm:ml-16 sm:w-64">
                         <Select
                           id={"transfer-classroom-" + request.id}
                           label={"Turma de destino de " + request.name}
@@ -299,8 +391,22 @@ export function CoordinatorRequests({
                         {rooms.isSuccess && !rooms.data.length && <p className="mt-2 text-sm text-(--muted)">Cadastre uma turma de destino para aprovar a transferência.</p>}
                       </div>
                     )}
-                    {status === "PENDING" ? (
-                      <div className="flex w-full shrink-0 gap-3 sm:w-auto">
+                    {status === "PENDING" && kind === "STUDENT" && request.type !== "TRANSFER" && guardians.data?.get(request.id)?.status === "AWAITING_SCHOOL_CHECK" ? (
+                      <div className="mt-5 flex w-full justify-center border-t border-(--line) pt-4">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setKind("GUARDIAN");
+                            setSearch("");
+                            setPage(0);
+                          }}
+                          className="min-h-11 w-full max-w-60 rounded-lg bg-(--blue-dark) px-5 text-sm font-medium text-white hover:bg-[#076a83]"
+                        >
+                          Conferir
+                        </button>
+                      </div>
+                    ) : status === "PENDING" ? (
+                      <div className="mt-5 flex w-full gap-3 border-t border-(--line) pt-4 sm:justify-end">
                         <button
                           type="button"
                           disabled={review.isPending}
@@ -323,7 +429,7 @@ export function CoordinatorRequests({
                         </button>
                         <button
                           type="button"
-                          disabled={review.isPending || (request.type === "TRANSFER" && (rooms.isPending || rooms.isError || !selectedClassrooms[`TRANSFER:${request.id}`]))}
+                          disabled={review.isPending || (request.type === "TRANSFER" && (rooms.isPending || rooms.isError || !selectedClassrooms[`TRANSFER:${request.id}`])) || (kind === "STUDENT" && request.type !== "TRANSFER" && !identityChecked[request.id])}
                           aria-label={`Aprovar ${request.type === "TRANSFER" ? "transferência" : "cadastro"} de ${request.name}`}
                           onClick={() => {
                             review.mutate({
@@ -331,6 +437,7 @@ export function CoordinatorRequests({
                               decision: "APPROVED",
                               type: request.type,
                               classroomId: request.type === "TRANSFER" ? Number(selectedClassrooms[`TRANSFER:${request.id}`]) : undefined,
+                              ...(kind === "STUDENT" && request.type !== "TRANSFER" ? { identityChecked: true } : {}),
                             });
                           }}
                           className="min-h-11 flex-1 rounded-lg bg-(--blue-dark) px-5 text-sm font-medium text-white hover:bg-[#076a83] disabled:opacity-50 sm:min-w-28"
@@ -344,7 +451,7 @@ export function CoordinatorRequests({
                         </button>
                       </div>
                     ) : (
-                      <span className="text-sm font-medium text-(--muted)">
+                      <span className="mt-4 block border-t border-(--line) pt-4 text-sm font-medium text-(--muted)">
                         {status === "APPROVED" ? "Aprovado" : "Recusado"}
                       </span>
                     )}
@@ -378,7 +485,7 @@ export function CoordinatorRequests({
     </div>
   );
 }
-export function Requests() {
+function CoordinatorRegistrations() {
   const [status, setStatus] = useState<RegistrationStatus>("PENDING");
   const [page, setPage] = useState(0);
   const client = useQueryClient();
@@ -528,6 +635,35 @@ export function Requests() {
           </Button>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Admin view: coordinator registrations plus the guardian-confirmation queue (support). */
+export function Requests() {
+  const [tab, setTab] = useState<"REGISTRATIONS" | "GUARDIAN">("REGISTRATIONS");
+  return (
+    <div className="space-y-6">
+      <nav aria-label="Tipo de solicitação" className="flex gap-2 overflow-x-auto border-b border-(--line)">
+        {(
+          [
+            { value: "REGISTRATIONS", label: "Cadastros", icon: Users },
+            { value: "GUARDIAN", label: "Responsáveis", icon: UserCheck },
+          ] as const
+        ).map(({ value, label, icon: Icon }) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={tab === value}
+            onClick={() => setTab(value)}
+            className={`flex min-h-14 items-center gap-3 rounded-t-xl border-b-2 px-5 text-sm font-medium sm:px-7 ${tab === value ? "border-(--blue) bg-cyan-50 text-(--blue-dark)" : "border-transparent text-(--muted) hover:bg-white"}`}
+          >
+            <Icon size={22} aria-hidden="true" />
+            {label}
+          </button>
+        ))}
+      </nav>
+      {tab === "GUARDIAN" ? <GuardianQueue /> : <CoordinatorRegistrations />}
     </div>
   );
 }
