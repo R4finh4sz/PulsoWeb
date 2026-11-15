@@ -13,6 +13,21 @@ import { canAccessSubject } from "@/utils/subjectAccess";
 import { CreateSubjectSchema } from "@/validation/Subject.validation";
 import { z } from "zod";
 import { demoUsers, getDemoUser } from "./access";
+import {
+  demoBirthDates,
+  mockAgreementRequest,
+  mockCheckStudentApproval,
+  mockCorrectBirthDate,
+  mockGuardianConfirmations,
+  mockGuardianPublic,
+} from "./guardian";
+
+export { mockGuardianPublic };
+export function mockPublicDocument(path: string) {
+  if (path === "/terms") return { ...terms };
+  const doc = legalDocuments[path.slice(1)];
+  return doc ? JSON.parse(JSON.stringify(doc.current)) : undefined;
+}
 import { demoSchoolInvitations, demoSubjectInvitations } from "./notifications";
 import { mockPassword } from "./platform";
 import {
@@ -68,7 +83,7 @@ const registrations: Registration[] = [
       name,
       email: `estudante${index + 1}@exemplo.com`,
       ra: `A${100 + index}`,
-      birthDate: null,
+      birthDate: demoBirthDates[5100 + index],
       role: "STUDENT",
       schoolName: "Escola Estadual Monte Serrat",
       status: "PENDING",
@@ -193,6 +208,18 @@ const schools: School[] = [
     },
   },
 ];
+type MockLegal = { title: string; version: string; content: string; publishedAt: string };
+const legalDocuments: Record<string, { current: MockLegal; history: MockLegal[] }> = Object.fromEntries(
+  [
+    ["privacy-policy", "Política de privacidade", "Esta política explica como o Pulso Escolar coleta, usa e protege os dados pessoais, conforme a LGPD."],
+    ["student-term", "Termo do estudante", "Declaro que li e compreendi como meus dados serão usados na plataforma Pulso Escolar."],
+    ["guardian-term", "Termo do responsável legal", "Autorizo o tratamento dos dados do aluno menor de idade pela escola, para fins exclusivamente educacionais."],
+    ["data-agreement", "TERMO DE ADESÃO INSTITUCIONAL E TRATAMENTO DE DADOS", "A escola tratará os dados pessoais de alunos e responsáveis apenas para fins educacionais, conforme a LGPD."],
+  ].map(([slug, title, content]) => [
+    slug,
+    { current: { title, content, version: "demo-1", publishedAt: new Date().toISOString() }, history: [] },
+  ]),
+);
 let terms = {
   title: "Termos de demonstração",
   version: "demo-1",
@@ -820,6 +847,23 @@ export function mockRequest(
     if (method !== "GET") terms = { ...terms, ...data };
     return { ...terms };
   }
+  if (path === "/terms/history") return [];
+  const legalSlug = /^\/(privacy-policy|guardian-term|student-term|data-agreement)(\/history)?$/.exec(path);
+  if (legalSlug) {
+    const doc = legalDocuments[legalSlug[1]];
+    if (legalSlug[2]) return clone(doc.history);
+    if (method !== "GET") {
+      if (current.role !== "ADMIN") throw new Error("Apenas o administrador pode publicar documentos.");
+      doc.history.unshift({ ...doc.current, publishedAt: new Date().toISOString() });
+      doc.current = {
+        title: String(data.title),
+        content: String(data.content),
+        version: `demo-${doc.history.length + 1}`,
+        publishedAt: new Date().toISOString(),
+      };
+    }
+    return clone(doc.current);
+  }
   if (parts[0] === "schools") {
     if (parts[1] === "search" && method === "GET") {
       const cep = url.searchParams.get("cep")?.replace(/\D/g, "");
@@ -926,8 +970,14 @@ export function mockRequest(
       if (!request) throw new Error("Solicitação não encontrada.");
       if (request.status !== "PENDING")
         throw new Error("Esta solicitação já foi analisada.");
+      if (parts[2] === "birth-date") {
+        request.birthDate = mockCorrectBirthDate(request.id, { name: request.name, ra: request.ra }, data);
+        return clone(request);
+      }
       if (data.status !== "APPROVED" && data.status !== "REJECTED")
         throw new Error("Informe uma decisão válida.");
+      if (data.status === "APPROVED" && request.role === "STUDENT")
+        mockCheckStudentApproval(request.id, data.identityChecked);
       request.status = data.status;
       request.reviewReason =
         typeof data.reason === "string" ? data.reason : null;
@@ -1187,6 +1237,10 @@ export function mockRequest(
     return clone(room);
   }
   if (parts[0] === "subjects") return [];
+  if (parts[0] === "schools" && parts[1] === "me" && parts[2] === "data-agreement")
+    return mockAgreementRequest(method, parts[3], data);
+  if (parts[0] === "guardian-confirmations")
+    return mockGuardianConfirmations(method, parts, url.searchParams, data);
   throw new Error(
     `Esta ação ainda não está disponível no mock: ${method} ${url.pathname}`,
   );

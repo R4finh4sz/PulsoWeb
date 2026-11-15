@@ -17,10 +17,10 @@ const shortcuts: {
     icon: "school",
   },
   {
-    title: "Cadastrar escola",
-    description: "Adicione uma instituição à plataforma.",
-    href: "/admin/schools/new",
-    icon: "school",
+    title: "FAQ",
+    description: "Gerencie as perguntas frequentes da plataforma.",
+    href: "/admin/faq",
+    icon: "help",
   },
   {
     title: "Coordenadores",
