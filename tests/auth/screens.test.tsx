@@ -1,5 +1,5 @@
 import ForgotPassword from "@/app/forgot-password/page";
-import Login from "@/app/page";
+import Login from "@/app/login/page";
 import {
   act,
   fireEvent,
@@ -266,7 +266,7 @@ test("2FA bloqueia código expirado e respeita espera do reenvio", () => {
   expect(screen.getByRole("status")).toHaveTextContent("expirado");
   expect(screen.getByRole("button", { name: /Reenviar em/ })).toBeDisabled();
 });
-test.each(["/", "/registration", "/invite/abc", "/forgot-password", "/guardian/abc", "/guardian-correction/abc"])(
+test.each(["/", "/login", "/registration", "/invite/abc", "/forgot-password", "/guardian/abc", "/guardian-correction/abc"])(
   "gate libera rota pública %s",
   (path) => {
     pathname = path;

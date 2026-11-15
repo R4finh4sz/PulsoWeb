@@ -161,7 +161,7 @@ export function RegistrationForm({ token }: { token?: string }) {
         </div>
         {done ? (
           <Link
-            href="/"
+            href="/login"
             className="inline-flex min-h-11 items-center gap-2 rounded text-sm font-medium text-(--blue-dark) hover:underline"
           >
             <ArrowLeft aria-hidden="true" size={16} />
@@ -440,7 +440,7 @@ export function RegistrationForm({ token }: { token?: string }) {
               {mutation.isPending ? "Enviando…" : "Enviar cadastro"}
             </Button>
             <p className="text-center text-sm">
-              <Link href="/" className="text-(--blue) underline">
+              <Link href="/login" className="text-(--blue) underline">
                 Já tenho uma conta
               </Link>
             </p>

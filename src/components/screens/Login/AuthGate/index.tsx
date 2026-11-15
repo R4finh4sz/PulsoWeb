@@ -125,6 +125,7 @@ function AuthorizedGate({ children }: { children: ReactNode }) {
     if (
       user &&
       (pathname === "/" ||
+        pathname === "/login" ||
         (!pathname.startsWith(homeRoutes[user.role] + "/") &&
           pathname !== homeRoutes[user.role]))
     )
@@ -203,7 +204,7 @@ function AuthorizedGate({ children }: { children: ReactNode }) {
     );
   if (
     !user ||
-    pathname === "/" ||
+    pathname === "/" || pathname === "/login" ||
     !(
       pathname === homeRoutes[user.role] ||
       pathname.startsWith(homeRoutes[user.role] + "/")
@@ -268,7 +269,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
       return;
     }
     if (!session) {
-      if (pathname !== "/" && !publicRegistration) router.replace("/");
+      if (pathname !== "/" && pathname !== "/login" && !publicRegistration) router.replace("/");
       return;
     }
     const remaining = Date.parse(session.expiresAt) - Date.now();
@@ -317,7 +318,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
     );
   if (publicRegistration) return children;
   if (!session)
-    return pathname === "/" ? (
+    return pathname === "/" || pathname === "/login" ? (
       children
     ) : (
       <p role="status" className="p-8">
