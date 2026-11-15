@@ -555,7 +555,7 @@ function CoordinatorRegistrations() {
                     {request.name}
                   </h3>
                   <p className="break-all text-xs text-(--muted)">
-                    {request.email} · RA: {request.ra || "Não informado"}
+                    {request.email} · Matrícula: {request.ra || "Não informado"}
                   </p>
                 </div>
                 <span className="ml-12 rounded-full bg-[#e1f5f8] px-2.5 py-1 text-[10px] font-medium text-(--blue) sm:ml-0">
@@ -583,7 +583,7 @@ function CoordinatorRegistrations() {
               </p>
               {request.hasPhoto && <RegistrationPhoto id={request.id} />}
               <p className="break-all text-sm">{request.email}</p>
-              <p className="text-sm">RA: {request.ra}</p>
+              <p className="text-sm">Matrícula: {request.ra}</p>
               {request.birthDate && (
                 <p className="text-sm">
                   Nascimento: {request.birthDate.split("-").reverse().join("/")}

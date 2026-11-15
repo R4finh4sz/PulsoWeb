@@ -44,7 +44,7 @@ export function SchoolManagement({ schoolId }: { schoolId: number }) {
             <div className="flex flex-wrap items-center gap-3 border-b border-(--line) p-3">
               <label className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-(--line) bg-[var(--paper)] px-3 py-2 focus-within:border-[var(--blue)] focus-within:ring-2 focus-within:ring-[var(--blue)]/20">
                 <Search aria-hidden="true" className="h-4 w-4 shrink-0 text-(--muted)" />
-                <input type="search" aria-label="Buscar coordenador por nome ou RA" placeholder="Buscar coordenador por nome ou RA" className="min-w-0 w-full bg-transparent text-sm text-[var(--ink)] outline-none placeholder:text-(--muted)" value={search} maxLength={150} disabled={busy} onChange={(event) => {
+                <input type="search" aria-label="Buscar coordenador por nome ou matrícula" placeholder="Buscar coordenador por nome ou matrícula" className="min-w-0 w-full bg-transparent text-sm text-[var(--ink)] outline-none placeholder:text-(--muted)" value={search} maxLength={150} disabled={busy} onChange={(event) => {
                   setSearch(event.target.value); setPage(0); setUserId("");
                 }} />
               </label>
@@ -67,7 +67,7 @@ export function SchoolManagement({ schoolId }: { schoolId: number }) {
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold text-(--ink)">{user.fullName}</span>
-                        <span className="block break-all text-xs text-(--muted)">{user.email} · RA: {user.ra || "Não informado"}</span>
+                        <span className="block break-all text-xs text-(--muted)">{user.email} · Matrícula: {user.ra || "Não informado"}</span>
                       </span>
                     </label>
                   </li>
