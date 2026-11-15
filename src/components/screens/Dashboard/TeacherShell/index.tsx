@@ -12,6 +12,7 @@ import {
   BookOpen,
   ChartColumn,
   ClipboardList,
+  CircleHelp,
   House,
   Inbox,
   LogOut,
@@ -39,7 +40,8 @@ export function TeacherShell({
   const links = admin
     ? [
         { label: "Início", href: home, icon: House },
-        { label: "Contratos", href: "/admin/contracts", icon: BookOpen },
+        { label: "Termos de uso", href: `${home}/terms`, icon: BookOpen },
+        { label: "FAQ", href: `${home}/faq`, icon: CircleHelp },
       ]
     : coordinator
       ? [

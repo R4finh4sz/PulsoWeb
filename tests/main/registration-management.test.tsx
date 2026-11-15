@@ -33,13 +33,6 @@ jest.mock("@/integrations/registration/api", () => ({
     invite: jest.fn(),
   },
 }));
-jest.mock("@/integrations/guardian/api", () => ({
-  ...jest.requireActual("@/integrations/guardian/api"),
-  guardianApi: { list: jest.fn().mockResolvedValue({ content: [], totalPages: 0 }) },
-}));
-jest.mock("@/integrations/agreement/api", () => ({
-  agreementApi: { current: jest.fn().mockResolvedValue({ version: 1, title: "", content: "", accepted: true, acceptedAt: null }) },
-}));
 jest.mock("@/integrations/schools/api", () => ({
   schoolsApi: { list: jest.fn(), searchByCep: jest.fn() },
 }));
@@ -111,19 +104,13 @@ test("coordenação separa professores e alunos, busca e aprova sem transferênc
     screen.getByText("Nenhuma solicitação encontrada para esta busca."),
   ).toBeVisible();
   fireEvent.click(await screen.findByRole("button", { name: "Alunos" }));
-  const approveStudent = await screen.findByRole("button", {
-    name: "Aprovar cadastro de Ana Silva",
-  });
-  expect(approveStudent).toBeDisabled();
   fireEvent.click(
-    screen.getByLabelText("Conferi nome, RA e data de nascimento com os registros da escola"),
-  );
-  fireEvent.click(approveStudent);
-  await waitFor(() =>
-    expect(registrationApi.review).toHaveBeenCalledWith(1, "APPROVED", "", {
-      type: "REGISTRATION",
-      identityChecked: true,
+    await screen.findByRole("button", {
+      name: "Aprovar cadastro de Ana Silva",
     }),
+  );
+  await waitFor(() =>
+    expect(registrationApi.review).toHaveBeenCalledWith(1, "APPROVED", ""),
   );
 });
 beforeEach(() => {
@@ -326,7 +313,7 @@ test("coordenação aceita transferência na mesma fila após escolher a turma",
   fireEvent.click(await screen.findByRole("button", { name: "Alunos" }));
   const approve = await screen.findByRole("button", { name: "Aprovar transferência de Aluno Transferido" });
   expect(approve).toBeDisabled();
-  expect(screen.getByRole("button", { name: "Aprovar cadastro de Ana Silva" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Aprovar cadastro de Ana Silva" })).toBeEnabled();
   await screen.findByRole("option", { name: "2 ano · A" });
   fireEvent.change(screen.getByRole("combobox", { name: "Turma de destino de Aluno Transferido" }), { target: { value: "9" } });
   fireEvent.click(approve);

@@ -17,10 +17,6 @@ export type Registration = {
   status: RegistrationStatus;
   reviewReason: string | null;
   hasPhoto: boolean;
-  schoolId?: number;
-  requestedAt?: string;
-  reviewedAt?: string | null;
-  reviewedById?: number | null;
 };
 export type RegistrationInput = {
   name: string;
@@ -30,12 +26,8 @@ export type RegistrationInput = {
   password: string;
   confirmPassword: string;
   schoolId: number;
-  guardianName?: string;
-  guardianEmail?: string;
   termsAccepted: boolean;
   termsVersion: string;
-  privacyAccepted?: boolean;
-  privacyVersion?: string;
 };
 export type Invitation = {
   email: string;
@@ -107,8 +99,6 @@ export const registrationApi = {
       password: string;
       termsAccepted: boolean;
       termsVersion: string;
-      privacyAccepted?: boolean;
-      privacyVersion?: string;
     },
   ) => {
     const invalidPassword = passwordError(body.password);
@@ -123,30 +113,16 @@ export const registrationApi = {
           password: body.password,
           termsAccepted: body.termsAccepted,
           termsVersion: body.termsVersion,
-          ...(body.privacyVersion
-            ? { privacyAccepted: true, privacyVersion: body.privacyVersion }
-            : {}),
         },
       },
     );
   },
-  list: (
-    status: RegistrationStatus,
-    page: number,
-    signal?: AbortSignal,
-    filters: { role?: Role; type?: "REGISTRATION" | "TRANSFER"; size?: number } = {},
-  ) =>
+  list: (status: RegistrationStatus, page: number, signal?: AbortSignal) =>
     apiRequest<{ content: Registration[]; totalPages: number }>(
-      "/registration-requests" +
-        queryString({ status, role: filters.role, type: filters.type, page, size: filters.size ?? 20 }),
+      "/registration-requests" + queryString({ status, page, size: 20 }),
       { signal },
     ),
-  correctBirthDate: (id: number, body: { birthDate: string; reason: string }) =>
-    apiRequest<Registration>(`/registration-requests/${id}/birth-date`, {
-      method: "PATCH",
-      body,
-    }),
-  review: (id: number, status: RegistrationStatus, reason: string, options?: { type: "REGISTRATION" | "TRANSFER"; classroomId?: number; identityChecked?: boolean }) =>
+  review: (id: number, status: RegistrationStatus, reason: string, options?: { type: "REGISTRATION" | "TRANSFER"; classroomId?: number }) =>
     apiRequest<Registration>(`/registration-requests/${id}`, {
       method: "PATCH",
       body: { status, ...(reason ? { reason } : {}), type: options?.type ?? "REGISTRATION", ...options },

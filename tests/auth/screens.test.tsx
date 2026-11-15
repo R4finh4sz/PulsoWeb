@@ -520,26 +520,3 @@ test("gate encerra sessão ociosa sem consumir refresh", async () => {
   expect(useAuthState.getState().session).toBeNull();
   expect(global.fetch).not.toHaveBeenCalled();
 });
-
-jest.mock("@/integrations/legal/api", () => ({
-  ...jest.requireActual("@/integrations/legal/api"),
-  legalApi: { current: jest.fn().mockResolvedValue(null) },
-}));
-
-test("gate mostra termos e privacidade em abas com um único aceite", async () => {
-  const { legalApi } = jest.requireMock("@/integrations/legal/api");
-  jest.mocked(legalApi.current).mockResolvedValueOnce({ title: "Privacidade", version: "1.2", content: "Texto de privacidade" });
-  jest.mocked(authApi.accepted).mockResolvedValueOnce([]).mockResolvedValue(["1"]);
-  useAuthState.getState().setSession(session);
-  render(<AuthGate><p>Privado</p></AuthGate>, { wrapper: queryWrapper().wrapper });
-  await screen.findByRole("checkbox");
-  expect(screen.getAllByRole("checkbox")).toHaveLength(1);
-  expect(screen.getByText("Conteúdo")).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: "Política de privacidade" }));
-  expect(screen.getByText("Texto de privacidade")).toBeVisible();
-  expect(screen.getByText("Li e aceito os termos de uso e a política de privacidade.")).toBeVisible();
-  fireEvent.click(screen.getByRole("checkbox"));
-  fireEvent.click(screen.getByRole("button", { name: "Aceitar e continuar" }));
-  await screen.findByText("Privado");
-  expect(authApi.accept).toHaveBeenCalledWith("1", "1.2");
-});
