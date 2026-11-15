@@ -1,6 +1,11 @@
 "use client";
 
 import { authApi } from "@/integrations/auth/api";
+import {
+  AcceptanceReader,
+  acceptanceLabel,
+  useAcceptanceDocuments,
+} from "@/components/screens/LegalDocuments/Acceptance";
 import { recordSessionActivity } from "@/api/client";
 import { SessionExpiry } from "./SessionExpiry";
 import { toSessionUser } from "@/integrations/auth/session";
@@ -48,17 +53,13 @@ function AuthorizedGate({ children }: { children: ReactNode }) {
   const [checkedVersion, setCheckedVersion] = useState<string | null>(null);
   const [schoolNoticeAccepted, setSchoolNoticeAccepted] = useState(false);
 
-  const terms = useQuery({
-    queryKey: ["terms"],
-    queryFn: ({ signal }) => authApi.terms(signal),
-    staleTime: 0,
-  });
+  const { terms, privacy, key: acceptanceKey } = useAcceptanceDocuments(["terms"], session?.user.role === "STUDENT");
   const accepted = useQuery({
     queryKey: ["terms-accepted"],
     queryFn: ({ signal }) => authApi.accepted(signal),
     staleTime: 0,
   });
-  const checked = !!terms.data && checkedVersion === terms.data.version;
+  const checked = !!acceptanceKey && checkedVersion === acceptanceKey;
   const hasAccepted =
     session?.user.termsAccepted === true &&
     !!terms.data &&
@@ -69,7 +70,9 @@ function AuthorizedGate({ children }: { children: ReactNode }) {
         throw new Error("Leia e aceite os termos para continuar.");
       const version = terms.data.version;
       const current = useAuthState.getState().session;
-      await authApi.accept(version);
+      await (privacy.data
+        ? authApi.accept(version, privacy.data.version)
+        : authApi.accept(version));
       const latest = useAuthState.getState().session;
       if (current && latest?.accessToken === current.accessToken) {
         useAuthState.getState().setSession({
@@ -91,6 +94,7 @@ function AuthorizedGate({ children }: { children: ReactNode }) {
     onError: () => {
       setCheckedVersion(null);
       void terms.refetch();
+      void privacy.refetch();
     },
   });
   const noTerms = terms.isSuccess && terms.data === null;
@@ -130,13 +134,13 @@ function AuthorizedGate({ children }: { children: ReactNode }) {
     if (schoolUnavailable && schoolNoticeAccepted && schoolDestination && !schoolRouteAllowed)
       router.replace(schoolDestination);
   }, [schoolUnavailable, schoolNoticeAccepted, schoolDestination, schoolRouteAllowed, router]);
-  if (terms.isPending || accepted.isPending)
+  if (terms.isPending || accepted.isPending || privacy.isPending)
     return (
       <p role="status" className="p-8">
         Verificando termos de uso…
       </p>
     );
-  if (terms.error || accepted.error || missingRequiredTerms)
+  if (terms.error || accepted.error || privacy.error || missingRequiredTerms)
     return (
       <BlockingDialog>
         <h1 id="auth-title">Não foi possível verificar os termos</h1>
@@ -144,6 +148,7 @@ function AuthorizedGate({ children }: { children: ReactNode }) {
           error={
             terms.error ||
             accepted.error ||
+            privacy.error ||
             new Error(
               "Os termos de uso precisam ser aceitos, mas não estão disponíveis. Tente novamente mais tarde.",
             )
@@ -153,6 +158,7 @@ function AuthorizedGate({ children }: { children: ReactNode }) {
           onClick={() => {
             void terms.refetch();
             void accepted.refetch();
+            void privacy.refetch();
           }}
         >
           Tentar novamente
@@ -163,16 +169,10 @@ function AuthorizedGate({ children }: { children: ReactNode }) {
     return (
       <BlockingDialog>
         <h1 id="auth-title" className="text-xl font-semibold">
-          Termos de uso
+          {session?.user.role === "STUDENT" ? "Termo do aluno e política de privacidade" : privacy.data ? "Termos de uso e política de privacidade" : "Termos de uso"}
         </h1>
-        <p className="mt-5 text-xs text-slate-500">
-          Versão {terms.data?.version}
-        </p>
-        <div
-          tabIndex={0}
-          className="my-5 max-h-[45dvh] overflow-y-auto whitespace-pre-wrap rounded-lg border p-4 text-sm leading-6"
-        >
-          {terms.data?.content}
+        <div className="my-5">
+          <AcceptanceReader student={session?.user.role === "STUDENT"} terms={terms.data!} privacy={privacy.data} maxHeight="max-h-[40dvh]" />
         </div>
         <label className="mb-5 flex gap-3 text-sm">
           <input
@@ -180,12 +180,10 @@ function AuthorizedGate({ children }: { children: ReactNode }) {
             checked={checked}
             disabled={accept.isPending}
             onChange={(event) =>
-              setCheckedVersion(
-                event.target.checked ? terms.data!.version : null,
-              )
+              setCheckedVersion(event.target.checked ? acceptanceKey : null)
             }
           />
-          Li e aceito os termos de uso.
+          {acceptanceLabel(!!privacy.data, session?.user.role === "STUDENT")}
         </label>
         <Failure error={accept.error} />
         <Button

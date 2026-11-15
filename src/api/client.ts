@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "./config";
 import { mockAccessEnabled, getDemoUser } from "@/mocks/access";
-import { mockRequest } from "@/mocks/api";
+import { mockRequest, mockGuardianPublic, mockPublicDocument } from "@/mocks/api";
 import { useAuthState, type LoginResponse } from "@/integrations/auth/state";
 import { showRequestError } from "@/store/feedbackStore";
 export class ApiError extends Error {
@@ -31,6 +31,7 @@ function isPublicPath(path: string) {
   return (
     publicAuthPaths.has(path) ||
     path.startsWith("/schools/search?") ||
+    /^\/guardian-(invitations|corrections)\/[^/]+(\/decision)?$/.test(path) ||
     (/^\/invitations\/[^/]+(?:\/(verify|resend|complete))?$/.test(path) &&
       !["/invitations/teachers", "/invitations/coordinators"].includes(path))
   );
@@ -150,6 +151,19 @@ async function request<T>(
     headers.set("Content-Type", "application/json");
   const isPublicAuthPath = isPublicPath(path);
   let session = useAuthState.getState().session;
+  if (mockAccessEnabled && /^\/guardian-(invitations|corrections)\//.test(path)) {
+    options.signal?.throwIfAborted();
+    return mockGuardianPublic(path, method, (body ?? {}) as Record<string, unknown>) as T;
+  }
+  if (
+    mockAccessEnabled &&
+    !getDemoUser(session?.accessToken) &&
+    method === "GET" &&
+    ["/terms", "/privacy-policy", "/student-term", "/guardian-term"].includes(path)
+  ) {
+    options.signal?.throwIfAborted();
+    return mockPublicDocument(path) as T;
+  }
   if (mockAccessEnabled && getDemoUser(session?.accessToken)) {
     options.signal?.throwIfAborted();
     return mockRequest(path, method, body, session!.accessToken) as T;

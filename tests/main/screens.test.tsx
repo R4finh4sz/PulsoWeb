@@ -272,7 +272,7 @@ test("dashboard mostra atalhos administrativos e logout", async () => {
   expect(within(shortcuts).getAllByRole("link")).toHaveLength(6);
   for (const href of [
     "/admin/schools",
-    "/admin/schools/new",
+    "/admin/faq",
     "/admin/coordinators",
     "/admin/metrics",
     "/admin/registration-requests",
@@ -283,14 +283,11 @@ test("dashboard mostra atalhos administrativos e logout", async () => {
   const navigation = screen.getByRole("navigation", {
     name: "Navegação principal",
   });
-  expect(within(navigation).getAllByRole("link")).toHaveLength(3);
+  expect(within(navigation).getAllByRole("link")).toHaveLength(2);
   expect(
-    within(navigation).getByRole("link", { name: "Termos de uso" }),
-  ).toHaveAttribute("href", "/admin/terms");
-  expect(within(navigation).getByRole("link", { name: "FAQ" })).toHaveAttribute(
-    "href",
-    "/admin/faq",
-  );
+    within(navigation).getByRole("link", { name: "Contratos" }),
+  ).toHaveAttribute("href", "/admin/contracts");
+  expect(within(navigation).queryByRole("link", { name: "FAQ" })).toBeNull();
   expect(screen.getByRole("link", { name: "Meu perfil" })).toHaveAttribute(
     "href",
     "/admin/profile",
