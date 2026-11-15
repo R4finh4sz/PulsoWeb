@@ -266,7 +266,7 @@ test("2FA bloqueia código expirado e respeita espera do reenvio", () => {
   expect(screen.getByRole("status")).toHaveTextContent("expirado");
   expect(screen.getByRole("button", { name: /Reenviar em/ })).toBeDisabled();
 });
-test.each(["/", "/registration", "/invite/abc", "/forgot-password"])(
+test.each(["/", "/registration", "/invite/abc", "/forgot-password", "/guardian/abc", "/guardian-correction/abc"])(
   "gate libera rota pública %s",
   (path) => {
     pathname = path;
@@ -280,6 +280,28 @@ test.each(["/", "/registration", "/invite/abc", "/forgot-password"])(
     expect(router.replace).not.toHaveBeenCalled();
   },
 );
+test.each(["/guardian/abc", "/guardian-correction/abc"])(
+  "gate libera convite com sessao autenticada em %s",
+  (path) => {
+    pathname = path;
+    useAuthState.getState().setSession({ ...session, twoFactorRequired: true });
+    render(<AuthGate>Convite do responsavel</AuthGate>, { wrapper: queryWrapper().wrapper });
+    expect(screen.getByText("Convite do responsavel")).toBeVisible();
+    expect(router.replace).not.toHaveBeenCalled();
+    expect(authApi.me).not.toHaveBeenCalled();
+  },
+);
+
+test.each(["/guardian", "/guardian/abc/private", "/guardian-correction/abc/private"])(
+  "gate mantem rota fora do convite protegida em %s",
+  (path) => {
+    pathname = path;
+    render(<AuthGate>Privado</AuthGate>, { wrapper: queryWrapper().wrapper });
+    expect(screen.queryByText("Privado")).not.toBeInTheDocument();
+    expect(router.replace).toHaveBeenCalledWith("/");
+  },
+);
+
 test("gate redireciona visitante e expira credenciais", () => {
   const { rerender } = render(
     <AuthGate>

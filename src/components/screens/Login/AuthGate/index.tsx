@@ -256,6 +256,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const publicRegistration =
     pathname === "/registration" ||
     pathname.startsWith("/invite/") ||
+    /^\/(guardian|guardian-correction)\/[^/]+\/?$/.test(pathname) ||
     pathname === "/forgot-password";
   useEffect(() => {
     if (!mounted) return;
