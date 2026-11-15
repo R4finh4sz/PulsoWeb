@@ -27,14 +27,10 @@ export function CoordinatorGrowth() {
       students: cumulative ? item.cumulativeStudents : item.students,
       teachers: cumulative ? item.cumulativeTeachers : item.teachers,
     })) ?? [];
-  const step = Math.max(
-    1,
-    Math.ceil(
-      Math.max(0, ...series.flatMap((item) => [item.students, item.teachers])) /
-        4,
-    ),
-  );
-  const maximum = step * 4;
+  const peak = Math.max(0, ...series.flatMap((item) => [item.students, item.teachers]));
+  const step = Math.max(1, Math.ceil(peak / 4));
+  const divisions = Math.max(1, Math.ceil(peak / step));
+  const maximum = step * divisions;
   return (
     <section
       aria-labelledby="growth-title"
@@ -119,18 +115,18 @@ export function CoordinatorGrowth() {
                   aria-label={`Cadastros ${cumulative ? "acumulados" : "mensais"} em ${data.year}. Valores mensais disponíveis na tabela acessível.`}
                   className="min-w-[640px] w-full"
                 >
-                  {[0, 1, 2, 3, 4].map((tick) => (
+                  {Array.from({ length: divisions + 1 }, (_, tick) => (
                     <g key={tick}>
                       <line
                         x1={55}
                         x2={765}
-                        y1={245 - tick * 55}
-                        y2={245 - tick * 55}
+                        y1={245 - (tick / divisions) * 220}
+                        y2={245 - (tick / divisions) * 220}
                         stroke="#e2e8f0"
                       />
                       <text
                         x={45}
-                        y={249 - tick * 55}
+                        y={249 - (tick / divisions) * 220}
                         textAnchor="end"
                         fontSize={12}
                         fill="#475569"

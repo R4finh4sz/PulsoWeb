@@ -85,6 +85,20 @@ test("ano inválido não dispara consulta e zero não gera escala inválida", as
   expect(metricsApi.growth).toHaveBeenCalledTimes(calls);
 });
 
+test.each([[2, 2, 4], [100, 100, 200], [1250, 1252, 2500]])("ajusta a escala aos valores reais: %i cadastros", async (count, maximum, cumulativeMaximum) => {
+  jest.mocked(metricsApi.growth).mockResolvedValue({
+    ...data,
+    months: [{ month: 1, students: count, teachers: 1, cumulativeStudents: count * 2, cumulativeTeachers: 1 }],
+  });
+  render(<CoordinatorGrowth />, { wrapper: queryWrapper().wrapper });
+  const chart = await screen.findByRole("img");
+  const axisValues = () => Array.from(chart.querySelectorAll('text[text-anchor="end"]')).map((tick) => tick.textContent);
+  expect(axisValues().at(-1)).toBe(maximum.toLocaleString("pt-BR"));
+  expect(chart.querySelector("rect")).toHaveAttribute("height", String(count / maximum * 220));
+  fireEvent.click(screen.getByRole("button", { name: "Acumulado no ano" }));
+  expect(axisValues().at(-1)).toBe(cumulativeMaximum.toLocaleString("pt-BR"));
+});
+
 test("erro permite tentar novamente", async () => {
   jest
     .mocked(metricsApi.growth)
