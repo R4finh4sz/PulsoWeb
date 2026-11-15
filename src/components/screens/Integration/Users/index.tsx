@@ -140,7 +140,7 @@ export function UserForm({
         />
       </label>
       <label className="block text-sm">
-        RA / matrícula
+        {resource === "students" ? "RA" : "Matrícula"}
         <input
           name="ra"
           required
@@ -274,8 +274,8 @@ export function UserList({
             />
             <input
               type="search"
-              aria-label="Buscar por nome ou RA"
-              placeholder="Buscar por nome ou RA"
+              aria-label={resource === "students" ? "Buscar por nome ou RA" : "Buscar por nome ou matrícula"}
+              placeholder={resource === "students" ? "Buscar por nome ou RA" : "Buscar por nome ou matrícula"}
               value={q}
               onChange={(event) => {
                 setQ(event.target.value);
@@ -326,7 +326,7 @@ export function UserList({
                   {person.fullName}
                 </h3>
                 <p className="break-all text-xs text-(--muted)">
-                  {person.email} · RA: {person.ra || "Não informado"}
+                  {person.email} · {resource === "students" ? "RA" : "Matrícula"}: {person.ra || "Não informado"}
                 </p>
               </div>
               {canEdit && resource !== "coordinators" && (

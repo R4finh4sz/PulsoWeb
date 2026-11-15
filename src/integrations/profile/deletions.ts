@@ -10,20 +10,30 @@ export type AccountDeletion = {
   status: "PENDING" | "APPROVED" | "REJECTED";
 };
 
+type AccountDeletionResponse = Omit<AccountDeletion, "name" | "createdAt"> & {
+  fullName: string;
+  requestedAt: string;
+};
+type DeletionItem = AccountDeletion | AccountDeletionResponse;
 type AccountDeletionPage = {
-  content: AccountDeletion[];
+  content: DeletionItem[];
   totalPages?: number;
 };
 
-function deletionItems(response: AccountDeletion[] | AccountDeletionPage) {
-  if (Array.isArray(response)) return response;
-  if (response && Array.isArray(response.content)) return response.content;
-  throw new Error("Formato inválido na resposta dos pedidos de exclusão.");
+function deletionItems(response: DeletionItem[] | AccountDeletionPage): AccountDeletion[] {
+  const items = Array.isArray(response) ? response : response?.content;
+  if (!Array.isArray(items))
+    throw new Error("Formato inválido na resposta dos pedidos de exclusão.");
+  return items.map((item) => ({
+    ...item,
+    name: "fullName" in item ? item.fullName : item.name,
+    createdAt: "requestedAt" in item ? item.requestedAt : item.createdAt,
+  }));
 }
 
 export const accountDeletionsApi = {
   list: async (status: AccountDeletion["status"], signal?: AbortSignal) => {
-    const first = await apiRequest<AccountDeletion[] | AccountDeletionPage>(
+    const first = await apiRequest<DeletionItem[] | AccountDeletionPage>(
       "/account-deletion-requests" + queryString({ status }),
       { signal },
     );
@@ -31,7 +41,7 @@ export const accountDeletionsApi = {
     if (Array.isArray(first)) return items;
     const pages = await Promise.all(
       Array.from({ length: Math.max(0, (first.totalPages ?? 1) - 1) }, (_, index) =>
-        apiRequest<AccountDeletion[] | AccountDeletionPage>(
+        apiRequest<DeletionItem[] | AccountDeletionPage>(
           "/account-deletion-requests" + queryString({ status, page: index + 1 }),
           { signal },
         ).then(deletionItems),

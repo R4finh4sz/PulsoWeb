@@ -80,6 +80,26 @@ test("carrega todas as páginas de pedidos de exclusão e preserva o sinal", asy
   );
 });
 
+test.each(["array", "page"])("normaliza nome e data da API de exclusões (%s)", async (format) => {
+  const request = {
+    id: 6,
+    fullName: "Ricardo Almeida",
+    email: "ricardo@exemplo.com",
+    role: "TEACHER",
+    reason: "Saí da escola.",
+    requestedAt: "2026-10-19T12:00:00Z",
+    status: "PENDING",
+  };
+  respond(format === "array" ? [request] : { content: [request], totalPages: 2 });
+  if (format === "page") respond({ content: [{ ...request, id: 7 }], totalPages: 2 });
+  const items = await accountDeletionsApi.list("PENDING");
+  expect(items).toHaveLength(format === "array" ? 1 : 2);
+  for (const item of items) {
+    expect(item.name).toBe(request.fullName);
+    expect(item.createdAt).toBe(request.requestedAt);
+  }
+});
+
 test("resposta inválida da fila de exclusões vira erro da consulta", async () => {
   respond({ unexpected: true });
   await expect(accountDeletionsApi.list("PENDING")).rejects.toThrow(
