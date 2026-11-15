@@ -1,9 +1,14 @@
 "use client";
 import { ApiError } from "@/api/client";
 import { DashboardShell } from "@/components/screens/Dashboard/DashboardShell";
+import {
+  AgreementRequiredModal,
+  agreementRoute,
+  useAgreement,
+} from "@/components/screens/DataAgreement";
 import { useMe } from "@/integrations/auth/hooks";
-import { useAuthState } from "@/integrations/auth/state";
 import { toSessionUser } from "@/integrations/auth/session";
+import { useAuthState } from "@/integrations/auth/state";
 import { homeRoutes, type SessionUser, type UserRole } from "@/interfaces/auth";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
@@ -44,6 +49,9 @@ export function Protected({
   const pathname = usePathname();
   const router = useRouter();
   const user = session.data ? toSessionUser(session.data) : null;
+  const agreement = useAgreement(
+    role === "coordenador" && user?.role === "coordenador",
+  );
   useEffect(() => {
     if (session.isPending || session.isError) return;
     if (!user) router.replace("/");
@@ -64,6 +72,13 @@ export function Protected({
         Carregando seu espaço…
       </p>
     );
+  if (
+    role === "coordenador" &&
+    agreement.data &&
+    !agreement.data.accepted &&
+    pathname !== agreementRoute
+  )
+    return <AgreementRequiredModal />;
   if (
     role === "coordenador" &&
     /^\/coordinator\/(students|teachers|classrooms)(\/|$)/.test(pathname) &&
@@ -87,8 +102,12 @@ export function Workspace({
   description?: string;
   children: ReactNode;
 }) {
-  const navigation =
-    user.role === "admin"
+  const agreement = useAgreement(user.role === "coordenador");
+  const blocked =
+    user.role === "coordenador" && agreement.data?.accepted === false;
+  const navigation = blocked
+    ? []
+    : user.role === "admin"
       ? [
           { label: "Escolas", href: "/admin/schools", icon: "school" as const },
           {

@@ -4,7 +4,11 @@ import { ArrowLeft } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
-import { authApi } from "@/integrations/auth/api";
+import {
+  AcceptanceReader,
+  acceptanceLabel,
+  useAcceptanceDocuments,
+} from "@/components/screens/LegalDocuments/Acceptance";
 import { registrationApi } from "@/integrations/registration/api";
 import { passwordError } from "@/validation/password";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -12,11 +16,20 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import { ErrorMessage } from "../Integration/shared";
 
+/** Brazilian age of majority: under 18 the school must confirm a legal guardian. */
+function isMinor(birthDate: string) {
+  if (!birthDate) return false;
+  const limit = new Date();
+  limit.setFullYear(limit.getFullYear() - 18);
+  return birthDate > limit.toISOString().slice(0, 10);
+}
+
 export function RegistrationForm({ token }: { token?: string }) {
   const [search, setSearch] = useState("");
   const [acceptedVersion, setAcceptedVersion] = useState<string | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [done, setDone] = useState(false);
+  const [birthDate, setBirthDate] = useState("");
   const [verified, setVerified] = useState(false);
   const [digits, setDigits] = useState<string[]>(Array(6).fill(""));
   const [now, setNow] = useState(0);
@@ -25,10 +38,7 @@ export function RegistrationForm({ token }: { token?: string }) {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
-  const terms = useQuery({
-    queryKey: ["registration-terms"],
-    queryFn: ({ signal }) => authApi.terms(signal),
-  });
+  const { terms, privacy, key: acceptanceKey } = useAcceptanceDocuments(["registration-terms"], !token);
   const schools = useQuery({
     queryKey: ["school-search", search],
     queryFn: ({ signal }) => registrationApi.schools(search, signal),
@@ -55,7 +65,7 @@ export function RegistrationForm({ token }: { token?: string }) {
   });
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
-      if (!terms.data || acceptedVersion !== terms.data.version)
+      if (!terms.data || !acceptanceKey || acceptedVersion !== acceptanceKey)
         throw new Error("Leia e aceite os termos atuais.");
       const name = String(data.get("name")).trim();
       const password = String(data.get("password"));
@@ -70,14 +80,26 @@ export function RegistrationForm({ token }: { token?: string }) {
         password,
         termsAccepted: true,
         termsVersion: terms.data.version,
+        ...(privacy.data
+          ? { privacyAccepted: true, privacyVersion: privacy.data.version }
+          : {}),
       };
       if (token) return registrationApi.complete(token, common);
       const photo = data.get("photo");
       if (photo instanceof File && photo.size > 2 * 1024 * 1024)
         throw new Error("A foto deve ter no máximo 2 MB.");
+      const guardianName = String(data.get("guardianName") ?? "").trim();
+      const guardianEmail = String(data.get("guardianEmail") ?? "").trim();
+      if (isMinor(birthDate)) {
+        if (!guardianName || !guardianEmail)
+          throw new Error("Informe o nome e o e-mail do responsável legal.");
+        if (guardianEmail.toLowerCase() === String(data.get("email")).trim().toLowerCase())
+          throw new Error("O e-mail do responsável deve ser diferente do seu.");
+      }
       return registrationApi.register(
         {
           ...common,
+          ...(isMinor(birthDate) ? { guardianName, guardianEmail } : {}),
           confirmPassword: password,
           email: String(data.get("email")).trim(),
           birthDate: String(data.get("birthDate")),
@@ -262,6 +284,8 @@ export function RegistrationForm({ token }: { token?: string }) {
                   label="Data de nascimento"
                   type="date"
                   required
+                  value={birthDate}
+                  onChange={(event) => setBirthDate(event.target.value)}
                   max={
                     now
                       ? new Date(now - 86400000).toISOString().slice(0, 10)
@@ -278,6 +302,32 @@ export function RegistrationForm({ token }: { token?: string }) {
                   maxLength={254}
                 />
               </>
+            )}
+            {!token && isMinor(birthDate) && (
+              <fieldset className="space-y-4 rounded-xl border border-(--line) p-4">
+                <legend className="px-1 text-sm font-semibold">Responsável legal</legend>
+                <p className="text-xs text-(--muted)">
+                  Por ser menor de 18 anos, a escola vai conferir o contato e enviar um convite
+                  ao seu responsável. Seu cadastro só será aprovado depois da confirmação dele.
+                </p>
+                <Input
+                  id="guardianName"
+                  name="guardianName"
+                  label="Nome do responsável"
+                  autoComplete="off"
+                  required
+                  maxLength={100}
+                />
+                <Input
+                  id="guardianEmail"
+                  name="guardianEmail"
+                  label="E-mail do responsável"
+                  type="email"
+                  autoComplete="off"
+                  required
+                  maxLength={254}
+                />
+              </fieldset>
             )}
             <Input
               id="ra"
@@ -354,28 +404,21 @@ export function RegistrationForm({ token }: { token?: string }) {
             />
             {terms.isPending && <p role="status">Carregando termos…</p>}
             <ErrorMessage error={terms.error} />
-            {terms.data && (
+            {privacy.isPending && !terms.isPending && <p role="status">Carregando política de privacidade…</p>}
+            <ErrorMessage error={privacy.error} />
+            {terms.data && privacy.isSuccess && (
               <>
-                <details className="rounded-xl border border-(--line) p-4">
-                  <summary className="cursor-pointer text-sm font-semibold">
-                    {terms.data.title} · {terms.data.version}
-                  </summary>
-                  <div className="mt-4 max-h-64 overflow-auto whitespace-pre-wrap text-sm leading-6">
-                    {terms.data.content}
-                  </div>
-                </details>
+                <AcceptanceReader student={!token} terms={terms.data} privacy={privacy.data} maxHeight="max-h-64" />
                 <label className="flex gap-3 text-sm">
                   <input
                     type="checkbox"
                     required
-                    checked={acceptedVersion === terms.data.version}
+                    checked={acceptedVersion === acceptanceKey}
                     onChange={(event) =>
-                      setAcceptedVersion(
-                        event.target.checked ? terms.data!.version : null,
-                      )
+                      setAcceptedVersion(event.target.checked ? acceptanceKey : null)
                     }
                   />
-                  Li e aceito os termos de uso.
+                  {acceptanceLabel(!!privacy.data, !token)}
                 </label>
               </>
             )}
@@ -390,7 +433,8 @@ export function RegistrationForm({ token }: { token?: string }) {
               disabled={
                 mutation.isPending ||
                 !terms.data ||
-                acceptedVersion !== terms.data.version
+                !privacy.isSuccess ||
+                acceptedVersion !== acceptanceKey
               }
             >
               {mutation.isPending ? "Enviando…" : "Enviar cadastro"}

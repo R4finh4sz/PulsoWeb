@@ -13,7 +13,7 @@ function PageContent({
   initialType = "TEACHER",
 }: {
   role: UserRole;
-  initialType?: "TEACHER" | "STUDENT" | "DELETION";
+  initialType?: "TEACHER" | "STUDENT" | "DELETION" | "GUARDIAN";
 }) {
   return (
     <Protected role={role}>
@@ -45,6 +45,6 @@ export default function RequestsPage({
   return <PageContent
     key={type}
     role="coordenador"
-    initialType={type === "deletion" ? "DELETION" : type === "student" ? "STUDENT" : "TEACHER"}
+    initialType={type === "deletion" ? "DELETION" : type === "student" ? "STUDENT" : type === "guardian" ? "GUARDIAN" : "TEACHER"}
   />;
 }
