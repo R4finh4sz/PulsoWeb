@@ -11,6 +11,7 @@ export function PasswordRequirements({
     { label: "Pelo menos 8 caracteres", met: password.length >= 8 },
     { label: "Uma letra maiúscula de A a Z", met: /[A-Z]/.test(password) },
     { label: "Um número", met: /[0-9]/.test(password) },
+    { label: "No máximo 72 bytes UTF-8", met: password.length > 0 && new TextEncoder().encode(password).length <= 72 },
     {
       label: "As senhas são iguais",
       met: password.length > 0 && password === confirmation,

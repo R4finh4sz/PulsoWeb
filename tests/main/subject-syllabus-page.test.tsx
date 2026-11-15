@@ -54,7 +54,7 @@ test("ementa abre em página com tópicos e referências visíveis", async () =>
   expect(screen.getByRole("button", { name: "Editar ementa" })).toBeVisible();
 });
 
-test("responsável edita ementa mesmo com sete disciplinas sem alterar nome ou texto antigo", async () => {
+test("responsável edita ementa mesmo com sete disciplinas e atualiza o texto sem alterar o nome", async () => {
   jest
     .mocked(subjectsApi.list)
     .mockResolvedValue(
@@ -72,7 +72,7 @@ test("responsável edita ementa mesmo com sete disciplinas sem alterar nome ou t
   await waitFor(() =>
     expect(subjectsApi.updateSyllabus).toHaveBeenCalledWith(5, 20, {
       name: subject.name,
-      syllabus: subject.syllabus,
+      syllabus: "Descrição atualizada",
       topics: [{ ...topic, description: "Descrição atualizada" }],
     }),
   );
