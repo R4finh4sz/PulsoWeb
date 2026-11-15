@@ -1,5 +1,5 @@
 import { RegistrationForm as Registration } from "@/components/screens/Registration";
-import { authApi } from "@/integrations/auth/api";
+import { legalApi } from "@/integrations/legal/api"; import { authApi } from "@/integrations/auth/api";
 import { registrationApi } from "@/integrations/registration/api";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { queryWrapper, router } from "../helpers";
@@ -8,7 +8,7 @@ jest.mock("next/navigation", () => ({
   usePathname: () => "/",
 }));
 jest.mock("@/integrations/auth/api", () => ({ authApi: { terms: jest.fn() } }));
-jest.mock("@/integrations/registration/api", () => ({
+jest.mock("@/integrations/legal/api", () => ({ legalApi: { current: jest.fn() } })); jest.mock("@/integrations/registration/api", () => ({
   registrationApi: {
     schools: jest.fn(),
     invitation: jest.fn(),
@@ -27,6 +27,7 @@ const invitation = {
   resendAvailableAt: "1970-01-01T00:00:00Z",
 };
 beforeEach(() => {
+  jest.mocked(legalApi.current).mockImplementation((type) => type === 'privacy' ? Promise.resolve({ title: 'Privacidade', content: 'Politica', version: '1' }) : authApi.terms());
   jest
     .mocked(authApi.terms)
     .mockResolvedValue({ title: "Termos", content: "Texto", version: "1" });
@@ -97,7 +98,7 @@ test("cadastro público envia dados, busca escolas e exige aceite", async () => 
       password: "Password1",
       confirmPassword: "Password1",
       termsAccepted: true,
-      termsVersion: "1",
+      termsVersion: "1", privacyAccepted: true, privacyVersion: "1",
       email: "a@b.com",
       birthDate: "2000-01-01",
       schoolId: 1,
@@ -140,7 +141,7 @@ test("convite validado envia dados e valida complexidade da senha", async () => 
     ra: "123",
     password: "Password1",
     termsAccepted: true,
-    termsVersion: "1",
+    termsVersion: "1", privacyAccepted: true, privacyVersion: "1",
   });
 });
 test.each([new Error("Cadastro negado"), "failure"])(
@@ -201,3 +202,8 @@ test("convite verifica email e reenvia código", async () => {
   fireEvent.submit(container.querySelector("form")!);
   expect(await screen.findByLabelText("Nome completo")).toBeVisible();
 });
+
+jest.mock("@/integrations/legal/api", () => ({
+  ...jest.requireActual("@/integrations/legal/api"),
+  legalApi: { current: jest.fn().mockResolvedValue(null) },
+}));
