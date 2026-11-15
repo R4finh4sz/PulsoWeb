@@ -44,7 +44,8 @@ export function Deliberation({ room }: { room: Classroom }) {
   const [reviewing, setReviewing] = useState(false);
   const roster = students.data ?? [];
   const destinations = (rooms.data ?? []).filter((destination) =>
-    destination.id !== room.id && room.schoolId != null && destination.schoolId === room.schoolId,
+    destination.id !== room.id &&
+    (room.schoolId == null || destination.schoolId == null || destination.schoolId === room.schoolId),
   );
   const approved = roster.filter((student) => results[student.id] === "APPROVED").length;
   const failed = roster.filter((student) => results[student.id] === "FAILED").length;

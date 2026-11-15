@@ -75,6 +75,22 @@ test("monta payload completo com resultados e turmas de destino", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Voltar ao painel" }));
   expect(replace).toHaveBeenCalledWith("/coordinator");
 });
+test.each(["both", "origin", "destination"])("lista destinos sem schoolId no contrato da API (%s)", async (missing) => {
+  const origin = { ...room, schoolId: missing === "destination" ? 1 : undefined };
+  const destination = { ...room, id: 2, name: "2º ano", schoolId: missing === "origin" ? 1 : undefined };
+  jest.mocked(classroomsApi.list).mockResolvedValue([origin, destination]);
+  render(<Deliberation room={origin} />, { wrapper: queryWrapper().wrapper });
+  fireEvent.click(await screen.findByRole("checkbox", { name: "Selecionar todos" }));
+  fireEvent.click(screen.getByRole("button", { name: "Reprovar" }));
+  const select = screen.getByLabelText("Turma de destino");
+  expect(await within(select).findByRole("option", { name: "2º ano · A" })).toBeVisible();
+  expect(within(select).queryByRole("option", { name: "1º ano · A" })).not.toBeInTheDocument();
+  fireEvent.change(select, { target: { value: "2" } });
+  fireEvent.click(screen.getByRole("button", { name: "Confirmar reprovação" }));
+  fireEvent.click(screen.getByRole("button", { name: "Revisar deliberação" }));
+  expect(screen.getByRole("region", { name: "Revisão da deliberação" })).toHaveTextContent("2º ano · A");
+});
+
 test("formatura exige todos aprovados e não vincula uma nova turma", async () => {
   render(<Deliberation room={room} />, { wrapper: queryWrapper().wrapper });
   fireEvent.click(await screen.findByRole("checkbox", { name: /Ana/ }));
