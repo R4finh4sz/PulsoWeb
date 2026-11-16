@@ -4,7 +4,7 @@ export type AccountDeletion = {
   id: number;
   name: string;
   email: string;
-  role: "TEACHER" | "STUDENT";
+  role: "TEACHER" | "STUDENT" | "PEDAGOGICAL_COORDINATOR";
   reason: string;
   createdAt: string;
   status: "PENDING" | "APPROVED" | "REJECTED";

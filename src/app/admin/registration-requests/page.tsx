@@ -19,9 +19,7 @@ function PageContent({
       {(user) => (
         <Workspace
           user={user}
-          title={
-            role === "coordenador" ? "Solicitações" : "Solicitações de cadastro"
-          }
+          title="Solicitações"
           description="Acompanhe e aprove solicitações pendentes da plataforma."
         >
           {role === "coordenador" ? (

@@ -641,7 +641,7 @@ function CoordinatorRegistrations() {
 
 /** Admin view: coordinator registrations plus the guardian-confirmation queue (support). */
 export function Requests() {
-  const [tab, setTab] = useState<"REGISTRATIONS" | "GUARDIAN">("REGISTRATIONS");
+  const [tab, setTab] = useState<"REGISTRATIONS" | "GUARDIAN" | "DELETION">("REGISTRATIONS");
   return (
     <div className="space-y-6">
       <nav aria-label="Tipo de solicitação" className="flex gap-2 overflow-x-auto border-b border-(--line)">
@@ -649,6 +649,7 @@ export function Requests() {
           [
             { value: "REGISTRATIONS", label: "Cadastros", icon: Users },
             { value: "GUARDIAN", label: "Responsáveis", icon: UserCheck },
+            { value: "DELETION", label: "Exclusões de conta", icon: Trash2 },
           ] as const
         ).map(({ value, label, icon: Icon }) => (
           <button
@@ -663,7 +664,13 @@ export function Requests() {
           </button>
         ))}
       </nav>
-      {tab === "GUARDIAN" ? <GuardianQueue /> : <CoordinatorRegistrations />}
+      {tab === "DELETION" ? (
+        <AccountDeletions />
+      ) : tab === "GUARDIAN" ? (
+        <GuardianQueue />
+      ) : (
+        <CoordinatorRegistrations />
+      )}
     </div>
   );
 }

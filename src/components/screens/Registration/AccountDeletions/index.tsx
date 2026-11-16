@@ -106,9 +106,10 @@ export function AccountDeletions() {
           }}
           className="min-h-12 rounded-lg border border-(--line) bg-white px-4 text-sm focus:ring-2 focus:ring-(--focus)"
         >
-          <option value="ALL">Alunos e professores</option>
+          <option value="ALL">Todos os usuários</option>
           <option value="STUDENT">Somente alunos</option>
           <option value="TEACHER">Somente professores</option>
+          <option value="PEDAGOGICAL_COORDINATOR">Somente coordenadores</option>
         </select>
       </div>
       <div className="mt-4">
@@ -158,7 +159,11 @@ export function AccountDeletions() {
                         {request.name}
                       </h3>
                       <span className="rounded-full bg-cyan-50 px-2.5 py-0.5 text-xs font-medium text-(--blue-dark)">
-                        {request.role === "TEACHER" ? "Professor" : "Aluno"}
+                        {request.role === "TEACHER"
+                          ? "Professor"
+                          : request.role === "PEDAGOGICAL_COORDINATOR"
+                            ? "Coordenador"
+                            : "Aluno"}
                       </span>
                     </div>
                     <p className="mt-0.5 break-all text-sm text-(--muted)">
