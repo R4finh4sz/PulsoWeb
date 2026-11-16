@@ -49,14 +49,21 @@ export function Protected({
   const pathname = usePathname();
   const router = useRouter();
   const user = session.data ? toSessionUser(session.data) : null;
+  const withoutSchool =
+    role === "coordenador" &&
+    !!session.data &&
+    !(session.data.schoolId ?? session.data.activeSchoolId);
+  const profileRoute = "/coordinator/profile";
   const agreement = useAgreement(
-    role === "coordenador" && user?.role === "coordenador",
+    role === "coordenador" && user?.role === "coordenador" && !!session.data && !withoutSchool,
   );
   useEffect(() => {
     if (session.isPending || session.isError) return;
     if (!user) router.replace("/");
     else if (user.role !== role) router.replace(homeRoutes[user.role]);
-  }, [session.isPending, session.isError, user, role, router]);
+    else if (withoutSchool && pathname !== profileRoute)
+      router.replace(profileRoute);
+  }, [session.isPending, session.isError, user, role, router, withoutSchool, pathname]);
   if (session.error)
     return (
       <main className="p-8">
@@ -72,6 +79,15 @@ export function Protected({
         Carregando seu espaço…
       </p>
     );
+  if (withoutSchool) {
+    if (pathname !== profileRoute)
+      return (
+        <p role="status" className="p-8">
+          Carregando seu espaço…
+        </p>
+      );
+    return children(user);
+  }
   if (
     role === "coordenador" &&
     agreement.data &&
@@ -79,16 +95,6 @@ export function Protected({
     pathname !== agreementRoute
   )
     return <AgreementRequiredModal />;
-  if (
-    role === "coordenador" &&
-    /^\/coordinator\/(students|teachers|classrooms)(\/|$)/.test(pathname) &&
-    !(session.data?.schoolId ?? session.data?.activeSchoolId)
-  )
-    return (
-      <Workspace user={user} title="Acesso indisponível">
-        <p role="alert">{schoolRequiredMessage}</p>
-      </Workspace>
-    );
   return children(user);
 }
 export function Workspace({
@@ -102,7 +108,9 @@ export function Workspace({
   description?: string;
   children: ReactNode;
 }) {
-  const agreement = useAgreement(user.role === "coordenador");
+  const me = useMe();
+  const hasSchool = !!(me.data?.schoolId ?? me.data?.activeSchoolId);
+  const agreement = useAgreement(user.role === "coordenador" && hasSchool);
   const blocked =
     user.role === "coordenador" && agreement.data?.accepted === false;
   const navigation = blocked

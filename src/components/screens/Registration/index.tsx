@@ -334,6 +334,9 @@ export function RegistrationForm({ token }: { token?: string }) {
               name="ra"
               label="Matrícula"
               required
+              autoComplete="off"
+              data-lpignore="true"
+              data-1p-ignore
               inputMode="numeric"
               pattern="[0-9]+"
               maxLength={token ? 50 : 30}
