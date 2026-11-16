@@ -34,7 +34,7 @@ export function Deliberation({ room }: { room: Classroom }) {
       setConfirming(false);
       setCompleted(true);
       await Promise.all(["classrooms", "users", "subjects", "schools", "metrics", "teacher-report", "teacher-activities"].map((key) =>
-        client.invalidateQueries({ queryKey: [key], refetchType: "none" }),
+        client.invalidateQueries({ queryKey: [key] }),
       ));
     },
     onError: (error) => { setConfirming(false); showRequestError(error); },
@@ -91,7 +91,7 @@ export function Deliberation({ room }: { room: Classroom }) {
       {students.isPending && <p role="status">Carregando alunos…</p>}
       <ErrorMessage error={students.error} />
       {students.isError && <button className={actionClass} onClick={() => students.refetch()}>Tentar novamente</button>}
-      {students.isSuccess && !roster.length && <p>Nenhum aluno vinculado à turma para deliberar.</p>}
+      {students.isSuccess && !roster.length && !completed && <p>Nenhum aluno vinculado à turma para deliberar.</p>}
       {roster.length > 0 && !completed && <>
         <div className="flex flex-wrap items-center gap-3 border-b border-(--line) pb-4">
           <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={roster.every((student) => selected.includes(student.id))} onChange={(event) => setSelected(event.target.checked ? roster.map((student) => student.id) : [])} />Selecionar todos</label>

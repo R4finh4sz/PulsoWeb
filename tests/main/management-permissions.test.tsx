@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import {
   ClassroomList,
   Details,
@@ -15,8 +15,9 @@ import { classroomsApi } from "@/integrations/classrooms/api";
 import { admin, queryWrapper, session } from "../helpers";
 
 let pathname = "/coordinator/classrooms";
+const replace = jest.fn();
 jest.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: jest.fn() }),
+  useRouter: () => ({ replace }),
   usePathname: () => pathname,
 }));
 jest.mock("@/components/screens/Dashboard/DashboardShell", () => ({
@@ -61,16 +62,23 @@ test.each([
   "/coordinator/students/new",
   "/coordinator/teachers",
   "/coordinator/teachers/new",
-])("blocks management without school at %s", async (path) => {
+])("redirects coordinator without school to profile from %s", async (path) => {
   pathname = path;
+  replace.mockClear();
   const child = jest.fn(() => <p>Private management</p>);
   render(<Protected role="coordenador">{child}</Protected>, {
     wrapper: queryWrapper().wrapper,
   });
-  expect(await screen.findByRole("alert")).toHaveTextContent(
-    schoolRequiredMessage,
-  );
+  await waitFor(() => expect(replace).toHaveBeenCalledWith("/coordinator/profile"));
+  expect(screen.queryByRole("alert")).toBeNull();
   expect(child).not.toHaveBeenCalled();
+});
+test("coordinator without school can open profile", async () => {
+  pathname = "/coordinator/profile";
+  render(<Protected role="coordenador">{() => <p>Profile page</p>}</Protected>, {
+    wrapper: queryWrapper().wrapper,
+  });
+  expect(await screen.findByText("Profile page")).toBeVisible();
 });
 test("linked coordinator keeps access", async () => {
   jest.mocked(authApi.me).mockResolvedValue({ ...coordinator, schoolId: 1 });

@@ -6,6 +6,7 @@ import { CoordinatorNotifications } from "@/components/screens/Dashboard/Coordin
 import { TeacherNotifications } from "@/components/screens/Dashboard/TeacherNotifications";
 import { DemoAccess } from "@/components/screens/Login/DemoAccess";
 import { useLogout } from "@/integrations/auth/hooks";
+import { useAuthState } from "@/integrations/auth/state";
 import type { SessionUser } from "@/interfaces/auth";
 import { homeRoutes, roleLabels } from "@/interfaces/auth";
 import {
@@ -36,6 +37,11 @@ export function TeacherShell({
   const coordinator = user.role === "coordenador";
   const admin = user.role === "admin";
   const home = homeRoutes[user.role];
+  const sessionUser = useAuthState((state) => state.session?.user);
+  const withoutSchool =
+    coordinator &&
+    !!sessionUser &&
+    !(sessionUser.schoolId ?? sessionUser.activeSchoolId);
   const links = admin
     ? [
         { label: "Início", href: home, icon: House },
@@ -74,7 +80,7 @@ export function TeacherShell({
           className={`flex w-full flex-wrap items-center gap-x-5 gap-y-4 px-[10px] py-4 ${coordinator ? "2xl:grid 2xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]" : "xl:grid xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"}`}
         >
           <Link
-            href={home}
+            href={withoutSchool ? `${home}/profile` : home}
             aria-label="Pulso Escolar — início"
             className="shrink-0 justify-self-start rounded-lg focus-visible:outline-white"
           >
@@ -96,7 +102,18 @@ export function TeacherShell({
                 ? [{ label: "Ranking", href: `${home}/ranking`, icon: Trophy }]
                 : []),
               ...links.slice(1),
-            ].map(({ label, href, icon: Icon }) => (
+            ].map(({ label, href, icon: Icon }) =>
+              withoutSchool ? (
+                <span
+                  key={href}
+                  aria-disabled="true"
+                  title="Disponível após o vínculo com uma escola"
+                  className="flex shrink-0 cursor-not-allowed items-center gap-2 rounded-lg px-3 py-3 text-sm font-medium text-[#d8e9ee] opacity-40"
+                >
+                  <Icon aria-hidden="true" size={19} />
+                  {label}
+                </span>
+              ) : (
               <Link
                 key={href}
                 href={href}
@@ -122,10 +139,11 @@ export function TeacherShell({
                 <Icon aria-hidden="true" size={19} />
                 {label}
               </Link>
-            ))}
+              ),
+            )}
           </nav>
           <div className="ml-auto flex min-w-0 max-w-full items-center justify-self-end gap-2 sm:gap-3">
-            {admin ? null : coordinator ? (
+            {admin || withoutSchool ? null : coordinator ? (
               <CoordinatorNotifications key={user.id} dark />
             ) : (
               <TeacherNotifications key={user.id} userId={user.id} dark />

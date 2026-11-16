@@ -76,7 +76,7 @@ const InvitationPage = ({
 test("coordenação separa professores e alunos, busca e aprova sem transferências", async () => {
   jest.mocked(authApi.me).mockResolvedValue({
     id: 2,
-    role: "PEDAGOGICAL_COORDINATOR",
+    role: "PEDAGOGICAL_COORDINATOR", schoolId: 1,
     fullName: "Coord",
     email: "c@b.com",
   } as Awaited<ReturnType<typeof authApi.me>>);
@@ -135,7 +135,7 @@ beforeEach(() => {
   } as Awaited<ReturnType<typeof authApi.me>>);
   jest
     .mocked(registrationApi.list)
-    .mockResolvedValue({ content: [{ ...request, role: "PEDAGOGICAL_COORDINATOR" }], totalPages: 2 });
+    .mockResolvedValue({ content: [{ ...request, role: "PEDAGOGICAL_COORDINATOR", schoolId: 1 }], totalPages: 2 });
   jest.mocked(registrationApi.photo).mockResolvedValue(new Blob(["photo"]));
   jest.mocked(registrationApi.review).mockResolvedValue(request);
   jest.mocked(schoolsApi.list).mockResolvedValue([school]);
@@ -228,7 +228,7 @@ test.each(["teachers", "coordinators"] as const)(
     if (resource === "teachers")
       jest.mocked(authApi.me).mockResolvedValue({
         id: 1,
-        role: "PEDAGOGICAL_COORDINATOR",
+        role: "PEDAGOGICAL_COORDINATOR", schoolId: 1,
         fullName: "Coord",
         email: "c@b.com",
       } as Awaited<ReturnType<typeof authApi.me>>);
@@ -280,7 +280,7 @@ test("invitation searches registered schools by CEP without external address loo
 test("erro ao convidar mantém email para tentar novamente", async () => {
   jest.mocked(authApi.me).mockResolvedValue({
     id: 1,
-    role: "PEDAGOGICAL_COORDINATOR",
+    role: "PEDAGOGICAL_COORDINATOR", schoolId: 1,
     fullName: "Coord",
     email: "c@b.com",
   } as Awaited<ReturnType<typeof authApi.me>>);
@@ -316,7 +316,7 @@ const RegistrationRequests = routeFixture<{
 );
 
 test("coordenação aceita transferência na mesma fila após escolher a turma", async () => {
-  jest.mocked(authApi.me).mockResolvedValue({ id: 2, role: "PEDAGOGICAL_COORDINATOR", fullName: "Coord", email: "c@b.com" } as Awaited<ReturnType<typeof authApi.me>>);
+  jest.mocked(authApi.me).mockResolvedValue({ id: 2, role: "PEDAGOGICAL_COORDINATOR", schoolId: 1, fullName: "Coord", email: "c@b.com" } as Awaited<ReturnType<typeof authApi.me>>);
   jest.mocked(registrationApi.list).mockResolvedValue({ content: [
     { ...request, type: "REGISTRATION", hasPhoto: false },
     { ...request, type: "TRANSFER", name: "Aluno Transferido", hasPhoto: false },
@@ -334,7 +334,7 @@ test("coordenação aceita transferência na mesma fila após escolher a turma",
 });
 
 test("coordenação pode recusar transferência sem escolher turma", async () => {
-  jest.mocked(authApi.me).mockResolvedValue({ id: 2, role: "PEDAGOGICAL_COORDINATOR", fullName: "Coord", email: "c@b.com" } as Awaited<ReturnType<typeof authApi.me>>);
+  jest.mocked(authApi.me).mockResolvedValue({ id: 2, role: "PEDAGOGICAL_COORDINATOR", schoolId: 1, fullName: "Coord", email: "c@b.com" } as Awaited<ReturnType<typeof authApi.me>>);
   jest.mocked(registrationApi.list).mockResolvedValue({ content: [{ ...request, type: "TRANSFER", hasPhoto: false }], totalPages: 1 });
   jest.mocked(classroomsApi.list).mockResolvedValue([]);
   render(<RegistrationRequests role="coordenador" />, { wrapper: queryWrapper().wrapper });
@@ -344,7 +344,7 @@ test("coordenação pode recusar transferência sem escolher turma", async () =>
 });
 
 test("filtro e fotos distinguem cadastro e transferência com o mesmo ID", async () => {
-  jest.mocked(authApi.me).mockResolvedValue({ id: 2, role: "PEDAGOGICAL_COORDINATOR", fullName: "Coord", email: "c@b.com" } as Awaited<ReturnType<typeof authApi.me>>);
+  jest.mocked(authApi.me).mockResolvedValue({ id: 2, role: "PEDAGOGICAL_COORDINATOR", schoolId: 1, fullName: "Coord", email: "c@b.com" } as Awaited<ReturnType<typeof authApi.me>>);
   jest.mocked(classroomsApi.list).mockResolvedValue([]);
   jest.mocked(registrationApi.list).mockResolvedValue({ content: [
     { ...request, type: "REGISTRATION" },
@@ -367,7 +367,7 @@ test("filtro e fotos distinguem cadastro e transferência com o mesmo ID", async
 
 test("admin exibe somente cadastros de coordenadores", async () => {
   jest.mocked(registrationApi.list).mockResolvedValue({ content: [
-    { ...request, role: "PEDAGOGICAL_COORDINATOR", type: "REGISTRATION", name: "Coordenador novo", hasPhoto: false },
+    { ...request, role: "PEDAGOGICAL_COORDINATOR", schoolId: 1, type: "REGISTRATION", name: "Coordenador novo", hasPhoto: false },
     { ...request, type: "TRANSFER", name: "Transferência de aluno" },
     { ...request, type: "REGISTRATION", name: "Cadastro de aluno" },
   ], totalPages: 1 });
