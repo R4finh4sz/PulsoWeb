@@ -54,6 +54,13 @@ export function Protected({
     !!session.data &&
     !(session.data.schoolId ?? session.data.activeSchoolId);
   const profileRoute = "/coordinator/profile";
+  // Pages a coordinator without a school can still open (legal docs, help).
+  const allowedWithoutSchool = [
+    profileRoute,
+    "/coordinator/terms",
+    "/coordinator/privacy",
+    "/coordinator/faq",
+  ].includes(pathname);
   const agreement = useAgreement(
     role === "coordenador" && user?.role === "coordenador" && !!session.data && !withoutSchool,
   );
@@ -61,9 +68,9 @@ export function Protected({
     if (session.isPending || session.isError) return;
     if (!user) router.replace("/");
     else if (user.role !== role) router.replace(homeRoutes[user.role]);
-    else if (withoutSchool && pathname !== profileRoute)
+    else if (withoutSchool && !allowedWithoutSchool)
       router.replace(profileRoute);
-  }, [session.isPending, session.isError, user, role, router, withoutSchool, pathname]);
+  }, [session.isPending, session.isError, user, role, router, withoutSchool, allowedWithoutSchool]);
   if (session.error)
     return (
       <main className="p-8">
@@ -80,7 +87,7 @@ export function Protected({
       </p>
     );
   if (withoutSchool) {
-    if (pathname !== profileRoute)
+    if (!allowedWithoutSchool)
       return (
         <p role="status" className="p-8">
           Carregando seu espaço…
