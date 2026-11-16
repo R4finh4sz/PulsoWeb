@@ -58,7 +58,7 @@ export function DashboardShell({
       : [...navigation];
   if (user.role === "admin" || user.role === "coordenador")
     sidebarNavigation.push({
-      label: "Solicitações de cadastro",
+      label: "Solicitações",
       href: `${home}/registration-requests`,
       icon: "users",
     });

@@ -35,8 +35,8 @@ const shortcuts: {
     icon: "chart",
   },
   {
-    title: "Solicitações de cadastro",
-    description: "Analise os pedidos de acesso à plataforma.",
+    title: "Solicitações",
+    description: "Analise os pedidos de acesso e de exclusão de conta.",
     href: "/admin/registration-requests",
     icon: "check",
   },
