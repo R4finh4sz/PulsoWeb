@@ -69,6 +69,25 @@ export function Profile({ user }: { user: SessionUser }) {
     queryKey: ["teacher-profile", user.id],
     queryFn: ({ signal }) => profileApi.get(signal),
   });
+  const noticeKey = `school-removed-notice:${user.id}`;
+  const [noticeDismissed, setNoticeDismissed] = useState(() => {
+    try {
+      return sessionStorage.getItem(noticeKey) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const showSchoolRemovedNotice =
+    user.role === "coordenador" &&
+    !!profile.data &&
+    profile.data.schools.length === 0 &&
+    !noticeDismissed;
+  function dismissNotice() {
+    setNoticeDismissed(true);
+    try {
+      sessionStorage.setItem(noticeKey, "1");
+    } catch {}
+  }
   const [active, setActive] = useState<"password" | "deletion">("password");
   const dialog = useRef<HTMLDialogElement>(null);
   const [deletionPassword, setDeletionPassword] = useState("");
@@ -356,6 +375,30 @@ export function Profile({ user }: { user: SessionUser }) {
           <ErrorMessage error={download.error} />
         </section>
       </div>
+      {showSchoolRemovedNotice && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-5"
+          role="presentation"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="school-removed-title"
+            className="max-h-[90dvh] w-full max-w-[528px] overflow-y-auto"
+          >
+            <FeedbackModalContent
+              type="invitation"
+              icon={GraduationCap}
+              titleId="school-removed-title"
+              title="Você foi removido da escola"
+              message="Você não está mais vinculado à sua escola anterior. Por isso, algumas informações do sistema não estão disponíveis. Você ainda pode consultar os Termos de uso, a Política de privacidade e solicitar a exclusão da conta."
+              actionLabel="Entendi"
+              autoFocusAction
+              onClose={dismissNotice}
+            />
+          </div>
+        </div>
+      )}
       <dialog
         ref={dialog}
         aria-labelledby="profile-dialog-title"
