@@ -80,6 +80,13 @@ beforeEach(() => {
 });
 afterEach(() => useAuthState.getState().setSession(null));
 
+// O aviso "sem escola" também usa role="dialog"; aqui queremos só o <dialog> do perfil.
+function profileDialog() {
+  return screen
+    .getAllByRole("dialog")
+    .find((element) => element.tagName === "DIALOG") as HTMLElement;
+}
+
 async function openDeletion() {
   const view = render(<TeacherProfileScreen />, {
     wrapper: queryWrapper().wrapper,
@@ -97,7 +104,7 @@ test("alternar os formulários não reutiliza campos nem muda o modo de controle
     render(<TeacherProfileScreen />, { wrapper: queryWrapper().wrapper });
     await screen.findByText("Nenhuma escola vinculada");
     fireEvent.click(screen.getByRole("button", { name: "Alterar senha" }));
-    const passwordField = within(screen.getByRole("dialog")).getByLabelText(
+    const passwordField = within(profileDialog()).getByLabelText(
       "Senha atual",
     );
     fireEvent.change(passwordField, { target: { value: "SenhaDaTroca123" } });
@@ -105,7 +112,7 @@ test("alternar os formulários não reutiliza campos nem muda o modo de controle
     fireEvent.click(
       screen.getByRole("button", { name: "Solicitar exclusão de conta" }),
     );
-    const deletionField = within(screen.getByRole("dialog")).getByLabelText(
+    const deletionField = within(profileDialog()).getByLabelText(
       "Senha atual",
     );
     expect(deletionField).not.toBe(passwordField);
@@ -116,10 +123,10 @@ test("alternar os formulários não reutiliza campos nem muda o modo de controle
     fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
     fireEvent.click(screen.getByRole("button", { name: "Alterar senha" }));
     expect(
-      within(screen.getByRole("dialog")).getByLabelText("Senha atual"),
+      within(profileDialog()).getByLabelText("Senha atual"),
     ).not.toBe(deletionField);
     expect(
-      within(screen.getByRole("dialog")).getByLabelText("Senha atual"),
+      within(profileDialog()).getByLabelText("Senha atual"),
     ).toHaveValue("");
     expect(errors).not.toHaveBeenCalled();
   } finally {
@@ -129,7 +136,7 @@ test("alternar os formulários não reutiliza campos nem muda o modo de controle
 
 test("exclusão exige senha e motivo e envia os dados preenchidos", async () => {
   await openDeletion();
-  const password = within(screen.getByRole("dialog")).getByLabelText(
+  const password = within(profileDialog()).getByLabelText(
     "Senha atual",
   );
   const reason = screen.getByLabelText("Motivo da exclusão");
@@ -163,7 +170,7 @@ test("senha incorreta mantém o formulário aberto e permite tentar novamente", 
     .mockRejectedValueOnce(new Error("A senha atual está incorreta."));
   await openDeletion();
   fireEvent.change(
-    within(screen.getByRole("dialog")).getByLabelText("Senha atual"),
+    within(profileDialog()).getByLabelText("Senha atual"),
     { target: { value: "errada" } },
   );
   fireEvent.change(screen.getByLabelText("Motivo da exclusão"), {
@@ -177,7 +184,7 @@ test("senha incorreta mantém o formulário aberto e permite tentar novamente", 
     "Não utilizo mais.",
   );
   fireEvent.change(
-    within(screen.getByRole("dialog")).getByLabelText("Senha atual"),
+    within(profileDialog()).getByLabelText("Senha atual"),
     { target: { value: "Pulso123" } },
   );
   fireEvent.click(screen.getByRole("button", { name: "Solicitar exclusão" }));
@@ -189,7 +196,7 @@ test("senha incorreta mantém o formulário aberto e permite tentar novamente", 
 test("cancelar não envia solicitação e limpa os campos ao reabrir", async () => {
   await openDeletion();
   fireEvent.change(
-    within(screen.getByRole("dialog")).getByLabelText("Senha atual"),
+    within(profileDialog()).getByLabelText("Senha atual"),
     { target: { value: "Pulso123" } },
   );
   fireEvent.change(screen.getByLabelText("Motivo da exclusão"), {
@@ -201,7 +208,7 @@ test("cancelar não envia solicitação e limpa os campos ao reabrir", async () 
     screen.getByRole("button", { name: "Solicitar exclusão de conta" }),
   );
   expect(
-    within(screen.getByRole("dialog")).getByLabelText("Senha atual"),
+    within(profileDialog()).getByLabelText("Senha atual"),
   ).toHaveValue("");
   expect(screen.getByLabelText("Motivo da exclusão")).toHaveValue("");
 });
@@ -212,7 +219,7 @@ async function openPassword() {
   await screen.findByText("Nenhuma escola vinculada");
   fireEvent.click(screen.getByRole("button", { name: "Alterar senha" }));
   fireEvent.change(
-    within(screen.getByRole("dialog")).getByLabelText("Senha atual"),
+    within(profileDialog()).getByLabelText("Senha atual"),
     { target: { value: "Pulso123" } },
   );
   fireEvent.change(screen.getByLabelText("Nova senha"), {
@@ -285,7 +292,7 @@ test("professor com sessão real carrega perfil e altera dois fatores", async ()
     screen.getByRole("switch", { name: "Autenticação de 2 fatores" }),
   );
   fireEvent.change(
-    within(screen.getByRole("dialog")).getByLabelText("Senha atual"),
+    within(profileDialog()).getByLabelText("Senha atual"),
     { target: { value: "Senha123" } },
   );
   fireEvent.click(screen.getByRole("button", { name: "Concluir" }));
