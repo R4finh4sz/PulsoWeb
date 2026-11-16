@@ -69,25 +69,14 @@ export function Profile({ user }: { user: SessionUser }) {
     queryKey: ["teacher-profile", user.id],
     queryFn: ({ signal }) => profileApi.get(signal),
   });
-  const noticeKey = `school-removed-notice:${user.id}`;
-  const [noticeDismissed, setNoticeDismissed] = useState(() => {
-    try {
-      return sessionStorage.getItem(noticeKey) === "1";
-    } catch {
-      return false;
-    }
-  });
-  const showSchoolRemovedNotice =
-    user.role === "coordenador" &&
-    !!profile.data &&
-    profile.data.schools.length === 0 &&
-    !noticeDismissed;
+  const withoutSchool =
+    !admin && !!profile.data && profile.data.schools.length === 0;
+  const [noticeDismissed, setNoticeDismissed] = useState(false);
+  const showSchoolRemovedNotice = withoutSchool && !noticeDismissed;
   function dismissNotice() {
     setNoticeDismissed(true);
-    try {
-      sessionStorage.setItem(noticeKey, "1");
-    } catch {}
   }
+  const unavailableClass = "pointer-events-none cursor-not-allowed opacity-40";
   const [active, setActive] = useState<"password" | "deletion">("password");
   const dialog = useRef<HTMLDialogElement>(null);
   const [deletionPassword, setDeletionPassword] = useState("");
@@ -97,7 +86,6 @@ export function Profile({ user }: { user: SessionUser }) {
   const password = useMutation({
     mutationFn: profileApi.changePassword,
     onSuccess: async () => {
-      // useLogout clears the local session and cache even if the request fails.
       await logout.mutateAsync().catch(() => undefined);
       router.replace("/");
     },
@@ -301,7 +289,12 @@ export function Profile({ user }: { user: SessionUser }) {
         <section aria-label="Conta" className="space-y-4">
           <h2 className="text-lg font-semibold">Conta</h2>
           <TwoFactorSettings />
-          <Link href={`${homeRoutes[user.role]}/faq`} className={optionClass}>
+          <Link
+            href={`${homeRoutes[user.role]}/faq`}
+            aria-disabled={withoutSchool || undefined}
+            tabIndex={withoutSchool ? -1 : undefined}
+            className={`${optionClass} ${withoutSchool ? unavailableClass : ""}`}
+          >
             <CircleHelp size={21} aria-hidden="true" />
             FAQ - Perguntas frequentes
             <ArrowRight size={18} className="ml-auto" aria-hidden="true" />
@@ -317,9 +310,9 @@ export function Profile({ user }: { user: SessionUser }) {
           </button>
           <button
             type="button"
-            disabled={download.isPending}
+            disabled={download.isPending || withoutSchool}
             onClick={() => download.mutate()}
-            className={optionClass}
+            className={`${optionClass} ${withoutSchool ? "opacity-40" : ""}`}
           >
             <Download size={21} aria-hidden="true" />
             {download.isPending ? "Exportando…" : "Exportação de dados"}
@@ -338,18 +331,30 @@ export function Profile({ user }: { user: SessionUser }) {
             </Link>
           ) : (
             <>
-            {user.role === "coordenador" && (
-              <Link href="/coordinator/data-agreement" className={optionClass}>
+              {user.role === "coordenador" && (
+                <Link
+                  href="/coordinator/data-agreement"
+                  aria-disabled={withoutSchool || undefined}
+                  tabIndex={withoutSchool ? -1 : undefined}
+                  className={`${optionClass} ${withoutSchool ? unavailableClass : ""}`}
+                >
+                  <FileText size={21} aria-hidden="true" />
+                  Termo de adesão institucional e tratamento de dados
+                  <ArrowRight
+                    size={18}
+                    className="ml-auto"
+                    aria-hidden="true"
+                  />
+                </Link>
+              )}
+              <Link
+                href={`${homeRoutes[user.role]}/privacy`}
+                className={optionClass}
+              >
                 <FileText size={21} aria-hidden="true" />
-                Termo de adesão institucional e tratamento de dados
+                Política de privacidade
                 <ArrowRight size={18} className="ml-auto" aria-hidden="true" />
               </Link>
-            )}
-            <Link href={`${homeRoutes[user.role]}/privacy`} className={optionClass}>
-              <FileText size={21} aria-hidden="true" />
-              Política de privacidade
-              <ArrowRight size={18} className="ml-auto" aria-hidden="true" />
-            </Link>
             </>
           )}
           {!admin && (
@@ -390,8 +395,8 @@ export function Profile({ user }: { user: SessionUser }) {
               type="invitation"
               icon={GraduationCap}
               titleId="school-removed-title"
-              title="Você foi removido da escola"
-              message="Você não está mais vinculado à sua escola anterior. Por isso, algumas informações do sistema não estão disponíveis. Você ainda pode consultar os Termos de uso, a Política de privacidade e solicitar a exclusão da conta."
+              title="Você não está vinculado a uma escola"
+              message="Você não está vinculado a nenhuma escola no momento. Por isso, algumas informações do sistema não estão disponíveis."
               actionLabel="Entendi"
               autoFocusAction
               onClose={dismissNotice}
@@ -583,7 +588,10 @@ export function Profile({ user }: { user: SessionUser }) {
                 onChange={(event) => setConfirmation(event.target.value)}
                 aria-describedby="password-requirements"
               />
-              <PasswordRequirements password={newPassword} confirmation={confirmation} />
+              <PasswordRequirements
+                password={newPassword}
+                confirmation={confirmation}
+              />
             </fieldset>
             <ErrorMessage error={password.error} />
             <div className="grid grid-cols-2 gap-3">
