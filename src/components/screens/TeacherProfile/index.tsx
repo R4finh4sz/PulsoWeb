@@ -310,9 +310,9 @@ export function Profile({ user }: { user: SessionUser }) {
           </button>
           <button
             type="button"
-            disabled={download.isPending || withoutSchool}
+            disabled={download.isPending}
             onClick={() => download.mutate()}
-            className={`${optionClass} ${withoutSchool ? "opacity-40" : ""}`}
+            className={optionClass}
           >
             <Download size={21} aria-hidden="true" />
             {download.isPending ? "Exportando…" : "Exportação de dados"}
