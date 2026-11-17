@@ -19,7 +19,8 @@ export function Deliberation({ room }: { room: Classroom }) {
     queryKey: ["classrooms", room.id, "students"],
     queryFn: ({ signal }) => classroomsApi.students(room.id, signal),
   });
-  const rooms = useQuery({ queryKey: ["classrooms"], queryFn: ({ signal }) => classroomsApi.list(signal) });
+  const approvedRooms = useQuery({ queryKey: ["classroom-deliberations", room.id, "destinations", "APPROVED"], queryFn: ({ signal }) => classroomsApi.destinations(room.id, "APPROVED", signal) });
+  const failedRooms = useQuery({ queryKey: ["classroom-deliberations", room.id, "destinations", "FAILED"], queryFn: ({ signal }) => classroomsApi.destinations(room.id, "FAILED", signal) });
   const [selected, setSelected] = useState<number[]>([]);
   const destinationDialog = useRef<HTMLDialogElement>(null);
   const [results, setResults] = useState<Record<number, Result>>({});
@@ -43,17 +44,19 @@ export function Deliberation({ room }: { room: Classroom }) {
   const [graduating, setGraduating] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const roster = students.data ?? [];
-  const destinations = (rooms.data ?? []).filter((destination) =>
-    destination.id !== room.id &&
-    (room.schoolId == null || destination.schoolId == null || destination.schoolId === room.schoolId),
-  );
+  const approvedDestinations = approvedRooms.data ?? [];
+  const failedDestinations = failedRooms.data ?? [];
+  const rooms = batchResult === "APPROVED" ? approvedRooms : failedRooms;
+  const destinations = batchResult === "APPROVED" ? approvedDestinations : failedDestinations;
+  const allDestinations = [...approvedDestinations, ...failedDestinations];
   const approved = roster.filter((student) => results[student.id] === "APPROVED").length;
   const failed = roster.filter((student) => results[student.id] === "FAILED").length;
   const pending = roster.length - approved - failed;
-  const validDestination = (id: string) => destinations.some((destination) => String(destination.id) === id);
+  const validDestination = (id: string, result: Result = batchResult) =>
+    (result === "APPROVED" ? approvedDestinations : failedDestinations).some((destination) => String(destination.id) === id);
   const ready = students.isSuccess && roster.length > 0 && pending === 0 && (
-    graduating ? failed === 0 : rooms.isSuccess &&
-      roster.every((student) => validDestination(String(studentDestinations[student.id])))
+    graduating ? failed === 0 : approvedRooms.isSuccess && failedRooms.isSuccess &&
+      roster.every((student) => validDestination(String(studentDestinations[student.id]), results[student.id]))
   );
   const payload: ClassroomDeliberation = {
     classroomId: room.id,
@@ -123,11 +126,11 @@ export function Deliberation({ room }: { room: Classroom }) {
           {batchResult === "APPROVED" && !canGraduate && <p className="text-xs text-(--muted)">Para finalizar a turma por formatura, selecione todos os alunos para aprovação.</p>}
         </fieldset>
         {mode === "GRADUATE" ? <p className="text-sm leading-6">A turma será encerrada porque todos os alunos se formaram, sem vínculo com uma nova turma. Todos devem estar aprovados. Os cadastros dos alunos serão mantidos.</p> : <div className="space-y-4">
-          <p className="text-sm text-(--muted)">Escolha turmas da mesma escola. Aprovados seguem para a próxima etapa; reprovados precisam de uma turma para cursar novamente.</p>
+          <p className="text-sm text-(--muted)">{batchResult === "APPROVED" ? "Aprovados seguem para a turma da etapa seguinte." : "Reprovados permanecem na mesma etapa, em uma turma para cursar novamente."}</p>
           {rooms.isPending && <p role="status">Carregando turmas…</p>}
           <ErrorMessage error={rooms.error} />
           {rooms.isError && <button className={actionClass} onClick={() => rooms.refetch()}>Tentar carregar turmas novamente</button>}
-          {rooms.isSuccess && !destinations.length && <p className="text-sm">Nenhuma outra turma da mesma escola disponível para encaminhamento.</p>}
+          {rooms.isSuccess && !destinations.length && <p className="text-sm">{batchResult === "APPROVED" ? "Não há turma de destino para aprovados desta turma. Se for a última etapa, o caminho é a formatura." : "Nenhuma turma disponível para os reprovados."}</p>}
           <label className="block text-sm">Turma de destino<select className={fieldClass} value={targetRoom} disabled={!rooms.isSuccess} onChange={(event) => setTargetRoom(event.target.value)}><option value="">Selecione uma turma</option>{destinations.map((destination) => <option key={destination.id} value={destination.id}>{classroomLabel(destination)}</option>)}</select></label>
         </div>}
         <button type="button" className={actionClass} disabled={!canApply} onClick={apply}>Confirmar {batchResult === "APPROVED" ? "aprovação" : "reprovação"}</button>
@@ -137,7 +140,7 @@ export function Deliberation({ room }: { room: Classroom }) {
         {reviewing && ready && <section aria-label="Revisão da deliberação" className="space-y-4 border-t border-(--line) pt-5">
           <h3 className="font-semibold">Confira os resultados antes de confirmar</h3>
           <p className="text-sm">{roster.length} alunos · {graduating ? "Finalização por formatura" : "Encaminhamento para outras turmas"}. Todos os resultados serão aplicados em uma única operação.</p>
-          <ul className="divide-y divide-(--line)">{roster.map((student) => <li key={student.id} className="py-2 text-sm">{student.fullName} · {results[student.id] === "APPROVED" ? "Aprovado" : "Reprovado"} · {graduating ? "Formatura" : classroomLabel(destinations.find((destination) => destination.id === studentDestinations[student.id]))}</li>)}</ul>
+          <ul className="divide-y divide-(--line)">{roster.map((student) => <li key={student.id} className="py-2 text-sm">{student.fullName} · {results[student.id] === "APPROVED" ? "Aprovado" : "Reprovado"} · {graduating ? "Formatura" : classroomLabel(allDestinations.find((destination) => destination.id === studentDestinations[student.id]))}</li>)}</ul>
           <button type="button" className={actionClass} disabled={submit.isPending} onClick={() => { destinationDialog.current?.close(); setConfirming(true); }}>Enviar deliberação</button>
         </section>}
       </>}
