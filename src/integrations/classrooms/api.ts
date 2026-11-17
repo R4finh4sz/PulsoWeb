@@ -14,6 +14,8 @@ export type ClassroomDeliberationResponse = ClassroomDeliberation & {
 export const classroomsApi = {
   deliberate: (body: ClassroomDeliberation) =>
     apiRequest<ClassroomDeliberationResponse>("/classroom-deliberations", { method: "POST", body }),
+  destinations: (classroomId: number, result: "APPROVED" | "FAILED", signal?: AbortSignal) =>
+    apiRequest<Classroom[]>(`/classroom-deliberations/destinations?classroomId=${classroomId}&result=${result}`, { signal }),
   teacherList: (signal?: AbortSignal) =>
     apiRequest<Classroom[]>("/teacher/classrooms", { signal }),
   remove: (id: number) => apiRequest<void>(path(id), { method: "DELETE" }),

@@ -4,21 +4,19 @@ import { ClassroomForm } from "@/components/screens/Integration/Classrooms";
 import { classroomsApi } from "@/integrations/classrooms/api";
 import { queryWrapper } from "../helpers";
 
-jest.mock("@/integrations/classrooms/api", () => ({ classroomsApi: { students: jest.fn(), list: jest.fn(), update: jest.fn(), deliberate: jest.fn().mockImplementation(async (body) => body) } }));
+jest.mock("@/integrations/classrooms/api", () => ({ classroomsApi: { students: jest.fn(), list: jest.fn(), destinations: jest.fn(), update: jest.fn(), deliberate: jest.fn().mockImplementation(async (body) => body) } }));
 jest.mock("@/store/feedbackStore", () => ({ ...jest.requireActual("@/store/feedbackStore"), showRequestError: jest.fn() }));
 const replace = jest.fn();
 jest.mock("next/navigation", () => ({ useRouter: () => ({ replace }) }));
 const room = { id: 1, name: "1º ano", identifier: "A", schoolId: 1, teacherIds: [] };
+const mockDestinations = (approved: unknown[], failed: unknown[]) =>
+  jest.mocked(classroomsApi.destinations).mockImplementation(async (_id, result) => (result === "APPROVED" ? approved : failed) as never);
 beforeEach(() => {
   jest.mocked(classroomsApi.students).mockResolvedValue([
     { id: 10, fullName: "Ana", role: "STUDENT", classroomId: 1, ra: "010", email: "ana@exemplo.com" },
     { id: 11, fullName: "Bruno", role: "STUDENT", classroomId: 1, ra: "011", email: "bruno@exemplo.com" },
   ]);
-  jest.mocked(classroomsApi.list).mockResolvedValue([
-    room,
-    { ...room, id: 2, name: "2º ano" },
-    { ...room, id: 3, schoolId: 2, name: "Outra escola" },
-  ]);
+  mockDestinations([{ ...room, id: 2, name: "2º ano" }], [room, { ...room, id: 2, name: "2º ano" }]);
 });
 test("falha no envio preserva a revisão para tentar novamente", async () => {
   jest.mocked(classroomsApi.deliberate).mockRejectedValueOnce(new Error("A turma foi alterada."));
@@ -49,14 +47,14 @@ test("monta payload completo com resultados e turmas de destino", async () => {
   expect(screen.getByRole("button", { name: "Confirmar aprovação" })).toBeDisabled();
   expect(screen.getByRole("radio", { name: "Finalizar a turma por formatura" })).toBeDisabled();
   const approved = screen.getByLabelText("Turma de destino");
-  expect(within(approved).queryByRole("option", { name: /Outra escola/ })).not.toBeInTheDocument();
-  expect(within(approved).queryByRole("option", { name: /1º ano/ })).not.toBeInTheDocument();
+  expect(within(approved).queryByRole("option", { name: /1º ano · A/ })).not.toBeInTheDocument();
   fireEvent.change(approved, { target: { value: "2" } });
   fireEvent.click(screen.getByRole("button", { name: "Confirmar aprovação" }));
   expect(screen.queryByRole("button", { name: "Definir destino da deliberação" })).not.toBeInTheDocument();
   expect(screen.queryByText(/aprovados ·/)).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("checkbox", { name: /Bruno/ }));
   fireEvent.click(screen.getByRole("button", { name: "Reprovar" }));
+  expect(within(screen.getByLabelText("Turma de destino")).getByRole("option", { name: "1º ano · A" })).toBeVisible();
   fireEvent.change(screen.getByLabelText("Turma de destino"), { target: { value: "2" } });
   fireEvent.click(screen.getByRole("button", { name: "Confirmar reprovação" }));
   fireEvent.click(screen.getByRole("button", { name: "Revisar deliberação" }));
@@ -78,7 +76,7 @@ test("monta payload completo com resultados e turmas de destino", async () => {
 test.each(["both", "origin", "destination"])("lista destinos sem schoolId no contrato da API (%s)", async (missing) => {
   const origin = { ...room, schoolId: missing === "destination" ? 1 : undefined };
   const destination = { ...room, id: 2, name: "2º ano", schoolId: missing === "origin" ? 1 : undefined };
-  jest.mocked(classroomsApi.list).mockResolvedValue([origin, destination]);
+  mockDestinations([destination], [destination]);
   render(<Deliberation room={origin} />, { wrapper: queryWrapper().wrapper });
   fireEvent.click(await screen.findByRole("checkbox", { name: "Selecionar todos" }));
   fireEvent.click(screen.getByRole("button", { name: "Reprovar" }));

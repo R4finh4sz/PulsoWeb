@@ -441,6 +441,11 @@ test("new password validation prevents invalid requests", async () => {
   expect(request).not.toHaveBeenCalled();
 });
 
+ test("destinos da deliberação consultam o endpoint por resultado", async () => {
+ await classroomsApi.destinations(1, "FAILED");
+ expect(request).toHaveBeenCalledWith("/classroom-deliberations/destinations?classroomId=1&result=FAILED", { signal: undefined });
+});
+
  test("delibera??o envia o contrato completo para a rota do backend", async () => {
  const body = { classroomId: 1, action: "GRADUATE" as const, students: [{ studentId: 10, result: "APPROVED" as const, destinationClassroomId: null }] };
  await classroomsApi.deliberate(body);
