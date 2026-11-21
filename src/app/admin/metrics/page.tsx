@@ -9,7 +9,10 @@ import {
 import { BackLink } from "@/components/ui/BackLink";
 import { metricsApi } from "@/integrations/metrics/api";
 import { useQuery } from "@tanstack/react-query";
+import { ChevronDown } from "lucide-react";
+import { useState } from "react";
 import { HistoryDoughnuts, MetricsCharts } from "./Charts";
+import { UsageMetrics } from "./UsageMetrics";
 import "./metrics.scss";
 
 const format = (value: number | null) =>
@@ -21,7 +24,40 @@ const memory = (value: number | null) =>
 const time = (timestamp: string) =>
   new Date(timestamp).toLocaleTimeString("pt-BR");
 
+const views = [
+  { id: "system", label: "Sistema" },
+  { id: "leads", label: "Leads" },
+] as const;
+
 function AdminMetrics() {
+  const [view, setView] = useState<(typeof views)[number]["id"]>("system");
+  const [month, setMonth] = useState("");
+
+  return (
+    <section
+      aria-label="Indicadores da plataforma"
+      className="adminMetrics space-y-5"
+    >
+      <BackLink />
+      <div role="group" aria-label="Tipo de métrica" className="flex flex-wrap gap-2">
+        {views.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={view === id}
+            onClick={() => setView(id)}
+            className={`min-h-11 rounded-lg border px-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-cyan-700 ${view === id ? "border-cyan-700 bg-cyan-50 text-cyan-900" : "border-(--line) hover:bg-slate-50"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {view === "system" ? <SystemMetrics /> : <UsageMetrics month={month} onMonthChange={setMonth} />}
+    </section>
+  );
+}
+
+function SystemMetrics() {
   const query = useQuery({
     queryKey: ["admin-metrics"],
     queryFn: ({ signal }) => metricsApi.admin(signal),
@@ -30,11 +66,7 @@ function AdminMetrics() {
   const current = query.data?.current;
 
   return (
-    <section
-      aria-label="Indicadores da plataforma"
-      className="adminMetrics space-y-5"
-    >
-      <BackLink />
+    <section aria-label="Métricas do sistema" className="space-y-5">
       {query.isPending && <p role="status">Carregando indicadores…</p>}
       <ErrorMessage error={query.error} />
       {query.isError && (
@@ -174,8 +206,12 @@ function AdminMetrics() {
                 As amostras são mantidas em memória e reiniciam com o servidor.
               </p>
               <HistoryDoughnuts history={query.data?.history ?? []} />
-              <details className="mt-6 border-t border-(--line) pt-4">
-                <summary className="cursor-pointer text-sm font-medium text-(--blue-dark)">
+              <details className="group mt-6 border-t border-(--line) pt-4">
+                <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-(--blue-dark) [&::-webkit-details-marker]:hidden">
+                  <ChevronDown
+                    aria-hidden="true"
+                    className="h-4 w-4 shrink-0 -rotate-90 group-open:rotate-0"
+                  />
                   Ver amostras
                 </summary>
                 <div
@@ -184,7 +220,7 @@ function AdminMetrics() {
                   role="region"
                   aria-label="Histórico de métricas"
                 >
-                  <table className="table table-hover mb-0 whitespace-nowrap text-sm tabular-nums">
+                  <table className="table table-hover mb-0 whitespace-nowrap text-center text-sm tabular-nums">
                     <caption className="sr-only">
                       Histórico de requisições, erros, latência e CPU, do mais
                       recente ao mais antigo
@@ -239,7 +275,7 @@ export default function Page() {
         <Workspace
           user={user}
           title="Métricas"
-          description="Acompanhe o desempenho e os recursos do servidor."
+          description="Acompanhe os cadastros, as solicitações de acesso e o desempenho do servidor."
         >
           <AdminMetrics />
         </Workspace>

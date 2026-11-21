@@ -9,24 +9,32 @@ export function mockRankingTotals(
   users: User[],
   startsAt: number,
   endsAt: number,
+  demoPeriod?: number,
 ) {
   const totals = new Map<
     number,
-    { correctAnswers: number; completedActivities: number }
+    { correctAnswers: number; completedActivities: number; totalQuestions: number; totalScore: number }
   >();
   for (const quiz of quizzes) {
     for (const result of mockQuizStudents(quiz, users)) {
       const submittedAt = result.submittedAt
         ? Date.parse(result.submittedAt)
         : NaN;
-      if (!result.score || !(submittedAt >= startsAt && submittedAt < endsAt))
+      const inPeriod = submittedAt >= startsAt && submittedAt < endsAt;
+      const demoSubmission = demoPeriod !== undefined && seededQuizIds.has(quiz.id)
+        && (result.studentId + quiz.id + demoPeriod) % 5 !== 0;
+      if (!result.score || (!inPeriod && !demoSubmission))
         continue;
       const total = totals.get(result.studentId) ?? {
         correctAnswers: 0,
         completedActivities: 0,
+        totalQuestions: 0,
+        totalScore: 0,
       };
       total.correctAnswers += result.score.correct;
       total.completedActivities += 1;
+      total.totalQuestions += result.score.total;
+      total.totalScore += result.score.grade;
       totals.set(result.studentId, total);
     }
   }

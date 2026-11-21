@@ -1,6 +1,8 @@
 import { classroomLabel } from "@/utils/classroomLabel";
 import { buildClassroomReports, reportMetrics } from "@/utils/teacherReports";
 import type { Faq } from "@/integrations/faqs/api";
+import type { TechnicalSample } from "@/integrations/metrics/api";
+import type { StudentRanking } from "@/integrations/ranking/students";
 import type { AccountDeletion } from "@/integrations/profile/deletions";
 import type { Registration } from "@/integrations/registration/api";
 import type { School, SchoolInvitation } from "@/integrations/schools/api";
@@ -358,8 +360,59 @@ export function mockRequest(
       throw new Error(
         "Métricas técnicas disponíveis apenas para administradores.",
       );
-    // shortcut: demo does not run a backend, keep technical samples empty until real telemetry is available.
-    return { current: null, history: [] };
+    const intervalSeconds = 15;
+    const sampleCount = 240;
+    const latest = Math.floor(Date.now() / (intervalSeconds * 1000));
+    const history = Array.from({ length: sampleCount }, (_, index): TechnicalSample => {
+      const sample = latest - sampleCount + 1 + index;
+      const load = (1 + Math.sin(sample / 12)) / 2;
+      const requestsPerSecond = 12 + Math.round(24 * load);
+      const errorsPerSecond = sample % 29 < 3 ? 0.5 : 0;
+      const databaseActiveConnections = 1 + Math.round(4 * load);
+      return {
+        timestamp: new Date(sample * intervalSeconds * 1000).toISOString(),
+        uptimeSeconds: 86400 + index * intervalSeconds,
+        intervalSeconds,
+        requestsPerSecond,
+        http5xxPercent: (errorsPerSecond / requestsPerSecond) * 100,
+        averageResponseMs: 42 + Math.round(60 * load),
+        requestsPerSecondByStatus: {
+          "200": requestsPerSecond - 1.5 - errorsPerSecond,
+          "201": 1,
+          "404": 0.5,
+          "500": errorsPerSecond,
+        },
+        processCpuPercent: 8 + Math.round(30 * load),
+        heapUsedBytes: (180 + Math.round(75 * load)) * 1024 ** 2,
+        heapCommittedBytes: 512 * 1024 ** 2,
+        liveThreads: 24 + Math.round(8 * load),
+        databaseActiveConnections,
+        databaseIdleConnections: 10 - databaseActiveConnections,
+      };
+    });
+    return { current: history[sampleCount - 1], history };
+  }
+  if (path === "/admin/metrics/usage" && method === "GET") {
+    if (current.role !== "ADMIN")
+      throw new Error("Métricas de uso disponíveis apenas para administradores.");
+    const month = url.searchParams.get("month");
+    // shortcut: demo fixtures are undated, add dates when the demo needs monthly history.
+    const usersByRole = { STUDENT: 0, TEACHER: 0, PEDAGOGICAL_COORDINATOR: 0, ADMIN: 0 };
+    const requestsByState = new Map<string | null, number>();
+    if (month === null) {
+      for (const user of users) usersByRole[user.role]++;
+      for (const request of registrations) {
+        const state = schools.find((school) => school.nome === request.schoolName)?.uf ?? null;
+        requestsByState.set(state, (requestsByState.get(state) ?? 0) + 1);
+      }
+    }
+    return {
+      month,
+      totalUsers: month === null ? users.length : 0,
+      usersByRole,
+      demandByState: Array.from(requestsByState, ([state, requests]) => ({ state, requests }))
+        .sort((a, b) => b.requests - a.requests),
+    };
   }
   if (url.pathname === "/schools/me/metrics/growth" && method === "GET") {
     const year = Number(url.searchParams.get("year"));
@@ -420,8 +473,53 @@ export function mockRequest(
     };
   }
   if (url.pathname === "/rankings/students" && method === "GET") {
-    // shortcut: demo has no historical submissions, add period fixtures when demo needs history.
-    return [];
+    const year = Number(url.searchParams.get("year"));
+    const bimester = Number(url.searchParams.get("bimester"));
+    const schoolId = url.searchParams.get("schoolId");
+    if (!Number.isInteger(year) || year < 1 || year > 9999 ||
+        !Number.isInteger(bimester) || bimester < 1 || bimester > 4)
+      throw new Error("Informe um ano de 1 a 9999 e um bimestre de 1 a 4.");
+    if (schoolId !== null && !schools.some((school) => String(school.id) === schoolId))
+      throw new Error("Escola não encontrada.");
+
+    const startMonth = [2, 4, 7, 9][bimester - 1];
+    const start = new Date(0);
+    start.setFullYear(year, startMonth, 1);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setMonth(startMonth + 2);
+    const currentYear = new Date().getFullYear();
+    const demoPeriod = year === currentYear || year === currentYear - 1 ? year + bimester : undefined;
+    const students = users.filter((user) => user.role === "STUDENT" &&
+      (schoolId === null || String(user.schoolId) === schoolId));
+    const totals = mockRankingTotals(students, start.getTime(), end.getTime(), demoPeriod);
+    const performance = (a: StudentRanking, b: StudentRanking) =>
+      b.correctAnswers * a.totalQuestions - a.correctAnswers * b.totalQuestions ||
+      b.correctAnswers - a.correctAnswers ||
+      b.totalActivities - a.totalActivities;
+    const round = (value: number) => Math.round(value * 100) / 100;
+    const entries = students.flatMap((student): StudentRanking[] => {
+      const total = totals.get(student.id);
+      if (!total || !total.totalQuestions) return [];
+      return [{
+        position: 0,
+        studentId: student.id,
+        studentName: student.fullName,
+        totalActivities: total.completedActivities,
+        totalScore: round(total.totalScore),
+        averageScore: round(total.totalScore / total.completedActivities),
+        correctAnswers: total.correctAnswers,
+        totalQuestions: total.totalQuestions,
+        accuracyPercentage: round(100 * total.correctAnswers / total.totalQuestions),
+      }];
+    }).sort((a, b) => performance(a, b) ||
+      a.studentName.localeCompare(b.studentName, "pt-BR", { sensitivity: "base" }) ||
+      a.studentId - b.studentId);
+    for (const [index, entry] of entries.entries()) {
+      const previous = entries[index - 1];
+      entry.position = previous && performance(previous, entry) === 0 ? previous.position : index + 1;
+    }
+    return entries;
   }
   if (path === "/me") return { ...current };
   if (url.pathname === "/ranking" && method === "GET") {
@@ -498,7 +596,8 @@ export function mockRequest(
             grade: admin || schoolId ? gradeOf(room.name) : null,
             classroomName: schoolId ? room.name : null,
             classroomIdentifier: schoolId ? room.identifier : null,
-            ...total,
+            correctAnswers: total.correctAnswers,
+            completedActivities: total.completedActivities,
           },
         ];
       });

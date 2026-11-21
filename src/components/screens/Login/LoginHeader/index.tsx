@@ -2,7 +2,7 @@ import logoImage from "@/assets/images/LogoImage.png";
 import Image from "next/image";
 
 export function LoginHeader({
-  title = "Bem-vindo de volta!",
+  title = "Seja Bem-vindo",
   description = "Informe seus dados para continuar",
 }: {
   title?: string;

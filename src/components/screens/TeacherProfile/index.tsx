@@ -318,11 +318,6 @@ export function Profile({ user }: { user: SessionUser }) {
             {download.isPending ? "Exportando…" : "Exportação de dados"}
             <ArrowRight size={18} className="ml-auto" aria-hidden="true" />
           </button>
-          <Link href={`${homeRoutes[user.role]}/terms`} className={optionClass}>
-            <FileText size={21} aria-hidden="true" />
-            Termos de uso
-            <ArrowRight size={18} className="ml-auto" aria-hidden="true" />
-          </Link>
           {admin ? (
             <Link href="/admin/contracts" className={optionClass}>
               <FileText size={21} aria-hidden="true" />
@@ -331,6 +326,11 @@ export function Profile({ user }: { user: SessionUser }) {
             </Link>
           ) : (
             <>
+              <Link href={`${homeRoutes[user.role]}/terms`} className={optionClass}>
+                <FileText size={21} aria-hidden="true" />
+                Termos de uso
+                <ArrowRight size={18} className="ml-auto" aria-hidden="true" />
+              </Link>
               {user.role === "coordenador" && (
                 <Link
                   href="/coordinator/data-agreement"

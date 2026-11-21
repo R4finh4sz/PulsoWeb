@@ -40,6 +40,8 @@ test("perfil do admin mostra dados da conta e não oferece exclusão ou vínculo
   expect(await data.findByText("Administrador da Rede")).toBeVisible();
   expect(data.getByText("admin@rede.com")).toBeVisible();
   expect(data.getByText("Administrador")).toBeVisible();
+  expect(screen.getByRole("link", { name: "Contratos" })).toHaveAttribute("href", "/admin/contracts");
+  expect(screen.queryByRole("link", { name: "Termos de uso" })).not.toBeInTheDocument();
   expect(data.queryByText("Escolas")).not.toBeInTheDocument();
   expect(data.queryByText("Matrícula")).not.toBeInTheDocument();
   expect(
