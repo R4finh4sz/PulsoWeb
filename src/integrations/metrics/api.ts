@@ -51,9 +51,21 @@ export type TechnicalMetrics = {
   history: TechnicalSample[];
 };
 
+export type AdminUsageMetrics = {
+  month: string | null;
+  totalUsers: number;
+  usersByRole: Record<"STUDENT" | "TEACHER" | "PEDAGOGICAL_COORDINATOR" | "ADMIN", number>;
+  demandByState: { state: string | null; requests: number }[];
+};
+
 export const metricsApi = {
   admin: (signal?: AbortSignal) =>
     apiRequest<TechnicalMetrics>("/admin/metrics", { signal }),
+  adminUsage: (month: string, signal?: AbortSignal) =>
+    apiRequest<AdminUsageMetrics>(
+      "/admin/metrics/usage" + queryString({ month }),
+      { signal },
+    ),
   growth: (year: number, signal?: AbortSignal) =>
     apiRequest<SchoolGrowth>(
       "/schools/me/metrics/growth" + queryString({ year }),
