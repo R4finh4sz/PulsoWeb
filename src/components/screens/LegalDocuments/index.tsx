@@ -21,14 +21,15 @@ const legalKey = (type: LegalDocType) => ["legal-document", type];
 const formatDate = (value?: string | null) =>
   value ? new Date(value).toLocaleString("pt-BR") : null;
 
-function DocumentBody({ doc }: { doc: LegalDocument }) {
+function DocumentBody({ doc, type }: { doc: LegalDocument; type: LegalDocType }) {
+  const publishedAt = type === "terms" ? null : formatDate(doc.publishedAt);
   return (
     <>
       <div>
         <h2 className="wrap-break-word text-xl font-semibold">{doc.title}</h2>
         <p className="mt-2 text-sm text-(--muted)">
           Versão atual: {doc.version}
-          {formatDate(doc.publishedAt) ? ` · publicada em ${formatDate(doc.publishedAt)}` : ""}
+          {publishedAt ? ` · publicada em ${publishedAt}` : ""}
         </p>
       </div>
       <div className="whitespace-pre-wrap wrap-break-word border-t border-(--line) pt-5 text-sm leading-7">
@@ -58,7 +59,7 @@ export function LegalDocumentView({ type }: { type: LegalDocType }) {
   return (
     <section className="space-y-5 rounded-2xl border border-(--line) bg-white p-5 sm:p-8">
       {doc.data ? (
-        <DocumentBody doc={doc.data} />
+        <DocumentBody doc={doc.data} type={type} />
       ) : (
         <p className="py-8 text-center text-sm text-(--muted)">
           {label} ainda não foi publicado.
@@ -211,7 +212,7 @@ export function LegalDocumentsAdmin({ initialType = "terms" }: { initialType?: L
                     Editar
                   </button>
                 </div>
-                <DocumentBody doc={doc.data} />
+                <DocumentBody doc={doc.data} type={type} />
               </>
             ) : (
               <div className="space-y-4 py-8 text-center">
